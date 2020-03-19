@@ -19,6 +19,11 @@ class MazeGeneratorPanel(bpy.types.Panel):
         layout.prop(mg_props, 'use_polar_grid')
         layout.prop(mg_props, 'maze_algorithm')
         layout.prop(mg_props, 'rows_or_radius')
+        layout.prop(mg_props, 'seed')
+        layout.label(text=" Walls:")
+        row = layout.row()
+        row.prop(mg_props, 'wall_height')
+        row.prop(mg_props, 'wall_width')
         layout.label(text=" Simple Row:")
 
         row = layout.row()
