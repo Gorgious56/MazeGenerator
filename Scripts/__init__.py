@@ -42,10 +42,12 @@ auto_load.init()
 
 
 def register():
-    auto_load.register()
+    bpy.utils.register_class(MGProperties)
     bpy.types.Scene.mg_props = PointerProperty(type=MGProperties)
+    auto_load.register()
 
 
 def unregister():
-    auto_load.unregister()
+    bpy.utils.unregister_class(MGProperties)
     del bpy.types.Scene.mg_props
+    auto_load.unregister()

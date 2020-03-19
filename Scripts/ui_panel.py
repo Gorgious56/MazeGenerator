@@ -13,7 +13,7 @@ class MazeGeneratorPanel(bpy.types.Panel):
         layout = self.layout
 
         scene = context.scene
-        mg_props = scene[]
+        mg_props = scene.mg_props
 
         # Create a simple row.
         layout.label(text=" Simple Row:")
