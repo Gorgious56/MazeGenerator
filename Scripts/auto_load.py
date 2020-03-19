@@ -1,6 +1,4 @@
-import os
 import bpy
-import sys
 import typing
 import inspect
 import pkgutil
@@ -16,12 +14,14 @@ __all__ = (
 modules = None
 ordered_classes = None
 
+
 def init():
     global modules
     global ordered_classes
 
     modules = get_all_submodules(Path(__file__).parent)
     ordered_classes = get_ordered_classes_to_register(modules)
+
 
 def register():
     for cls in ordered_classes:
@@ -32,6 +32,7 @@ def register():
             continue
         if hasattr(module, "register"):
             module.register()
+
 
 def unregister():
     for cls in reversed(ordered_classes):
@@ -50,9 +51,11 @@ def unregister():
 def get_all_submodules(directory):
     return list(iter_submodules(directory, directory.name))
 
+
 def iter_submodules(path, package_name):
     for name in sorted(iter_submodule_names(path)):
         yield importlib.import_module("." + name, package_name)
+
 
 def iter_submodule_names(path, root=""):
     for _, module_name, is_package in pkgutil.iter_modules([str(path)]):
@@ -70,6 +73,7 @@ def iter_submodule_names(path, root=""):
 def get_ordered_classes_to_register(modules):
     return toposort(get_register_deps_dict(modules))
 
+
 def get_register_deps_dict(modules):
     deps_dict = {}
     classes_to_register = set(iter_classes_to_register(modules))
@@ -77,8 +81,10 @@ def get_register_deps_dict(modules):
         deps_dict[cls] = set(iter_own_register_deps(cls, classes_to_register))
     return deps_dict
 
+
 def iter_own_register_deps(cls, own_classes):
     yield from (dep for dep in iter_register_deps(cls) if dep in own_classes)
+
 
 def iter_register_deps(cls):
     for value in typing.get_type_hints(cls, {}, {}).values():
@@ -86,11 +92,13 @@ def iter_register_deps(cls):
         if dependency is not None:
             yield dependency
 
+
 def get_dependency_from_annotation(value):
     if isinstance(value, tuple) and len(value) == 2:
         if value[0] in (bpy.props.PointerProperty, bpy.props.CollectionProperty):
             return value[1]["type"]
     return None
+
 
 def iter_classes_to_register(modules):
     base_types = get_register_base_types()
@@ -99,6 +107,7 @@ def iter_classes_to_register(modules):
             if not getattr(cls, "is_registered", False):
                 yield cls
 
+
 def get_classes_in_modules(modules):
     classes = set()
     for module in modules:
@@ -106,10 +115,12 @@ def get_classes_in_modules(modules):
             classes.add(cls)
     return classes
 
+
 def iter_classes_in_module(module):
     for value in module.__dict__.values():
         if inspect.isclass(value):
             yield value
+
 
 def get_register_base_types():
     return set(getattr(bpy.types, name) for name in [

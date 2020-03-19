@@ -16,10 +16,13 @@ class MazeGeneratorPanel(bpy.types.Panel):
         mg_props = scene.mg_props
 
         # Create a simple row.
+        layout.prop(mg_props, 'use_polar_grid')
+        layout.prop(mg_props, 'maze_algorithm')
+        layout.prop(mg_props, 'rows_or_radius')
         layout.label(text=" Simple Row:")
 
         row = layout.row()
-        row.prop(mg_props, "test_property")
+        # row.prop(mg_props, "test_property")
         row.prop(scene, "frame_end")
 
         # Create an row where the buttons are aligned to each other.
@@ -60,15 +63,3 @@ class MazeGeneratorPanel(bpy.types.Panel):
         # sub.operator("object.simple_operator")
 
         # row.operator("object.simple_operator")
-
-
-def register():
-    bpy.utils.register_class(MazeGeneratorPanel)
-
-
-def unregister():
-    bpy.utils.unregister_class(MazeGeneratorPanel)
-
-
-if __name__ == "__main__":
-    register()
