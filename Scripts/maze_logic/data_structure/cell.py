@@ -9,6 +9,7 @@ class Cell:
         self.group = 0
 
         self.neighbors = [None] * 4
+        # 0>North - 1>West - 2>South - 3>East
 
         self.links = {}
 
@@ -56,5 +57,3 @@ class Cell:
 
     def get_wall_mask(self):
         return [not self.exists_and_is_linked(n) for n in self.neighbors] if self.has_any_link() else [False] * len(self.neighbors)
-
-
