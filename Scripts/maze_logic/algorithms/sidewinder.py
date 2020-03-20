@@ -1,20 +1,19 @@
-from random import choice
-from random import seed
-from random import randint
+from random import choice, randint
+from . maze_algorithm import MazeAlgorithm
 
 
-class Sidewinder:
+class Sidewinder(MazeAlgorithm):
     def __init__(self, grid, _seed, _max_steps=-1, close_chance=1):
-        steps = 100000 if _max_steps < 0 else _max_steps
-        seed(_seed)
+        super().__init__(_seed=_seed, _max_steps=_max_steps)
+
         for row in grid.each_row():
-            if steps < 0:
+            if self.must_break():
                 break
             run = []
             for c in row:
                 if c.group == 0:
                     c.group = 1
-                if steps < 0:
+                if self.must_break():
                     break
                 run.append(c)
                 if (c.neighbors[3] is None) or (c.neighbors[0] is not None and randint(0, close_chance) < 1):
@@ -25,4 +24,4 @@ class Sidewinder:
                     run = []
                 else:
                     c.link(c.neighbors[3])
-                steps -= 1
+                self.next_step()

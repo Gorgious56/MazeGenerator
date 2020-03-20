@@ -1,27 +1,23 @@
 from random import choice
-from random import seed
+from . maze_algorithm import MazeAlgorithm
 
 
-class RecursiveBacktracker:
-    def __init__(self, grid, _seed, _max_steps=-1):
-        max_steps = 100000 if _max_steps < 0 else _max_steps
-        seed(_seed)
-
-        steps = 0
+class RecursiveBacktracker(MazeAlgorithm):
+    def __init__(self, grid, _seed, _max_steps=0):
+        super().__init__(_seed=_seed, _max_steps=_max_steps)
         expeditions = 1
 
         stack = [grid.random_cell(_seed)]
         stack[-1].group = expeditions + 1
 
         backtracking = False
-        while len(stack) > 0 and steps < max_steps:
+        while len(stack) > 0 and not self.must_break():
             current = stack[-1]
             neighbors = current.get_unlinked_neighbors()
             try:
-
                 unlinked_neighbor = choice(neighbors)
                 current.link(unlinked_neighbor)
-                steps += 1
+                self.next_step()
                 stack.append(unlinked_neighbor)
                 unlinked_neighbor.group = expeditions + 1
                 backtracking = False

@@ -1,24 +1,23 @@
-from random import choice, seed
+from random import choice
+from . maze_algorithm import MazeAlgorithm
 
 
-class AldousBroder:
-    def __init__(self, grid, _seed, _max_steps=-1):
-        steps = 10000 if _max_steps < 0 else _max_steps
-        if _seed:
-            seed(_seed)
+class AldousBroder(MazeAlgorithm):
+    def __init__(self, grid, _seed, _max_steps=-1, close_chance=1):
+        super().__init__(_seed=_seed, _max_steps=_max_steps)
 
         expeditions = 1
         current = grid.random_cell(_seed, True)
         current.group = expeditions
 
         unvisited = grid.size - 1 - len(grid.masked_cells)
-        while unvisited > 0 and steps > 0:
+        while unvisited > 0 and not self.must_break():
 
             neighbor = choice(current.get_neighbors())
 
             if len(neighbor.links) <= 0:
                 current.link(neighbor)
                 unvisited -= 1
-                steps -= 1
+                self.next_step()
             current = neighbor
             current.group = expeditions

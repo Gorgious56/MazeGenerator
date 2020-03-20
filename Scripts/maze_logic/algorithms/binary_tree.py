@@ -1,18 +1,16 @@
 from random import choice
-from random import seed
+from . maze_algorithm import MazeAlgorithm
 
 
-class BinaryTree:
-    def __init__(self, grid, _seed, _max_steps=-1):
-        steps = 100000 if _max_steps < 0 else _max_steps
-        seed(_seed)
-
+class BinaryTree(MazeAlgorithm):
+    def __init__(self, grid, _seed, _max_steps=-1, close_chance=1):
+        super().__init__(_seed=_seed, _max_steps=_max_steps)
         expeditions = 1
 
         for c in grid.each_cell():
-            if steps <= 0:
+            if self.must_break():
                 break
-            neighbors = [n for n in c.neighbors[0: 1 + len(c.neighbors) // 2] if n]
+            neighbors = [n for n in c.neighbors[0:2] if n]
 
             if len(neighbors) > 0:
                 link = choice(neighbors)
@@ -20,4 +18,4 @@ class BinaryTree:
                 link.group = expeditions + 1
                 if c.group == 0:
                     c.group = expeditions
-            steps -= 1
+            self.next_step()

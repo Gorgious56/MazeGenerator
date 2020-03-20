@@ -1,16 +1,13 @@
-from random import choice, seed
+from random import choice
+from . maze_algorithm import MazeAlgorithm
 
 
-class HuntAndKill:
+class HuntAndKill(MazeAlgorithm):
     def __init__(self, grid, _seed=-1, _max_steps=-1):
+        super().__init__(_seed=_seed, _max_steps=_max_steps)
         self.grid = grid
 
         self.unvisited_legit_cells = []
-
-        self.steps = 100000 if _max_steps < 0 else _max_steps
-
-        self._seed = _seed
-        seed(_seed)
 
         self.expeditions = 2
 
@@ -18,9 +15,15 @@ class HuntAndKill:
 
     def on(self):
 
-        self.initialize()
-        while self.current and self.steps > 0:
-            while self.current and self.steps > 0:
+        self.unvisited_legit_cells = []
+        if self.must_break():
+            return
+        self.set_current(self.grid.random_cell(self._seed))
+
+        self.add_to_unvisited_legit_cells(self.current.get_unlinked_neighbors())
+
+        while self.current and not self.must_break():
+            while self.current and not self.must_break():
                 unvisited_neighbors = self.current.get_unlinked_neighbors()
                 try:
                     neighbor = choice(unvisited_neighbors)
@@ -28,31 +31,21 @@ class HuntAndKill:
                     unvisited_neighbors.remove(neighbor)
                     self.add_to_unvisited_legit_cells(unvisited_neighbors)
                     self.set_current(neighbor)
-                    if self.steps <= 0:
+                    if self.must_break():
                         break
                 except IndexError:  # unvisited_neighbors is empty
                     self.current = None
-            if self.steps <= 0:
+            if self.must_break():
                 break
             try:
                 self.expeditions += 1
-                self.set_current(choice(self.unvisited_legit_cells)) 
+                self.set_current(choice(self.unvisited_legit_cells))
                 neighbor = choice(self.current.get_linked_neighbors())
-                self.link_to(neighbor, self.current)                                
+                self.link_to(neighbor, self.current)                     
 
                 self.add_to_unvisited_legit_cells(self.current.get_unlinked_neighbors())
             except IndexError:  # Neighbors is empty
                 break
-
-    def initialize(self):
-        self.unvisited_legit_cells = []
-
-        self.steps -= 1
-        if self.steps < 0:
-            return
-        self.set_current(self.grid.random_cell(self._seed))
-
-        self.add_to_unvisited_legit_cells(self.current.get_unlinked_neighbors())
 
     def link_to(self, c, other_c):
         c.link(other_c)
@@ -61,7 +54,7 @@ class HuntAndKill:
         except ValueError:
             pass
         other_c.group = self.expeditions
-        self.steps -= 1
+        self.next_step()
 
     def set_current(self, c):
         self.current = c
@@ -69,6 +62,3 @@ class HuntAndKill:
 
     def add_to_unvisited_legit_cells(self, cells):
         self.unvisited_legit_cells.extend([c for c in cells if c not in self.unvisited_legit_cells])
-
-#        for c in cells:
-#            c.group = 1
