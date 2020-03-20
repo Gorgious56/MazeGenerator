@@ -16,52 +16,56 @@ class MazeGeneratorPanel(bpy.types.Panel):
         mg_props = scene.mg_props
 
         # Create a simple row.
+        layout.prop(mg_props, 'auto_update')
         layout.prop(mg_props, 'use_polar_grid')
         layout.prop(mg_props, 'maze_algorithm')
-        layout.prop(mg_props, 'rows_or_radius')
+        layout.prop(mg_props, 'rows_or_radius', slider=True)
         layout.prop(mg_props, 'seed')
-        layout.label(text=" Walls:")
+        layout.prop(mg_props, 'braid_dead_ends', slider=True)
+        layout.prop(mg_props, 'steps')
+        layout.label(text=" Walls")
         row = layout.row()
         row.prop(mg_props, 'wall_height')
         row.prop(mg_props, 'wall_width')
-        layout.label(text=" Simple Row:")
+        layout.label(text=" Cells")
+        layout.prop(mg_props, 'color_shift', slider=True)
 
-        row = layout.row()
+        # row = layout.row()
         # row.prop(mg_props, "test_property")
-        row.prop(scene, "frame_end")
+        # row.prop(scene, "frame_end")
 
         # Create an row where the buttons are aligned to each other.
-        layout.label(text=" Aligned Row:")
+        # layout.label(text=" Aligned Row:")
 
-        row = layout.row(align=True)
-        row.prop(scene, "frame_start")
-        row.prop(scene, "frame_end")
+        # row = layout.row(align=True)
+        # row.prop(scene, "frame_start")
+        # row.prop(scene, "frame_end")
 
         # Create two columns, by using a split layout.
-        split = layout.split()
+        # split = layout.split()
 
         # First column
-        col = split.column()
-        col.label(text="Column One:")
-        col.prop(scene, "frame_end")
-        col.prop(scene, "frame_start")
+        # col = split.column()
+        # col.label(text="Column One:")
+        # col.prop(scene, "frame_end")
+        # col.prop(scene, "frame_start")
 
         # Second column, aligned
-        col = split.column(align=True)
-        col.label(text="Column Two:")
-        col.prop(scene, "frame_start")
-        col.prop(scene, "frame_end")
+        # col = split.column(align=True)
+        # col.label(text="Column Two:")
+        # col.prop(scene, "frame_start")
+        # col.prop(scene, "frame_end")
 
-        # Big render button
+        # Big button
         layout.label(text="Big Button:")
         row = layout.row()
         row.scale_y = 3.0
         row.operator("maze.generate")
 
         # Different sizes in a row
-        layout.label(text="Different button sizes:")
-        row = layout.row(align=True)
-        row.operator("maze.generate")
+        # layout.label(text="Different button sizes:")
+        # row = layout.row(align=True)
+        # row.operator("maze.generate")
 
         # sub = row.row()
         # sub.scale_x = 2.0

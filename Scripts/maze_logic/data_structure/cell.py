@@ -51,6 +51,10 @@ class Cell:
     def exists_and_is_linked(self, other_cell):
         return other_cell is not None and other_cell in self.links
 
-    # Get the wall mask.
+    def exists_and_is_linked_neighbor_index(self, neighbor_index):
+        return self.exists_and_is_linked(self.neighbors[neighbor_index])
+
     def get_wall_mask(self):
         return [not self.exists_and_is_linked(n) for n in self.neighbors] if self.has_any_link() else [False] * len(self.neighbors)
+
+
