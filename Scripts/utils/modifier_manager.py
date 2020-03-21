@@ -18,3 +18,24 @@ def add_modifier(obj, mod_type, mod_name, remove_if_already_exists=False, remove
             for prop, value in properties.items():
                 if hasattr(mod, prop):
                     setattr(mod, prop, value)
+
+
+def add_driver_to_object(obj, obj_prop, var_name, id_type, id, prop_path, expression=None):
+    if obj:
+        driver = obj.driver_add(obj_prop).driver
+        if len(driver.variables) > 0:
+            var = driver.variables[0]
+        else:
+            var = driver.variables.new()
+        var.name = var_name
+        var.type = 'SINGLE_PROP'
+
+        target = var.targets[0]
+        target.id_type = id_type
+        target.id = id
+        target.data_path = prop_path
+
+        if expression:
+            driver.expression = expression
+        else:
+            driver.expression = var_name
