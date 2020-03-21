@@ -6,7 +6,7 @@ from . grid import Grid
 
 
 class GridPolar(Grid):
-    def __init__(self, rows, columns, name="", cell_size=1):
+    def __init__(self, rows, name="", cell_size=1):
         self.cell_size = max(0, cell_size)
         self.rows_polar = []
         super().__init__(rows, 1, name, 'polar', 4)
@@ -14,7 +14,7 @@ class GridPolar(Grid):
     def prepare_grid(self):
         rows = [None] * self.rows
         row_height = 1 / self.rows
-        rows[0] = [CellPolar(0,0)]
+        rows[0] = [CellPolar(0, 0)]
 
         for r in range(1, self.rows):
             radius = r / self.rows
@@ -62,11 +62,12 @@ class GridPolar(Grid):
         return choice([c for c in choice(self.rows_polar) if not c.is_masked])
 
     def configure_cells(self):
+        # 0>cw - 1>ccw - 2>inward - 3>outward
         for c in self.each_cell():
             row, col = c.row, c.column
             if row > 0:
-                c.ccw = self[row, col - 1]
                 c.cw = self[row, (col + 1) % len(self.rows_polar[row])]
+                c.ccw = self[row, col - 1]
 
                 ratio = len(self.rows_polar[row]) / len(self.rows_polar[row - 1])
                 parent = self[row - 1, floor(col // ratio)]
@@ -74,7 +75,38 @@ class GridPolar(Grid):
 
                 c.inward = parent
 
-    def get_cell_position(self, c, row_length, cell_size, offset):
+    def get_blueprint(self):
+        walls, cells = [], []
+        for r in self.each_row():
+            for c in r:
+                if c.row > 0:
+                    _, C, D, B, A = self.get_cell_position(c, len(r), self.cell_size)
+
+                    if not c.has_any_link():
+                        if self.is_cell_linked(c.inward):
+                            walls.append(A)
+                            walls.append(C)
+                        if self.is_cell_linked(c.cw):
+                            walls.append(C)
+                            walls.append(D)
+                    else:
+                        cells.append(A)
+                        cells.append(B)
+                        cells.append(D)
+                        cells.append(C)
+                        if not c.exists_and_is_linked(c.inward):
+                            walls.append(A)
+                            walls.append(C)
+                        if not c.exists_and_is_linked(c.cw):
+                            walls.append(C)
+                            walls.append(D)
+                    if c.row == self.rows - 1 and c.has_any_link():
+                        walls.append(B)
+                        walls.append(D)
+
+        return walls, cells
+
+    def get_cell_position(self, c, row_length, cell_size):
         t = 2 * pi / row_length
         r_in = (c.row) * cell_size
         r_out = (c.row + 1) * cell_size
@@ -90,10 +122,10 @@ class GridPolar(Grid):
         dx = r_out * cos(t_cw)
         dy = r_out * sin(t_cw)
 
-        A = Vector([ax, ay, 0]) - offset
-        B = Vector([bx, by, 0]) - offset
-        C = Vector([cx, cy, 0]) - offset
-        D = Vector([dx, dy, 0]) - offset
+        A = Vector([ax, ay, 0])
+        B = Vector([bx, by, 0])
+        C = Vector([cx, cy, 0])
+        D = Vector([dx, dy, 0])
 
         center = (A + B + C + D) / 4
 

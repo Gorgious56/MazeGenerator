@@ -1,6 +1,5 @@
 from . import cell
-from math import pi
-from mathutils import Vector, Matrix
+from mathutils import Vector
 from random import choice, seed, shuffle
 
 
@@ -83,8 +82,10 @@ class Grid:
     def get_dead_ends(self):
         return [c for c in self.get_unmasked_cells() if len(c.links) == 1]
 
-    def braid_dead_ends(self, braid=0):
+    def braid_dead_ends(self, braid=0, _seed=None):
         if braid > 0:
+            braid /= 100
+            seed(_seed)
             dead_ends_shuffle = self.get_dead_ends()
             shuffle(dead_ends_shuffle)
             stop_index = int(len(dead_ends_shuffle) * min(max(0, braid), 1))
@@ -92,7 +93,7 @@ class Grid:
                 if len(c.links) != 1:
                     pass
                 else:
-                    unconnected_neighbors = [_c for _c in c.get_neighbors() if _c not in c.links]
+                    unconnected_neighbors = [_c for _c in c.get_neighbors() if _c not in c.links and _c.has_any_link()]
                     if len(unconnected_neighbors) > 0:
                         best = [_c for _c in unconnected_neighbors if len(c.links) < 2]
                         if len(best) == 0:
@@ -119,8 +120,6 @@ class Grid:
     def get_unmasked_cells(self):
         return [c for c in self.cells if not c.is_masked]
 
-
-
     def get_unmasked_and_linked_cells(self):
         return [c for c in self.each_cell() if any(c.links)]
 
@@ -128,28 +127,15 @@ class Grid:
         return c and any(c.links)
 
     def get_cell_position(self, c, cell_size=1):
-        # center = Vector([c.column * cell_size, c.row * cell_size, 0]) - offset
-        # top_left = Vector([(c.column - 0.5) * cell_size, (c.row + 0.5) * cell_size, 0]) - offset
-        # top_right = Vector([(c.column + 0.5) * cell_size, (c.row + 0.5) * cell_size, 0]) - offset
-        # bot_right = Vector([(c.column + 0.5) * cell_size, (c.row - 0.5) * cell_size, 0]) - offset
-        # bot_left = Vector([(c.column - 0.5) * cell_size, (c.row - 0.5) * cell_size, 0]) - offset
         center = (c.column * cell_size, c.row * cell_size, 0)
         top_left = ((c.column - 0.5) * cell_size, (c.row + 0.5) * cell_size, 0)
         top_right = ((c.column + 0.5) * cell_size, (c.row + 0.5) * cell_size, 0)
         bot_right = ((c.column + 0.5) * cell_size, (c.row - 0.5) * cell_size, 0)
         bot_left = ((c.column - 0.5) * cell_size, (c.row - 0.5) * cell_size, 0)
-        # center = self.sub_vec((c.column * cell_size, c.row * cell_size, 0), offset)
-        # top_left = self.sub_vec(((c.column - 0.5) * cell_size, (c.row + 0.5) * cell_size, 0), offset)
-        # top_right = self.sub_vec(((c.column + 0.5) * cell_size, (c.row + 0.5) * cell_size, 0), offset)
-        # bot_right = self.sub_vec(((c.column + 0.5) * cell_size, (c.row - 0.5) * cell_size, 0), offset)
-        # bot_left = self.sub_vec(((c.column - 0.5) * cell_size, (c.row - 0.5) * cell_size, 0), offset)
         return center, top_left, top_right, bot_right, bot_left
 
     def sub_vec(self, vec1, vec2):
         return (vec1[0] - vec2[0], vec1[1] - vec2[1], vec1[2] - vec2[2])
-
-    def get_cell_rotation(self, c):
-        return Vector([0, 0, 45])
 
     def get_blueprint(self):
         walls = []
@@ -159,9 +145,6 @@ class Grid:
             walls.extend(new_walls)
             cells.extend(new_cells)
         return walls, cells
-
-    def get_matrix(self, c):
-        return Matrix.Translation((c.column, c.row, 0)) @ Matrix.Rotation(-pi/4,4,"Z")
 
     def need_wall_to(self, c):
         return not c or c.is_masked or not c.has_any_link()
@@ -188,5 +171,5 @@ class Grid:
         cells.append(positions[2])
         cells.append(positions[3])
         cells.append(positions[4])
-        
+
         return walls, cells

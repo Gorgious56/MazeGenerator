@@ -1,6 +1,5 @@
 class Cell:
     neighbors_return = [2, 3, 0, 1]
-    neighbors_name = ["North", "West", "South", "East"]
 
     def __init__(self, row, col):
         self.row = row
@@ -50,7 +49,7 @@ class Cell:
         return [c for c in self.get_neighbors() if c.has_any_link()]
 
     def exists_and_is_linked(self, other_cell):
-        return other_cell is not None and other_cell in self.links
+        return other_cell is not None and self.is_linked(other_cell)
 
     def exists_and_is_linked_neighbor_index(self, neighbor_index):
         return self.exists_and_is_linked(self.neighbors[neighbor_index])
