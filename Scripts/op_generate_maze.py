@@ -1,6 +1,6 @@
 from bpy.types import Operator
 from time import time
-from . maze_logic . data_structure . visual_grid import VisualGrid
+from . visual . grid_visual import GridVisual
 
 
 class GenerateMazeOperator(Operator):
@@ -11,7 +11,7 @@ class GenerateMazeOperator(Operator):
     @classmethod
     def poll(cls, context):
         mg_props = context.scene.mg_props
-        return mg_props.rows_or_radius > 0
+        return mg_props.rows_or_radius > 0 and context.mode == 'OBJECT'
 
     def execute(self, context):
         start_time = time()
@@ -20,8 +20,5 @@ class GenerateMazeOperator(Operator):
         return {'FINISHED'}
 
     def main(self, context):
-        scene = context.scene
-        mg_props = scene.mg_props
-
-        v_grid = VisualGrid(scene, mg_props)
-        v_grid.build_objects()
+        if context.mode == 'OBJECT':
+            GridVisual(context.scene)

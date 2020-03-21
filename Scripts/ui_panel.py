@@ -2,8 +2,7 @@ import bpy
 
 
 class MazeGeneratorPanel(bpy.types.Panel):
-    """Creates a Panel in the scene context of the properties editor"""
-    bl_idname = "MG_Panel"
+    bl_idname = "MAZE_GENERATOR_PT_MainPanel"
     bl_label = "Maze Generator"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
@@ -16,19 +15,42 @@ class MazeGeneratorPanel(bpy.types.Panel):
         mg_props = scene.mg_props
 
         # Create a simple row.
-        layout.prop(mg_props, 'auto_update')
-        layout.prop(mg_props, 'use_polar_grid')
-        layout.prop(mg_props, 'maze_algorithm')
+        layout.prop_menu_enum(mg_props, 'maze_algorithm')
+
         layout.prop(mg_props, 'rows_or_radius', slider=True)
         layout.prop(mg_props, 'seed')
         layout.prop(mg_props, 'braid_dead_ends', slider=True)
         layout.prop(mg_props, 'steps')
-        layout.label(text=" Walls")
-        row = layout.row()
+
+        box = layout.box()
+        box.label(text="Walls")
+        row = box.row()
         row.prop(mg_props, 'wall_height')
         row.prop(mg_props, 'wall_width')
-        layout.label(text=" Cells")
-        layout.prop(mg_props, 'color_shift', slider=True)
+
+        box = layout.box()
+        box.label(text="Cells")
+        box.prop_menu_enum(mg_props, 'cell_type')
+
+        box = layout.box()
+        box.label(text="Display")
+        box.prop_menu_enum(mg_props, 'paint_style')
+        row = box.row()
+        row.prop(mg_props, 'seed_color_button', text='Randomize Colors', toggle=True)
+        row.enabled = mg_props.paint_style != 'DISTANCE'
+        box.prop(mg_props, 'hue_shift', slider=True, text='Hue Shift', )
+        box.prop(mg_props, 'saturation_shift', slider=True, text='Saturation Shift')
+        box.prop(mg_props, 'value_shift', slider=True, text='Value Shift')
+        # box.prop(mg_props, 'color_shift')
+        
+        box = layout.box()
+        box.label(text="Generation")
+        box.prop(mg_props, 'auto_update', toggle=True)
+        row = box.row()
+        row.scale_y = 3.0
+        row.operator("maze.generate")
+
+        # row.prop(mg_props, 'paint_distance', toggle=True)
 
         # row = layout.row()
         # row.prop(mg_props, "test_property")
@@ -57,10 +79,6 @@ class MazeGeneratorPanel(bpy.types.Panel):
         # col.prop(scene, "frame_end")
 
         # Big button
-        layout.label(text="Big Button:")
-        row = layout.row()
-        row.scale_y = 3.0
-        row.operator("maze.generate")
 
         # Different sizes in a row
         # layout.label(text="Different button sizes:")
