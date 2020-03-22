@@ -3,6 +3,7 @@ from bpy.props import IntProperty, BoolProperty, EnumProperty, FloatProperty, Po
 import bpy.ops
 from . maze_logic . algorithms . algorithm_manager import generate_algo_enum, DEFAULT_ALGO
 from . visual . cell_type_manager import generate_cell_type_enum, DEFAULT_CELL_TYPE
+from . visual . cell_visual_manager import generate_cell_visual_enum, DEFAULT_CELL_VISUAL_TYPE
 from . visual . grid_visual import GridVisual
 from random import random
 
@@ -13,7 +14,6 @@ def generate_maze(self, context):
 
 
 def update_paint(self, context):
-    print(GridVisual.Instance)
     if GridVisual.Instance:
         GridVisual.Instance.set_materials()
 
@@ -65,6 +65,15 @@ class MGProperties(PropertyGroup):
         update=generate_maze
     )
 
+    maze_bias: FloatProperty(
+        name="Bias",
+        description="An additional parameter to tweak the maze. The results differ for each one",
+        default=0,
+        min=-1,
+        max=1,
+        update=generate_maze
+    )
+
     steps: IntProperty(
         name="Steps",
         description="Set the number of steps at which to stop the algorithm (0 = unlimited)",
@@ -81,7 +90,16 @@ class MGProperties(PropertyGroup):
         min=0,
         max=100,
         subtype='PERCENTAGE',
-        options={'ANIMATABLE'},
+        update=generate_maze
+    )
+
+    sparse_dead_ends: IntProperty(
+        name="Sparse Maze",
+        description="Choose how many dead ends will be culled subsequently to make a sparser maze",
+        default=0,
+        min=0,
+        max=100,
+        subtype='PERCENTAGE',
         update=generate_maze
     )
 
@@ -114,6 +132,13 @@ class MGProperties(PropertyGroup):
         set=click_randomize_color_button
     )
 
+    show_only_longest_path: BoolProperty(
+        name="Longest Path",
+        description="Toggle this property to show only the longest path",
+        default=False,
+        update=update_paint
+    )
+
     hue_shift: FloatProperty(
         name="Hue Shift",
         description="Tweak the color hue shift of the cells",
@@ -141,13 +166,8 @@ class MGProperties(PropertyGroup):
     paint_style: EnumProperty(
         name="Paint Style",
         description="Choose how to paint the cells",
-        items=[
-            ('DISTANCE', 'Distance', ''),
-            ('GROUP', 'Cell Group', ''),
-            ('UNIFORM', 'Uniform', ''),
-            ('NEIGHBORS', 'Neighbors Amount', ''),
-        ],
-        default='DISTANCE',
+        items=generate_cell_visual_enum(),
+        default=DEFAULT_CELL_VISUAL_TYPE,
         update=update_paint
     )
 

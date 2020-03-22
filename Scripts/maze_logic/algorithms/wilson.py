@@ -3,8 +3,8 @@ from . maze_algorithm import MazeAlgorithm
 
 
 class Wilson(MazeAlgorithm):
-    def __init__(self, grid, _seed, _max_steps=-1):
-        super().__init__(_seed=_seed, _max_steps=_max_steps)
+    def __init__(self, grid, _seed, _max_steps=-1, bias=0):
+        super().__init__(_seed=_seed, _max_steps=_max_steps, bias=bias)
 
         unvisited = grid.get_unmasked_cells().copy()
         target_cell = choice(unvisited)

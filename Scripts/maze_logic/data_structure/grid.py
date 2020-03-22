@@ -1,5 +1,4 @@
 from . import cell
-from mathutils import Vector
 from random import choice, seed, shuffle
 
 
@@ -103,6 +102,27 @@ class Grid:
         else:
             return None
 
+    def sparse_dead_ends(self, sparse=0, braid=0, _seed=None):
+        max_cells_to_cull = len(self.get_unmasked_and_linked_cells()) * (sparse / 100) * (1 - braid / 100) - 2
+        culled_cells = 0
+        while culled_cells < max_cells_to_cull:
+            dead_ends = self.get_dead_ends()
+            if not any(dead_ends):
+                return
+            for c in dead_ends:
+                try:
+                    c.unlink(next(iter(c.links)))
+                    culled_cells += 1
+                    if culled_cells >= max_cells_to_cull:
+                        return
+                except StopIteration:
+                    return
+
+    def cull_dead_ends(self, culled_cells):
+        for c in self.get_dead_ends():
+            for i, n in enumerate(c.get_neighbors()):
+                c.unlink(n)
+
     def mask_cell(self, column, row):
         c = self[column, row]
         if c is not None:
@@ -110,6 +130,7 @@ class Grid:
             self.masked_cells.append(c)
             for i, n in enumerate(c.get_neighbors()):
                 n.neighbors[c.neighbors_return[i]] = None
+                c.unlink(n)
 
     def mask_ring(self, center_row, center_col, radius):
         for r in range(self.rows):
@@ -122,9 +143,6 @@ class Grid:
 
     def get_unmasked_and_linked_cells(self):
         return [c for c in self.each_cell() if any(c.links)]
-
-    def is_cell_linked(self, c):
-        return c and any(c.links)
 
     def get_cell_position(self, c, cell_size=1):
         center = (c.column * cell_size, c.row * cell_size, 0)

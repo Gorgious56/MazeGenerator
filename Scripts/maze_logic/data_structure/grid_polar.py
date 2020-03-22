@@ -33,7 +33,7 @@ class GridPolar(Grid):
 
     def __getitem__(self, key):
         try:
-            return self.rows_polar[key[0]][key[1]] 
+            return self.rows_polar[key[0]][key[1]]
         except IndexError:
             return None
 
@@ -79,29 +79,28 @@ class GridPolar(Grid):
         walls, cells = [], []
         for r in self.each_row():
             for c in r:
-                if c.row > 0:
-                    _, C, D, B, A = self.get_cell_position(c, len(r), self.cell_size)
+                _, C, D, B, A = self.get_cell_position(c, len(r), self.cell_size)
 
-                    if not c.has_any_link():
-                        if self.is_cell_linked(c.inward):
-                            walls.append(A)
-                            walls.append(C)
-                        if self.is_cell_linked(c.cw):
-                            walls.append(C)
-                            walls.append(D)
-                    else:
-                        cells.append(A)
-                        cells.append(B)
-                        cells.append(D)
-                        cells.append(C)
-                        if not c.exists_and_is_linked(c.inward):
-                            walls.append(A)
-                            walls.append(C)
-                        if not c.exists_and_is_linked(c.cw):
-                            walls.append(C)
-                            walls.append(D)
-                    if c.row == self.rows - 1 and c.has_any_link():
+                if c.has_any_link():
+                    cells.append(A)
+                    cells.append(B)
+                    cells.append(D)
+                    cells.append(C)
+                    if not c.exists_and_is_linked(c.inward):
+                        walls.append(A)
+                        walls.append(C)
+                    if not c.exists_and_is_linked(c.cw):
+                        walls.append(C)
+                        walls.append(D)
+                    if c.row == self.rows - 1:
                         walls.append(B)
+                        walls.append(D)
+                else:
+                    if c.inward and c.has_any_link():
+                        walls.append(A)
+                        walls.append(C)
+                    if c.cw and c.cw.has_any_link():
+                        walls.append(C)
                         walls.append(D)
 
         return walls, cells
@@ -113,19 +112,10 @@ class GridPolar(Grid):
         t_cw = (c.column + 1) * t
         t_ccw = c.column * t
 
-        ax = r_in * cos(t_ccw)
-        ay = r_in * sin(t_ccw)
-        bx = r_out * cos(t_ccw)
-        by = r_out * sin(t_ccw)
-        cx = r_in * cos(t_cw)
-        cy = r_in * sin(t_cw)
-        dx = r_out * cos(t_cw)
-        dy = r_out * sin(t_cw)
-
-        A = Vector([ax, ay, 0])
-        B = Vector([bx, by, 0])
-        C = Vector([cx, cy, 0])
-        D = Vector([dx, dy, 0])
+        A = Vector([r_in * cos(t_ccw), r_in * sin(t_ccw), 0])
+        B = Vector([r_out * cos(t_ccw), r_out * sin(t_ccw), 0])
+        C = Vector([r_in * cos(t_cw), r_in * sin(t_cw), 0])
+        D = Vector([r_out * cos(t_cw), r_out * sin(t_cw), 0])
 
         center = (A + B + C + D) / 4
 

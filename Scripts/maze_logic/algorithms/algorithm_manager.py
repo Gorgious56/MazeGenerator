@@ -28,18 +28,19 @@ def generate_algo_enum():
             ]
 
 
-def work(algorithm, grid, seed, max_steps=-1):
+def work(algorithm, grid, seed, max_steps=-1, parameter=0):
+    algo = None
     if algorithm == ALGO_BINARY_TREE:
-        BinaryTree(grid, seed, max_steps)
+        BinaryTree(grid, seed, max_steps, parameter)
     if algorithm == ALGO_SIDEWINDER:
-        Sidewinder(grid, seed, max_steps)
+        Sidewinder(grid, seed, max_steps, parameter)
     if algorithm == ALGO_CROSS_STITCH:
-        CrossStitch(grid, seed, max_steps)
+        CrossStitch(grid, seed, max_steps, parameter)
     if algorithm == ALGO_ALDOUS_BRODER:
-        AldousBroder(grid, seed, max_steps)
+        AldousBroder(grid, seed, max_steps, parameter)
     if algorithm == ALGO_WILSON:
-        Wilson(grid, seed, max_steps)
+        Wilson(grid, seed, max_steps, parameter)
     if algorithm == ALGO_HUNT_AND_KILL:
-        HuntAndKill(grid, seed, max_steps)
+        HuntAndKill(grid, seed, max_steps, parameter)
     if algorithm == ALGO_RECURSIVE_BACKTRACKER:
-        RecursiveBacktracker(grid, seed, max_steps)
+        RecursiveBacktracker(grid, seed, max_steps, parameter)

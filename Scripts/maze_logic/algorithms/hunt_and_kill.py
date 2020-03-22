@@ -3,16 +3,18 @@ from . maze_algorithm import MazeAlgorithm
 
 
 class HuntAndKill(MazeAlgorithm):
-    def __init__(self, grid, _seed=-1, _max_steps=-1):
-        super().__init__(_seed=_seed, _max_steps=_max_steps)
+    def __init__(self, grid, _seed, _max_steps=-1, bias=0):
+        super().__init__(_seed=_seed, _max_steps=_max_steps, bias=bias)
         self.grid = grid
 
         self.unvisited_legit_cells = []
 
         self.expeditions = 2
 
-        self.on()
+        self.direction = - 1
 
+        self.on()
+        
     def on(self):
 
         self.unvisited_legit_cells = []
@@ -24,16 +26,17 @@ class HuntAndKill(MazeAlgorithm):
 
         while self.current and not self.must_break():
             while self.current and not self.must_break():
-                unvisited_neighbors = self.current.get_unlinked_neighbors()
-                try:
-                    neighbor = choice(unvisited_neighbors)
+                neighbor, self.direction = self.current.get_biased_unmasked_unlinked_neighbor(self.direction, self.bias)
+                if neighbor:
+                    unvisited_neighbors = self.current.get_unlinked_neighbors()
                     self.link_to(self.current, neighbor)
-                    unvisited_neighbors.remove(neighbor)
+                    if neighbor in unvisited_neighbors:
+                        unvisited_neighbors.remove(neighbor)
                     self.add_to_unvisited_legit_cells(unvisited_neighbors)
                     self.set_current(neighbor)
                     if self.must_break():
                         break
-                except IndexError:  # unvisited_neighbors is empty
+                else:
                     self.current = None
             if self.must_break():
                 break
@@ -41,7 +44,9 @@ class HuntAndKill(MazeAlgorithm):
                 self.expeditions += 1
                 self.set_current(choice(self.unvisited_legit_cells))
                 neighbor = choice(self.current.get_linked_neighbors())
-                self.link_to(neighbor, self.current)                     
+                self.link_to(neighbor, self.current)
+
+                self.direction = neighbor.get_direction(self.current)
 
                 self.add_to_unvisited_legit_cells(self.current.get_unlinked_neighbors())
             except IndexError:  # Neighbors is empty
@@ -51,6 +56,10 @@ class HuntAndKill(MazeAlgorithm):
         c.link(other_c)
         try:
             self.unvisited_legit_cells.remove(other_c)
+        except ValueError:
+            pass
+        try:
+            self.unvisited_legit_cells.remove(c)
         except ValueError:
             pass
         other_c.group = self.expeditions

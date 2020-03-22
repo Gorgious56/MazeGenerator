@@ -6,6 +6,7 @@ class CellTriangle(Cell):
 
     def __init__(self, row, col):
         super().__init__(row, col)
+        # If Upright : NE, NW, S else : SW, SE, N
         self.neighbors = [None] * 3
 
     def is_upright(self):

@@ -1,5 +1,4 @@
 import bpy
-from mathutils import Color
 from random import seed, random
 from .. utils . modifier_manager import add_modifier, add_driver_to_object
 from .. utils . distance_manager import Distances
@@ -10,11 +9,7 @@ from .. maze_logic . data_structure . grid_hex import GridHex
 from .. maze_logic . data_structure . grid_triangle import GridTriangle
 from .. maze_logic . algorithms import algorithm_manager
 from .. visual . cell_type_manager import POLAR, TRIANGLE, HEXAGON, get_cell_vertices
-
-
-DISTANCE = 'DISTANCE'
-GROUP = 'GROUP'
-NEIGHBORS = 'NEIGHBORS'
+from .. visual . cell_visual_manager import DISTANCE, GROUP, NEIGHBORS, LONGEST_DISTANCE
 
 
 class GridVisual:
@@ -34,8 +29,10 @@ class GridVisual:
         self.cell_vertices = get_cell_vertices(self.props.cell_type)
 
         self.generate_grid()
-        algorithm_manager.work(props.maze_algorithm, self.grid, props.seed, max_steps=props.steps)
+        algorithm_manager.work(props.maze_algorithm, self.grid, props.seed, max_steps=props.steps, parameter=props.maze_bias)
         self.grid.braid_dead_ends(props.braid_dead_ends, props.seed)
+        self.grid.sparse_dead_ends(props.sparse_dead_ends, props.braid_dead_ends, props.seed)
+
         self.generate_objects()
         self.build_objects()
         self.generate_modifiers()
@@ -105,10 +102,13 @@ class GridVisual:
             color_node.outputs['Color'].default_value = (random(), random(), random(), 1)
         else:
             color_node = nodes.new(type='ShaderNodeVertexColor')
-            color_node.layer_name = self.props.paint_style
+            if self.props.paint_style == DISTANCE and self.props.show_only_longest_path:
+                color_node.layer_name = LONGEST_DISTANCE
+            else:
+                color_node.layer_name = self.props.paint_style
 
         color_node.location = -400, 0
-        hue_sat_value = nodes.new(type='ShaderNodeHueSaturation')        
+        hue_sat_value = nodes.new(type='ShaderNodeHueSaturation')
         hue_sat_value.location = -200, 0
         add_driver_to_object(hue_sat_value.inputs['Hue'], 'default_value', 'hue_shift', 'SCENE', self.scene, 'mg_props.hue_shift', '0.5 + hue_shift')
         add_driver_to_object(hue_sat_value.inputs['Saturation'], 'default_value', 'sat_shift', 'SCENE', self.scene, 'mg_props.saturation_shift', '1 + sat_shift')
@@ -144,7 +144,7 @@ class GridVisual:
             self.obj_walls.location.xyz = self.obj_cells.location.xyz = (-self.grid.columns / 2, -self.grid.rows / 2, 0)
 
     def build_objects(self):
-        all_walls, all_cells = self.grid.get_blueprint()        
+        all_walls, all_cells = self.grid.get_blueprint()
 
         self.mesh_wall.from_pydata(
             all_walls,
@@ -170,7 +170,7 @@ class GridVisual:
         )
 
     def paint_cells(self):
-        layers = {DISTANCE: [], GROUP: [], NEIGHBORS: []}
+        layers = {DISTANCE: [], GROUP: [], NEIGHBORS: [], LONGEST_DISTANCE: []}
 
         unmasked_and_linked_cells = self.grid.get_unmasked_and_linked_cells()
 
@@ -180,6 +180,8 @@ class GridVisual:
         distances = Distances(new_start)
         distances.get_distances()
         goal, max_distance = distances.max()
+
+        longest_path = distances.path_to(goal).path
 
         seed(self.props.seed_color)
 
@@ -196,12 +198,17 @@ class GridVisual:
 
         for c in unmasked_and_linked_cells:
             this_distance = distances[c]
-            if this_distance is not None:  # Do not simplify "if this_distance is not None" to "if this_distance"
+            # Do not simplify "if this_distance is not None" to "if this_distance"
+            if this_distance is not None:
                 relative_distance = this_distance / max_distance
-                new_col = Color((relative_distance, 1 - relative_distance, 0))
-                layers[DISTANCE].append((new_col.r, new_col.g, new_col.b, 1))
+                layers[DISTANCE].append((relative_distance, 1 - relative_distance, 0, 1))
+                if c in longest_path:
+                    layers[LONGEST_DISTANCE].append((relative_distance, 1 - relative_distance, 0, 1))
+                else:
+                    layers[LONGEST_DISTANCE].append((0.5, 0.5, 0.5, 1))
             else:
                 layers[DISTANCE].append((0.5, 0.5, 0.5, 1))
+                layers[LONGEST_DISTANCE].append((0.5, 0.5, 0.5, 1))
 
             layers[GROUP].append(group_colors[c.group])
 

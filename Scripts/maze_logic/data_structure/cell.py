@@ -1,3 +1,6 @@
+from random import random, choice
+
+
 class Cell:
     neighbors_return = [2, 3, 0, 1]
 
@@ -19,6 +22,12 @@ class Cell:
 
     def __repr__(self):
         return self.__str__()
+
+    def get_direction(self, other_cell):
+        try:
+            return self.neighbors.index(other_cell)
+        except ValueError:
+            return -1
 
     def link(self, other_cell, bidirectional=True):
         self.links[other_cell] = True
@@ -56,3 +65,54 @@ class Cell:
 
     def get_wall_mask(self):
         return [not self.exists_and_is_linked(n) for n in self.neighbors] if self.has_any_link() else [False] * len(self.neighbors)
+
+    def get_biased_unmasked_unlinked_neighbor(self, direction, bias):
+        if direction == -1 or type(self) is not Cell:
+            try:
+                unlinked_neighbor = choice(self.get_unlinked_neighbors())
+                return unlinked_neighbor, self.get_direction(unlinked_neighbor)
+            except IndexError:
+                return None, -1
+        else:
+            left_dir = (direction + 1) % 4
+            right_dir = (direction - 1) % 4
+            left = self.neighbors[left_dir]
+            front = self.neighbors[direction]
+            right = self.neighbors[right_dir]
+
+            choose_left = (1 - 2 * bias) / 3
+            choose_front = (1 - abs(bias) / 3) / 3
+
+            is_left_available = left and not left.has_any_link()
+            is_front_available = front and not front.has_any_link()
+            is_right_available = right and not right.has_any_link()
+            roll = random()
+
+            if choose_left > roll:
+                if is_left_available:
+                    return left, left_dir
+                elif is_front_available:
+                    return front, direction
+                elif is_right_available:
+                    return right, right_dir
+            elif choose_left + choose_front > roll:
+                if is_front_available:
+                    return front, direction
+                else:
+                    new_roll = random()
+                    choose_left = (1 - bias) / 2
+                    if choose_left > new_roll and is_left_available:
+                        return left, left_dir
+                    elif is_right_available:
+                        return right, right_dir
+                    else:
+                        return None, -1
+            elif is_right_available:
+                return right, right_dir
+            elif is_front_available:
+                return front, direction
+            elif is_left_available:
+                return left, left_dir
+            else:
+                return None, -1
+            return None, -1
