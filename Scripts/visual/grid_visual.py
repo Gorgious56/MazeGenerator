@@ -2,7 +2,7 @@ import bpy
 from random import seed, random
 from .. utils . modifier_manager import add_modifier, add_driver_to_object
 from .. utils . distance_manager import Distances
-from .. utils . vertex_colors_manager import set_vertex_color_layers
+from .. utils . mesh_manager import set_vertex_color_layers
 from .. maze_logic . data_structure . grid import Grid
 from .. maze_logic . data_structure . grid_polar import GridPolar
 from .. maze_logic . data_structure . grid_hex import GridHex
@@ -29,9 +29,9 @@ class GridVisual:
         self.cell_vertices = get_cell_vertices(self.props.cell_type)
 
         self.generate_grid()
-        algorithm_manager.work(props.maze_algorithm, self.grid, props.seed, max_steps=props.steps, parameter=props.maze_bias)
-        self.grid.braid_dead_ends(props.braid_dead_ends, props.seed)
+        algorithm_manager.work(props.maze_algorithm, self.grid, props.seed, max_steps=props.steps, bias=props.maze_bias)
         self.grid.sparse_dead_ends(props.sparse_dead_ends, props.braid_dead_ends, props.seed)
+        props.dead_ends = self.grid.braid_dead_ends(props.braid_dead_ends, props.seed)
 
         self.generate_objects()
         self.build_objects()
@@ -45,14 +45,16 @@ class GridVisual:
 
     def generate_grid(self):
         props = self.props
+        grid = None
         if props.cell_type == POLAR:
-            g = GridPolar(props.rows_or_radius)
+            grid = GridPolar
         elif props.cell_type == HEXAGON:
-            g = GridHex(props.rows_or_radius, props.rows_or_radius)
+            grid = GridHex
         elif props.cell_type == TRIANGLE:
-            g = GridTriangle(props.rows_or_radius, props.rows_or_radius)
+            grid = GridTriangle
         else:
-            g = Grid(props.rows_or_radius, props.rows_or_radius)
+            grid = Grid
+        g = grid(props.rows_or_radius, props.rows_or_radius, cell_size=props.cell_size)
         self.grid = g
 
     def generate_objects(self):
@@ -66,9 +68,9 @@ class GridVisual:
 
         # Get or add the Wall object and link it to the wall mesh
         try:
-            self.obj_walls = scene.objects['Wall']
+            self.obj_walls = scene.objects['Walls']
         except KeyError:
-            self.obj_walls = bpy.data.objects.new('Wall', self.mesh_wall)
+            self.obj_walls = bpy.data.objects.new('Walls', self.mesh_wall)
             scene.collection.objects.link(self.obj_walls)
 
         # Get or add the Cells mesh
@@ -124,6 +126,30 @@ class GridVisual:
         links.new(hue_sat_value.outputs[0], principled.inputs[0])
         links.new(principled.outputs[0], output.inputs[0])
 
+        try:
+            mat = self.obj_walls.material_slots[0].material
+        except IndexError:
+            mat = bpy.data.materials.new("mat_walls")
+            self.obj_walls.data.materials.append(mat)
+        mat.use_nodes = True
+
+        nodes = mat.node_tree.nodes
+        nodes.clear()
+
+        color_node = nodes.new(type='ShaderNodeRGB')
+        color_node.location = -400, 0
+        color = self.props.wall_color
+        color_node.outputs['Color'].default_value = [color[0], color[1], color[2], 1]
+
+        principled = nodes.new(type='ShaderNodeBsdfPrincipled')
+
+        output = nodes.new(type='ShaderNodeOutputMaterial')
+        output.location = 300, 0
+
+        links = mat.node_tree.links
+        links.new(color_node.outputs[0], principled.inputs[0])
+        links.new(principled.outputs[0], output.inputs[0])
+
     def generate_modifiers(self):
         props = self.props
         self.obj_walls.modifiers.clear()
@@ -151,6 +177,7 @@ class GridVisual:
             [(i, i + 1) for i in range(0, len(all_walls) - 1, 2)],
             [])
         edges = []
+
         cell_vertices = self.cell_vertices
         # Connect all cell edges to make a face:
         for cv in range(cell_vertices):
@@ -198,8 +225,7 @@ class GridVisual:
 
         for c in unmasked_and_linked_cells:
             this_distance = distances[c]
-            # Do not simplify "if this_distance is not None" to "if this_distance"
-            if this_distance is not None:
+            if this_distance is not None:  # Do not simplify "if this_distance is not None" to "if this_distance"
                 relative_distance = this_distance / max_distance
                 layers[DISTANCE].append((relative_distance, 1 - relative_distance, 0, 1))
                 if c in longest_path:

@@ -14,7 +14,7 @@ class HuntAndKill(MazeAlgorithm):
         self.direction = - 1
 
         self.on()
-        
+
     def on(self):
 
         self.unvisited_legit_cells = []
@@ -26,13 +26,9 @@ class HuntAndKill(MazeAlgorithm):
 
         while self.current and not self.must_break():
             while self.current and not self.must_break():
-                neighbor, self.direction = self.current.get_biased_unmasked_unlinked_neighbor(self.direction, self.bias)
+                neighbor, self.direction = self.current.get_biased_unmasked_unlinked_directional_neighbor(self.bias, self.direction)
                 if neighbor:
-                    unvisited_neighbors = self.current.get_unlinked_neighbors()
                     self.link_to(self.current, neighbor)
-                    if neighbor in unvisited_neighbors:
-                        unvisited_neighbors.remove(neighbor)
-                    self.add_to_unvisited_legit_cells(unvisited_neighbors)
                     self.set_current(neighbor)
                     if self.must_break():
                         break
@@ -68,6 +64,8 @@ class HuntAndKill(MazeAlgorithm):
     def set_current(self, c):
         self.current = c
         c.group = self.expeditions
+        unvisited_neighbors = self.current.get_unlinked_neighbors()
+        self.add_to_unvisited_legit_cells(unvisited_neighbors)
 
     def add_to_unvisited_legit_cells(self, cells):
         self.unvisited_legit_cells.extend([c for c in cells if c not in self.unvisited_legit_cells])

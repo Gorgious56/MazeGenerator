@@ -16,6 +16,8 @@ ALGO_WILSON = 'ALGO_WILSON'
 ALGO_HUNT_AND_KILL = 'ALGO_HUNT_AND_KILL'
 ALGO_RECURSIVE_BACKTRACKER = 'ALGO_RECURSIVE_BACKTRACKER'
 
+BIASED_ALGORITHMS = ALGO_RECURSIVE_BACKTRACKER, ALGO_HUNT_AND_KILL, ALGO_SIDEWINDER, ALGO_BINARY_TREE, ALGO_CROSS_STITCH
+
 
 def generate_algo_enum():
     return [(ALGO_BINARY_TREE, 'Binary Tree', ''),
@@ -28,19 +30,21 @@ def generate_algo_enum():
             ]
 
 
-def work(algorithm, grid, seed, max_steps=-1, parameter=0):
+def work(algorithm, grid, seed, max_steps=-1, bias=0):
     algo = None
     if algorithm == ALGO_BINARY_TREE:
-        BinaryTree(grid, seed, max_steps, parameter)
-    if algorithm == ALGO_SIDEWINDER:
-        Sidewinder(grid, seed, max_steps, parameter)
-    if algorithm == ALGO_CROSS_STITCH:
-        CrossStitch(grid, seed, max_steps, parameter)
-    if algorithm == ALGO_ALDOUS_BRODER:
-        AldousBroder(grid, seed, max_steps, parameter)
-    if algorithm == ALGO_WILSON:
-        Wilson(grid, seed, max_steps, parameter)
-    if algorithm == ALGO_HUNT_AND_KILL:
-        HuntAndKill(grid, seed, max_steps, parameter)
-    if algorithm == ALGO_RECURSIVE_BACKTRACKER:
-        RecursiveBacktracker(grid, seed, max_steps, parameter)
+        algo = BinaryTree
+    elif algorithm == ALGO_SIDEWINDER:
+        algo = Sidewinder
+    elif algorithm == ALGO_CROSS_STITCH:
+        algo = CrossStitch
+    elif algorithm == ALGO_ALDOUS_BRODER:
+        algo = AldousBroder
+    elif algorithm == ALGO_WILSON:
+        algo = Wilson
+    elif algorithm == ALGO_HUNT_AND_KILL:
+        algo = HuntAndKill
+    elif algorithm == ALGO_RECURSIVE_BACKTRACKER:
+        algo = RecursiveBacktracker
+    if algo:
+        algo(grid, seed, max_steps, bias)

@@ -1,4 +1,3 @@
-from random import choice
 from . maze_algorithm import MazeAlgorithm
 
 
@@ -6,29 +5,59 @@ class CrossStitch(MazeAlgorithm):
     def __init__(self, grid, _seed, _max_steps=-1, bias=0):
         super().__init__(_seed=_seed, _max_steps=_max_steps, bias=bias)
 
-        current = grid.random_cell(_seed)
-        current.group = 1
+        self.expeditions = 1
 
-        while current and not self.must_break():
-            unvisited_neighbors = current.get_unlinked_neighbors()
+        self.unvisited_legit_cells = []
 
-            if len(unvisited_neighbors) > 0:
-                neighbor = choice(unvisited_neighbors)
-                current.link(neighbor)
-                current = neighbor
-                current.group = 1
+        direction = -1
+        self.current = None
+
+        self.set_current(grid.random_cell(_seed))
+
+        self.current.group = 1
+
+        while self.current and not self.must_break():
+            unvisited_neighbor, direction = self.current.get_biased_unmasked_unlinked_directional_neighbor(bias, direction)
+
+            if unvisited_neighbor:
+                self.link_to(self.current, unvisited_neighbor)
+                self.set_current(unvisited_neighbor)
             else:
-                current = None
+                self.set_current(None)
             self.next_step()
 
-            for c in grid.each_cell():  # TODO optimize
+            while self.unvisited_legit_cells:
+                c = self.unvisited_legit_cells[0]
                 if self.must_break():
                     break
-                visited_neighbors = c.get_linked_neighbors()
-                if not c.has_any_link() and len(visited_neighbors) > 0:
-                    current = c
-                    current.group = 1
-                    neighbor = choice(visited_neighbors)
-                    current.link(neighbor)
-                    neighbor.group = 3
-                    self.next_step()
+                if not c.has_any_link():
+                    neighbor = c.get_biased_unmasked_linked_neighbor(bias, 5)
+                    if neighbor:
+                        self.set_current(c)
+                        self.link_to(self.current, neighbor)
+                        self.next_step()
+
+    def link_to(self, c, other_c):
+        c.link(other_c)
+        try:
+            self.unvisited_legit_cells.remove(other_c)
+        except ValueError:
+            pass
+        try:
+            self.unvisited_legit_cells.remove(c)
+        except ValueError:
+            pass
+        other_c.group = self.expeditions + 2
+        self.next_step()
+
+    def set_current(self, c):
+        self.current = c
+        if c:
+            c.group = self.expeditions
+            unvisited_neighbors = self.current.get_unlinked_neighbors()
+            self.add_to_unvisited_legit_cells(unvisited_neighbors)
+        else:
+            self.direction = - 1
+
+    def add_to_unvisited_legit_cells(self, cells):
+        self.unvisited_legit_cells.extend([c for c in cells if c not in self.unvisited_legit_cells])

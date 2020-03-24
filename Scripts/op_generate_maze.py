@@ -1,10 +1,11 @@
 from bpy.types import Operator
+from bpy.props import IntProperty
 from time import time
 from . visual . grid_visual import GridVisual
 
 
 class GenerateMazeOperator(Operator):
-    """Tooltip"""
+    """Generate a new maze"""
     bl_idname = "maze.generate"
     bl_label = "Generate Maze"
 
@@ -16,7 +17,7 @@ class GenerateMazeOperator(Operator):
     def execute(self, context):
         start_time = time()
         self.main(context)
-        print(str((time() - start_time) * 1000).split('.')[0] + ' ms')
+        context.scene.mg_props.generation_time = int((time() - start_time) * 1000)
         return {'FINISHED'}
 
     def main(self, context):

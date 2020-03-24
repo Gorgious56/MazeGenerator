@@ -3,7 +3,7 @@ from random import choice, seed, shuffle
 
 
 class Grid:
-    def __init__(self, rows, columns, name="", coord_system='cartesian', sides=4):
+    def __init__(self, rows, columns, name="", coord_system='cartesian', sides=4, cell_size=1):
         self.rows = rows
         self.columns = columns
         self.cells = [None] * (rows * columns)
@@ -19,6 +19,8 @@ class Grid:
         self.configure_cells()
 
         self.offset = (columns / 2, rows / 2, 0)
+
+        self.cell_size = 1
 
     def __delitem__(self, key):
         del self.cells[key[0] + key[1] * self.columns]
@@ -82,28 +84,27 @@ class Grid:
         return [c for c in self.get_unmasked_cells() if len(c.links) == 1]
 
     def braid_dead_ends(self, braid=0, _seed=None):
+        dead_ends_shuffle = self.get_dead_ends()
+        dead_ends = len(dead_ends_shuffle)
         if braid > 0:
             braid /= 100
             seed(_seed)
-            dead_ends_shuffle = self.get_dead_ends()
+
             shuffle(dead_ends_shuffle)
             stop_index = int(len(dead_ends_shuffle) * min(max(0, braid), 1))
             for c in dead_ends_shuffle[0:stop_index]:
-                if len(c.links) != 1:
-                    pass
-                else:
+                if len(c.links) == 1:
                     unconnected_neighbors = [_c for _c in c.get_neighbors() if _c not in c.links and _c.has_any_link()]
                     if len(unconnected_neighbors) > 0:
                         best = [_c for _c in unconnected_neighbors if len(c.links) < 2]
                         if len(best) == 0:
                             best = unconnected_neighbors
                         c.link(choice(best))
-            return dead_ends_shuffle[stop_index:len(dead_ends_shuffle)]
-        else:
-            return None
+                        dead_ends -= 1
+        return dead_ends
 
     def sparse_dead_ends(self, sparse=0, braid=0, _seed=None):
-        max_cells_to_cull = len(self.get_unmasked_and_linked_cells()) * (sparse / 100) * (1 - braid / 100) - 2
+        max_cells_to_cull = len(self.get_unmasked_and_linked_cells()) * (sparse / 100) - 2
         culled_cells = 0
         while culled_cells < max_cells_to_cull:
             dead_ends = self.get_dead_ends()
@@ -144,7 +145,8 @@ class Grid:
     def get_unmasked_and_linked_cells(self):
         return [c for c in self.each_cell() if any(c.links)]
 
-    def get_cell_position(self, c, cell_size=1):
+    def get_cell_position(self, c):
+        cell_size = self.cell_size
         center = (c.column * cell_size, c.row * cell_size, 0)
         top_left = ((c.column - 0.5) * cell_size, (c.row + 0.5) * cell_size, 0)
         top_right = ((c.column + 0.5) * cell_size, (c.row + 0.5) * cell_size, 0)
@@ -167,11 +169,11 @@ class Grid:
     def need_wall_to(self, c):
         return not c or c.is_masked or not c.has_any_link()
 
-    def get_cell_walls(self, c, cell_size=1):
+    def get_cell_walls(self, c):
         walls = []
         cells = []
         mask = c.get_wall_mask()
-        positions = self.get_cell_position(c, cell_size)
+        positions = self.get_cell_position(c)
         if mask[0]:
             walls.append(positions[1])
             walls.append(positions[2])

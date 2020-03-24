@@ -18,7 +18,7 @@ class RecursiveBacktracker(MazeAlgorithm):
         while len(stack) > 0 and not self.must_break():
             current = stack[-1]
 
-            unlinked_neighbor, direction = current.get_biased_unmasked_unlinked_neighbor(direction, bias)
+            unlinked_neighbor, direction = current.get_biased_unmasked_unlinked_directional_neighbor(bias, direction)
             if unlinked_neighbor:
                 current.link(unlinked_neighbor)
                 self.next_step()

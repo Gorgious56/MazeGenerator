@@ -29,7 +29,7 @@ class MGProperties(PropertyGroup):
     auto_update: BoolProperty(
         name='Auto Update',
         default=True,
-        description='Generate a new maze each time a property is modified',
+        description='Generate a new maze each time a parameter is modified. This will hurt performance when generating big mazes',
         update=generate_maze
     )
 
@@ -43,7 +43,7 @@ class MGProperties(PropertyGroup):
 
     cell_type: EnumProperty(
         name="Cell Type",
-        description="Choose the shape of your cells",
+        description="The shape of the maze's cells",
         items=generate_cell_type_enum(),
         default=DEFAULT_CELL_TYPE,
         update=generate_maze
@@ -62,15 +62,16 @@ class MGProperties(PropertyGroup):
         name="Seed",
         description="This seed will be used to randomize the maze",
         default=0,
+        min=0,
         update=generate_maze
     )
 
     maze_bias: FloatProperty(
         name="Bias",
-        description="An additional parameter to tweak the maze. The results differ for each one",
+        description="Add a bias to the algorithm in a certain direction",
         default=0,
-        min=-1,
-        max=1,
+        soft_min=-1,
+        soft_max=1,
         update=generate_maze
     )
 
@@ -85,7 +86,7 @@ class MGProperties(PropertyGroup):
 
     braid_dead_ends: IntProperty(
         name="Braid Dead Ends",
-        description="Set the amount of dead-ends to get rid of",
+        description="This percentage of dead-ends will be connected to one of their neighbors",
         default=0,
         min=0,
         max=100,
@@ -118,6 +119,16 @@ class MGProperties(PropertyGroup):
         min=0,
         soft_max=2,
         # update=generate_maze
+    )
+
+    wall_color: FloatVectorProperty(
+        name='Wall Color',
+        description="Change the wall's displayed color",
+        subtype='COLOR',
+        default=(0.5, 0.5, 0.5),
+        min=0,
+        max=1,
+        update=update_paint
     )
 
     seed_color: IntProperty(
@@ -155,6 +166,15 @@ class MGProperties(PropertyGroup):
         max=1,
     )
 
+    cell_size: FloatProperty(
+        name="Cell Size",
+        description="Tweak the cell's size",
+        default=1,
+        min=0.1,
+        max=1,
+        update=generate_maze
+    )
+
     value_shift: FloatProperty(
         name="Color Shift",
         description="Tweak the color value shift of the cells",
@@ -170,6 +190,16 @@ class MGProperties(PropertyGroup):
         default=DEFAULT_CELL_VISUAL_TYPE,
         update=update_paint
     )
+
+    generation_time: IntProperty(
+        name="Generation Time",
+    )
+
+    dead_ends: IntProperty(
+        name="Dead Ends",
+    )
+
+
 
     def register():
         Scene.mg_props = PointerProperty(type=MGProperties)

@@ -6,9 +6,10 @@ from . grid import Grid
 
 
 class GridPolar(Grid):
-    def __init__(self, rows, name="", cell_size=1):
+    def __init__(self, rows, columns, name="", cell_size=1):
         self.cell_size = max(0, cell_size)
         self.rows_polar = []
+        self.doubling_rows = []
         super().__init__(rows, 1, name, 'polar', 4)
 
     def prepare_grid(self):
@@ -25,6 +26,8 @@ class GridPolar(Grid):
             ratio = round(estimated_cell_width / row_height + self.cell_size - 1)
 
             cells = previous_count * ratio
+            if cells != previous_count:
+                self.doubling_rows.append(r - 1)
             rows[r] = [CellPolar(r, col) for col in range(cells)]
         self.rows_polar = rows
 
@@ -66,8 +69,8 @@ class GridPolar(Grid):
         for c in self.each_cell():
             row, col = c.row, c.column
             if row > 0:
-                c.cw = self[row, (col + 1) % len(self.rows_polar[row])]
-                c.ccw = self[row, col - 1]
+                c.ccw = self[row, (col + 1) % len(self.rows_polar[row])]
+                c.cw = self[row, col - 1]
 
                 ratio = len(self.rows_polar[row]) / len(self.rows_polar[row - 1])
                 parent = self[row - 1, floor(col // ratio)]
@@ -81,27 +84,39 @@ class GridPolar(Grid):
             for c in r:
                 _, C, D, B, A = self.get_cell_position(c, len(r), self.cell_size)
 
-                if c.has_any_link():
-                    cells.append(A)
-                    cells.append(B)
-                    cells.append(D)
-                    cells.append(C)
-                    if not c.exists_and_is_linked(c.inward):
+                if not c.has_any_link():
+                    if c.inward and c.inward.has_any_link():
                         walls.append(A)
                         walls.append(C)
-                    if not c.exists_and_is_linked(c.cw):
+                    if c.ccw and c.ccw.has_any_link():
                         walls.append(C)
-                        walls.append(D)
-                    if c.row == self.rows - 1:
-                        walls.append(B)
                         walls.append(D)
                 else:
-                    if c.inward and c.has_any_link():
-                        walls.append(A)
-                        walls.append(C)
-                    if c.cw and c.cw.has_any_link():
-                        walls.append(C)
-                        walls.append(D)
+                    if c.row > 0:
+                        if not c.exists_and_is_linked(c.inward):
+                            walls.append(A)
+                            walls.append(C)
+                        if not c.exists_and_is_linked(c.ccw):
+                            walls.append(C)
+                            walls.append(D)
+                        if c.row == self.rows - 1:
+                            walls.append(B)
+                            walls.append(D)
+                    if c.row >= min(self.rows - 1, 12) or c.row not in self.doubling_rows:
+                        cells.append(A)
+                        cells.append(B)
+                        cells.append(D)
+                        cells.append(C)
+                    elif c.row > 0:
+                        cells.append(A)
+                        cells.append(B + (B - A) * (0.1 if c.row > 1 else 0.35) - Vector([0, 0, 0.01]))
+                        cells.append(D + (D - C) * (0.1 if c.row > 1 else 0.35) - Vector([0, 0, 0.01]))
+                        cells.append(C)
+                    else:
+                        cells.append(Vector([-1, 1, -0.02]))
+                        cells.append(Vector([1, 1, -0.02]))
+                        cells.append(Vector([1, -1, -0.02]))
+                        cells.append(Vector([-1, -1, -0.02]))
 
         return walls, cells
 

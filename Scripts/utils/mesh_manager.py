@@ -8,7 +8,6 @@ def remove_all_vertex_layers(mesh):
 
 
 def set_vertex_colors_layer(obj, bm, layer_name, cols, points_per_face=4):
-
     color_layer = bm.loops.layers.color.new(layer_name)
     color_table = [cols[i // points_per_face] for i in range(len(bm.verts))]
 
@@ -21,6 +20,9 @@ def set_vertex_color_layers(obj, layers, points_per_face=4):
     # the layer parameter is supposed to be a dictionary with key = vertex layer name, and values = all cell colors
     mesh = obj.data
     remove_all_vertex_layers(mesh)
+
+    # for g in obj.vertex_groups:
+    #     obj.vertex_groups.remove(g)
 
     bm = bmesh.new()
     bm.from_mesh(mesh)

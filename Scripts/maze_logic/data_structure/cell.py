@@ -1,4 +1,4 @@
-from random import random, choice
+from random import random, choice, choices
 
 
 class Cell:
@@ -66,7 +66,21 @@ class Cell:
     def get_wall_mask(self):
         return [not self.exists_and_is_linked(n) for n in self.neighbors] if self.has_any_link() else [False] * len(self.neighbors)
 
-    def get_biased_unmasked_unlinked_neighbor(self, direction, bias):
+    def get_biased_choice(self, cell_list, bias, relative_weight=5):
+        cell_list_len = len(cell_list)
+        try:
+            return choices(cell_list, weights=[1 + relative_weight * abs(bias) * (ind if bias >= 0 else cell_list_len - 1 - ind) for ind in range(cell_list_len)])[0]
+        except IndexError:
+            return None
+
+    def get_biased_unmasked_linked_neighbor(self, bias, relative_weight=5):
+        return self.get_biased_choice(self.get_linked_neighbors(), bias, relative_weight)
+
+    def get_biased_unmasked_unlinked_neighbor(self, bias, relative_weight=5):
+        return self.get_biased_choice(self.get_unlinked_neighbors(), bias, relative_weight)
+
+    def get_biased_unmasked_unlinked_directional_neighbor(self, bias, direction):
+        direction = int(direction)
         if direction == -1 or type(self) is not Cell:
             try:
                 unlinked_neighbor = choice(self.get_unlinked_neighbors())
