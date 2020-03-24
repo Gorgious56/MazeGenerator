@@ -1,11 +1,11 @@
 from mathutils import Vector
-from . grid import Grid
-from . cell_hex import CellHex
+from .. grids . grid import Grid
+from .. cells . cell_hex import CellHex
 
 
 class GridHex(Grid):
-    def __init__(self, rows, columns, name=""):
-        super().__init__(rows, columns, name, 'cartesian', sides=6)
+    def __init__(self, rows, columns, name="", cell_size=1):
+        super().__init__(rows, columns, name, 'cartesian', sides=6, cell_size=cell_size)
 
     def prepare_grid(self):
         for r in range(self.rows):
@@ -51,7 +51,7 @@ class GridHex(Grid):
             cells.append(positions[1 + (i * 2)])
             cells.append(positions[2 + (i * 2)])
 
-        return walls, cells
+        return walls, cells, None
 
     def get_cell_position(self, c, size):
         size /= 2 ** 0.5

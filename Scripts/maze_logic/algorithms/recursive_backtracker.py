@@ -1,6 +1,4 @@
-from random import choice
 from . maze_algorithm import MazeAlgorithm
-from .. data_structure . cell import Cell
 
 
 class RecursiveBacktracker(MazeAlgorithm):

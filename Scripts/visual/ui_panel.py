@@ -55,6 +55,7 @@ class WallsPanel(bpy.types.Panel):
         row.prop(mg_props, 'wall_height')
         row.prop(mg_props, 'wall_width')
         layout.prop(mg_props, 'wall_color')
+        layout.prop(mg_props, 'wall_hide', text='Auto-hide wall when insetting')
 
 
 class CellsPanel(bpy.types.Panel):
@@ -85,9 +86,13 @@ class CellsPanel(bpy.types.Panel):
             layout.prop(mg_props, 'seed_color_button', text='Randomize Colors', toggle=True)
         else:
             layout.prop(mg_props, 'show_only_longest_path', text='Show Longest Path')
+            row = layout.row(align=True)
+            row.prop(mg_props, 'distance_color_start', text='Start')
+            row.prop(mg_props, 'distance_color_end', text='End')
         layout.prop(mg_props, 'hue_shift', slider=True, text='Hue Shift', )
         layout.prop(mg_props, 'saturation_shift', slider=True, text='Saturation Shift')
         layout.prop(mg_props, 'value_shift', slider=True, text='Value Shift', icon='COLORSET_10_VEC')
+
 
 
 class ParametersPanel(bpy.types.Panel):

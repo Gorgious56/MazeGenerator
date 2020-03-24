@@ -16,10 +16,8 @@ class GenerateMazeOperator(Operator):
 
     def execute(self, context):
         start_time = time()
-        self.main(context)
-        context.scene.mg_props.generation_time = int((time() - start_time) * 1000)
-        return {'FINISHED'}
-
-    def main(self, context):
         if context.mode == 'OBJECT':
             GridVisual(context.scene)
+        context.scene.mg_props.generation_time = int((time() - start_time) * 1000)
+        return {'FINISHED'}
+        

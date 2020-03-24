@@ -1,9 +1,8 @@
-from random import choices
 from . maze_algorithm import MazeAlgorithm
-from .. data_structure . cell_polar import CellPolar
-from .. data_structure . cell import Cell
-from .. data_structure . cell_triangle import CellTriangle
-from .. data_structure . cell_hex import CellHex
+from .. data_structure . cells . cell_polar import CellPolar
+from .. data_structure . cells . cell import Cell
+from .. data_structure . cells . cell_triangle import CellTriangle
+from .. data_structure . cells . cell_hex import CellHex
 
 
 class BinaryTree(MazeAlgorithm):

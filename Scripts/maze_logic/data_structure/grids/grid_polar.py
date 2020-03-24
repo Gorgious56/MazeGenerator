@@ -1,8 +1,8 @@
 from random import choice, seed
 from math import pi, floor, cos, sin
 from mathutils import Vector
-from . cell_polar import CellPolar
-from . grid import Grid
+from .. cells . cell_polar import CellPolar
+from .. grids . grid import Grid
 
 
 class GridPolar(Grid):
@@ -10,7 +10,7 @@ class GridPolar(Grid):
         self.cell_size = max(0, cell_size)
         self.rows_polar = []
         self.doubling_rows = []
-        super().__init__(rows, 1, name, 'polar', 4)
+        super().__init__(rows, 1, name, 'polar', 4, cell_size=cell_size)
 
     def prepare_grid(self):
         rows = [None] * self.rows

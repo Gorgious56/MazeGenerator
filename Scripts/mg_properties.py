@@ -16,6 +16,7 @@ def generate_maze(self, context):
 def update_paint(self, context):
     if GridVisual.Instance:
         GridVisual.Instance.set_materials()
+        GridVisual.Instance.update_visibility()
 
 
 def click_randomize_color_button(self, value):
@@ -131,6 +132,13 @@ class MGProperties(PropertyGroup):
         update=update_paint
     )
 
+    wall_hide: BoolProperty(
+        name='Wall Hide',
+        description="Auto-hide the wall if the cells are inset",
+        default=True,
+        update=update_paint
+    )
+
     seed_color: IntProperty(
         name="Color Seed",
         description="Configure the wall default width",
@@ -147,6 +155,26 @@ class MGProperties(PropertyGroup):
         name="Longest Path",
         description="Toggle this property to show only the longest path",
         default=False,
+        update=update_paint
+    )
+
+    distance_color_start: FloatVectorProperty(
+        name='Path Start Color',
+        description="Change the path's start cell color. This will change the distance's displayed gradient",
+        subtype='COLOR',
+        default=(0, 1, 0),
+        min=0,
+        max=1,
+        update=update_paint
+    )    
+    
+    distance_color_end: FloatVectorProperty(
+        name='Path End Color',
+        description="Change the path's end cell color. This will change the distance's displayed gradient",
+        subtype='COLOR',
+        default=(1, 0, 0),
+        min=0,
+        max=1,
         update=update_paint
     )
 
@@ -170,7 +198,8 @@ class MGProperties(PropertyGroup):
         name="Cell Size",
         description="Tweak the cell's size",
         default=1,
-        min=0.1,
+        soft_min=0.1,
+        min=0,
         max=1,
         update=generate_maze
     )

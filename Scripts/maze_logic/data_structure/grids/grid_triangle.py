@@ -1,11 +1,11 @@
 from mathutils import Vector
-from . grid import Grid
-from . cell_triangle import CellTriangle
+from .. grids . grid import Grid
+from .. cells . cell_triangle import CellTriangle
 
 
 class GridTriangle(Grid):
-    def __init__(self, rows, columns, name=""):
-        super().__init__(rows, columns, name, 'cartesian', sides=3)
+    def __init__(self, rows, columns, name="", cell_size=1):
+        super().__init__(rows, columns, name, 'cartesian', sides=3, cell_size=cell_size)
 
     def prepare_grid(self):
         for r in range(self.rows):
@@ -67,7 +67,7 @@ class GridTriangle(Grid):
         cells.append(positions[1])
         cells.append(positions[2])  
       
-        return walls, cells
+        return walls, cells, []
 
     def get_cell_position(self, c, size):
         width = size

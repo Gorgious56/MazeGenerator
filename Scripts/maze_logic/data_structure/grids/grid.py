@@ -1,5 +1,15 @@
-from . import cell
+from .. cells import cell
 from random import choice, seed, shuffle
+from mathutils import Vector
+
+TOP = 'TOP'
+BOT = 'BOT'
+LEFT = 'LEFT'
+RIGHT = 'RIGHT'
+TOP_BORDER = 'TOP_BORDER'
+BOT_BORDER = 'BOT_BORDER'
+LEFT_BORDER = 'LEFT_BORDER'
+RIGHT_BORDER = 'RIGHT_BORDER'
 
 
 class Grid:
@@ -20,7 +30,7 @@ class Grid:
 
         self.offset = (columns / 2, rows / 2, 0)
 
-        self.cell_size = 1
+        self.cell_size = cell_size
 
     def __delitem__(self, key):
         del self.cells[key[0] + key[1] * self.columns]
@@ -146,13 +156,28 @@ class Grid:
         return [c for c in self.each_cell() if any(c.links)]
 
     def get_cell_position(self, c):
+        positions = {}
         cell_size = self.cell_size
-        center = (c.column * cell_size, c.row * cell_size, 0)
-        top_left = ((c.column - 0.5) * cell_size, (c.row + 0.5) * cell_size, 0)
-        top_right = ((c.column + 0.5) * cell_size, (c.row + 0.5) * cell_size, 0)
-        bot_right = ((c.column + 0.5) * cell_size, (c.row - 0.5) * cell_size, 0)
-        bot_left = ((c.column - 0.5) * cell_size, (c.row - 0.5) * cell_size, 0)
-        return center, top_left, top_right, bot_right, bot_left
+        border = (1 - cell_size) / 2
+        positions['center'] = Vector([c.column, c.row, 0])
+        positions['top_left'] = Vector([c.column - 0.5, c.row + 0.5, 0])
+        positions['top_right'] = Vector([c.column + 0.5, c.row + 0.5, 0])
+        positions['bot_right'] = Vector([c.column + 0.5, c.row - 0.5, 0])
+        positions['bot_left'] = Vector([c.column - 0.5, c.row - 0.5, 0])
+        positions['top_left_border'] = positions['top_left'] + Vector([1, -1, 0]) * border
+        positions['top_right_border'] = positions['top_right'] + Vector([-1, -1, 0]) * border
+        positions['bot_right_border'] = positions['bot_right'] + Vector([1, 1, 0]) * border
+        positions['bot_left_border'] = positions['bot_left'] + Vector([-1, 1, 0]) * border
+
+        positions[TOP] = c.row + 0.5
+        positions[BOT] = c.row - 0.5
+        positions[LEFT] = c.column - 0.5
+        positions[RIGHT] = c.column + 0.5
+        positions[TOP_BORDER] = positions[TOP] - border
+        positions[BOT_BORDER] = positions[BOT] + border
+        positions[LEFT_BORDER] = positions[LEFT] + border
+        positions[RIGHT_BORDER] = positions[RIGHT] - border
+        return positions
 
     def sub_vec(self, vec1, vec2):
         return (vec1[0] - vec2[0], vec1[1] - vec2[1], vec1[2] - vec2[2])
@@ -160,11 +185,14 @@ class Grid:
     def get_blueprint(self):
         walls = []
         cells = []
+        cells_vertices = []
         for c in self.get_unmasked_and_linked_cells():
-            new_walls, new_cells = self.get_cell_walls(c)
+            new_walls, new_cells, cell_vertices = self.get_cell_walls(c)
             walls.extend(new_walls)
             cells.extend(new_cells)
-        return walls, cells
+            if cell_vertices:
+                cells_vertices.append(cell_vertices)
+        return walls, cells, cells_vertices
 
     def need_wall_to(self, c):
         return not c or c.is_masked or not c.has_any_link()
@@ -173,23 +201,44 @@ class Grid:
         walls = []
         cells = []
         mask = c.get_wall_mask()
-        positions = self.get_cell_position(c)
+        p = self.get_cell_position(c)
         if mask[0]:
-            walls.append(positions[1])
-            walls.append(positions[2])
+            walls.append(p['top_left'])
+            walls.append(p['top_right'])
         if mask[3]:
-            walls.append(positions[2])
-            walls.append(positions[3])
+            walls.append(p['bot_right'])
+            walls.append(p['top_right'])
         if self.need_wall_to(c.neighbors[2]):
-            walls.append(positions[3])
-            walls.append(positions[4])
+            walls.append(p['bot_right'])
+            walls.append(p['bot_left'])
         if self.need_wall_to(c.neighbors[1]):
-            walls.append(positions[1])
-            walls.append(positions[4])
+            walls.append(p['top_left'])
+            walls.append(p['bot_left'])
 
-        cells.append(positions[1])
-        cells.append(positions[2])
-        cells.append(positions[3])
-        cells.append(positions[4])
+        cell_corners = 4
 
-        return walls, cells
+        cells.append(Vector([p[RIGHT_BORDER], p[TOP_BORDER], 0]))
+        if not mask[0]:
+            cells.append(Vector([p[RIGHT_BORDER], p[TOP], 0]))
+            cells.append(Vector([p[LEFT_BORDER], p[TOP], 0]))
+            cell_corners += 2
+
+        cells.append(Vector([p[LEFT_BORDER], p[TOP_BORDER], 0]))
+        if not mask[1]:
+            cells.append(Vector([p[LEFT], p[TOP_BORDER], 0]))
+            cells.append(Vector([p[LEFT], p[BOT_BORDER], 0]))
+            cell_corners += 2
+
+        cells.append(Vector([p[LEFT_BORDER], p[BOT_BORDER], 0]))
+        if not mask[2]:
+            cells.append(Vector([p[LEFT_BORDER], p[BOT], 0]))
+            cells.append(Vector([p[RIGHT_BORDER], p[BOT], 0]))
+            cell_corners += 2
+        cells.append(Vector([p[RIGHT_BORDER], p[BOT_BORDER], 0]))
+
+        if not mask[3]:
+            cells.append(Vector([p[RIGHT], p[BOT_BORDER], 0]))
+            cells.append(Vector([p[RIGHT], p[TOP_BORDER], 0]))
+            cell_corners += 2
+
+        return walls, cells, cell_corners
