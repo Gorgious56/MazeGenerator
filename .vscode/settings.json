@@ -1,6 +1,15 @@
 {
-    "python.linting.pylintEnabled": false,
-    "python.linting.flake8Enabled": true,
-    "python.linting.enabled": true,
-    "blender.addon.reloadOnSave": true
+  "python.linting.pylintEnabled": false,
+  "python.linting.flake8Enabled": true,
+  "python.linting.enabled": true,
+  "blender.addon.reloadOnSave": true,
+  "files.exclude": {
+    "**/.json": true,
+    "**/.pyc": true,
+    "**/__pycache__": true,
+    "**/__pycache__.*": true,
+    ".vscode\\settings.json": true,
+    ".vscode": true,
+    "MazeGenerator.code-workspace": true
+  }
 }
