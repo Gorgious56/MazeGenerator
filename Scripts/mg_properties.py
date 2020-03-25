@@ -26,6 +26,12 @@ def click_randomize_color_button(self, value):
         GridVisual.Instance.paint_cells()
 
 
+def update_modifiers(self, context):
+    if GridVisual.Instance:
+        GridVisual.Instance.generate_modifiers()
+        GridVisual.Instance.generate_drivers()
+
+
 class MGProperties(PropertyGroup):
     auto_update: BoolProperty(
         name='Auto Update',
@@ -110,7 +116,6 @@ class MGProperties(PropertyGroup):
         description="Configure the wall default height",
         default=0.5,
         soft_min=0,
-        # update=generate_maze
     )
 
     wall_width: FloatProperty(
@@ -119,7 +124,6 @@ class MGProperties(PropertyGroup):
         default=0.2,
         min=0,
         soft_max=2,
-        # update=generate_maze
     )
 
     wall_color: FloatVectorProperty(
@@ -136,7 +140,14 @@ class MGProperties(PropertyGroup):
         name='Wall Hide',
         description="Auto-hide the wall if the cells are inset",
         default=True,
-        update=update_paint
+    )
+
+    wall_bevel: FloatProperty(
+        name='Wall Bevel',
+        description="Add a bevel to the wall. Caution : This will increase generation time",
+        default=0,
+        min=0,
+        soft_max=0.1,
     )
 
     seed_color: IntProperty(
@@ -166,8 +177,8 @@ class MGProperties(PropertyGroup):
         min=0,
         max=1,
         update=update_paint
-    )    
-    
+    )
+
     distance_color_end: FloatVectorProperty(
         name='Path End Color',
         description="Change the path's end cell color. This will change the distance's displayed gradient",
@@ -194,14 +205,30 @@ class MGProperties(PropertyGroup):
         max=1,
     )
 
-    cell_size: FloatProperty(
-        name="Cell Size",
-        description="Tweak the cell's size",
-        default=1,
-        soft_min=0.1,
+    cell_inset: FloatProperty(
+        name="Cell Inset",
+        description="Tweak the cell's inset",
+        default=0,
+        soft_max=0.9,
         min=0,
         max=1,
         update=generate_maze
+    )
+
+    cell_thickness: FloatProperty(
+        name="Cell Thickness",
+        description="Tweak the cell's thickness",
+        default=0,
+        soft_max=0.5,
+        min=0,
+    )
+
+    cell_contour: FloatProperty(
+        name='Cell Contour',
+        description='This will add a stylised contour the cells',
+        default=0,
+        min=0,
+        soft_max=0.2
     )
 
     value_shift: FloatProperty(
@@ -228,7 +255,12 @@ class MGProperties(PropertyGroup):
         name="Dead Ends",
     )
 
-
+    maze_weave: BoolProperty(
+        name='Weave Maze',
+        description='Check if you want the cells to weave over and under each other',
+        default=False,
+        update=generate_maze
+    )
 
     def register():
         Scene.mg_props = PointerProperty(type=MGProperties)

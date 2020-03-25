@@ -1,6 +1,6 @@
 import bpy
 from .. maze_logic . algorithms . algorithm_manager import BIASED_ALGORITHMS
-from . cell_type_manager import TRIANGLE, HEXAGON, POLAR
+from . cell_type_manager import TRIANGLE, HEXAGON, POLAR, SQUARE
 
 
 class MazeGeneratorPanel(bpy.types.Panel):
@@ -52,10 +52,11 @@ class WallsPanel(bpy.types.Panel):
         mg_props = scene.mg_props
 
         row = layout.row(align=True)
+        layout.prop(mg_props, 'wall_bevel', text='Wall Bevel', slider=True)
         row.prop(mg_props, 'wall_height')
         row.prop(mg_props, 'wall_width')
         layout.prop(mg_props, 'wall_color')
-        layout.prop(mg_props, 'wall_hide', text='Auto-hide wall when insetting')
+        layout.prop(mg_props, 'wall_hide', text='Auto-hide wall when insetting', toggle=True)
 
 
 class CellsPanel(bpy.types.Panel):
@@ -81,18 +82,27 @@ class CellsPanel(bpy.types.Panel):
         scene = context.scene
         mg_props = scene.mg_props
 
-        layout.prop(mg_props, 'paint_style')
+        box = layout.box()
+        row = box.row()
+        row.prop(mg_props, 'maze_weave', toggle=True)
+        row.enabled = mg_props.cell_type == SQUARE
+        row = box.row(align=True)
+        row.prop(mg_props, 'cell_inset', slider=True, text='Inset')
+        row.prop(mg_props, 'cell_contour', slider=True, text='Contour')
+        box.prop(mg_props, 'cell_thickness', slider=True, text='Thickness')
+
+        box = layout.box()
+        box.prop(mg_props, 'paint_style')
         if mg_props.paint_style != 'DISTANCE':
-            layout.prop(mg_props, 'seed_color_button', text='Randomize Colors', toggle=True)
+            box.prop(mg_props, 'seed_color_button', text='Randomize Colors', toggle=True)
         else:
-            layout.prop(mg_props, 'show_only_longest_path', text='Show Longest Path')
-            row = layout.row(align=True)
+            box.prop(mg_props, 'show_only_longest_path', text='Show Longest Path')
+            row = box.row(align=True)
             row.prop(mg_props, 'distance_color_start', text='Start')
             row.prop(mg_props, 'distance_color_end', text='End')
-        layout.prop(mg_props, 'hue_shift', slider=True, text='Hue Shift', )
-        layout.prop(mg_props, 'saturation_shift', slider=True, text='Saturation Shift')
-        layout.prop(mg_props, 'value_shift', slider=True, text='Value Shift', icon='COLORSET_10_VEC')
-
+        box.prop(mg_props, 'hue_shift', slider=True, text='Hue Shift', )
+        box.prop(mg_props, 'saturation_shift', slider=True, text='Saturation Shift')
+        box.prop(mg_props, 'value_shift', slider=True, text='Value Shift', icon='COLORSET_10_VEC')
 
 
 class ParametersPanel(bpy.types.Panel):
@@ -133,8 +143,6 @@ class ParametersPanel(bpy.types.Panel):
 
         sub = row.row()
         sub.operator('maze.tweak_row_number', text='', icon='ADD').add_or_remove = True
-
-        layout.prop(mg_props, 'cell_size')
 
         row = layout.row()
         row.prop(mg_props, 'seed')
