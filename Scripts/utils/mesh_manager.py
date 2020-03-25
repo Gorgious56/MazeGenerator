@@ -1,4 +1,6 @@
 import bmesh
+import bpy
+from mathutils import Vector
 
 
 def remove_all_vertex_layers(mesh):
@@ -7,49 +9,33 @@ def remove_all_vertex_layers(mesh):
         vertex_colors.remove(vertex_colors[0])
 
 
-def set_vertex_colors_layer(obj, bm, layer_name, cols, cell_corners=4):
-    color_layer = bm.loops.layers.color.new(layer_name)
-
-    homogen_grid = type(cell_corners) is not list
-    if homogen_grid:
-        color_table = [cols[i // cell_corners] for i in range(len(bm.verts))]
-    else:
-        color_table = []
-        current_face = 0
-        remaining_verts = cell_corners[current_face]
-        for v in range(len(bm.verts)):
-            color_table.append(cols[current_face])
-            remaining_verts -= 1
-            if remaining_verts == 0:
-                current_face += 1
-                try:
-                    remaining_verts = cell_corners[current_face]
-                except IndexError:
-                    break
-
-    for face in bm.faces:
-        for loop in face.loops:
-            loop[color_layer] = color_table[loop.vert.index]
-
-
-def set_vertex_color_layers(obj, layers, cell_corners):
-    # the layer parameter is supposed to be a dictionary with key = vertex layer name, and values = all cell colors
+def set_mesh_layers(obj, cells_visual):
     mesh = obj.data
     remove_all_vertex_layers(mesh)
-
-    # for g in obj.vertex_groups:
-    #     obj.vertex_groups.remove(g)
-    homogen_grid = type(cell_corners) is not list
 
     bm = bmesh.new()
     bm.from_mesh(mesh)
 
-    for layer_name, cols in layers.items():
-        if any(cols):
-            if homogen_grid:
-                # cell_corners = max(len(bm.verts) // len(cols), 3, cell_corners)
-                set_vertex_colors_layer(obj, bm, layer_name, cols, cell_corners)
-            else:
-                set_vertex_colors_layer(obj, bm, layer_name, cols, cell_corners)
+    color_tables = {}
+    color_layers = {}
+    # colors_layers = []
+    for layer_name in cells_visual[0].color_layers:
+        color_tables[layer_name] = []
+        color_layers[layer_name] = bm.loops.layers.color.new(layer_name)
+    for cv in cells_visual:
+        for layer, color in cv.color_layers.items():
+            for f in cv.faces:
+                color_tables[layer].extend([color] * f.corners())
+
+    for layer_name in color_layers:
+        color_layer = color_layers[layer_name]
+        color_table = color_tables[layer_name]
+        for face in bm.faces:
+            for loop in face.loops:
+                loop[color_layer] = color_table[loop.vert.index]
+
+    # newGeom = bmesh.ops.extrude_face_region(bm, geom=bm.faces)
+    # verts = [e for e in newGeom['geom'] if isinstance(e, bmesh.types.BMVert)]
+    # bmesh.ops.translate(bm, vec=Vector((0, 0, -1)), verts=verts)z
 
     bm.to_mesh(mesh)

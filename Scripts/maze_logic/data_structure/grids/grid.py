@@ -1,6 +1,7 @@
-from .. cells import cell
 from random import choice, seed, shuffle
 from mathutils import Vector
+from .. cells . cell import Cell
+from .... visual . cell_visual import CellVisual
 
 TOP = 'TOP'
 BOT = 'BOT'
@@ -13,7 +14,7 @@ RIGHT_BORDER = 'RIGHT_BORDER'
 
 
 class Grid:
-    def __init__(self, rows, columns, name="", coord_system='cartesian', sides=4, cell_size=1):
+    def __init__(self, rows=2, columns=2, name="", coord_system='cartesian', sides=4, cell_size=1):
         self.rows = rows
         self.columns = columns
         self.cells = [None] * (rows * columns)
@@ -45,7 +46,7 @@ class Grid:
     def prepare_grid(self):
         for c in range(self.columns):
             for r in range(self.rows):
-                self[c, r] = cell.Cell(r, c)
+                self[c, r] = Cell(r, c)
 
     def configure_cells(self):
         for c in self.cells:
@@ -164,11 +165,6 @@ class Grid:
         positions['top_right'] = Vector([c.column + 0.5, c.row + 0.5, 0])
         positions['bot_right'] = Vector([c.column + 0.5, c.row - 0.5, 0])
         positions['bot_left'] = Vector([c.column - 0.5, c.row - 0.5, 0])
-        positions['top_left_border'] = positions['top_left'] + Vector([1, -1, 0]) * border
-        positions['top_right_border'] = positions['top_right'] + Vector([-1, -1, 0]) * border
-        positions['bot_right_border'] = positions['bot_right'] + Vector([1, 1, 0]) * border
-        positions['bot_left_border'] = positions['bot_left'] + Vector([-1, 1, 0]) * border
-
         positions[TOP] = c.row + 0.5
         positions[BOT] = c.row - 0.5
         positions[LEFT] = c.column - 0.5
@@ -183,62 +179,32 @@ class Grid:
         return (vec1[0] - vec2[0], vec1[1] - vec2[1], vec1[2] - vec2[2])
 
     def get_blueprint(self):
-        walls = []
-        cells = []
-        cells_vertices = []
-        for c in self.get_unmasked_and_linked_cells():
-            new_walls, new_cells, cell_vertices = self.get_cell_walls(c)
-            walls.extend(new_walls)
-            cells.extend(new_cells)
-            if cell_vertices:
-                cells_vertices.append(cell_vertices)
-        return walls, cells, cells_vertices
+        return [self.get_cell_walls(c) for c in self.get_unmasked_and_linked_cells()]
 
     def need_wall_to(self, c):
         return not c or c.is_masked or not c.has_any_link()
 
     def get_cell_walls(self, c):
-        walls = []
-        cells = []
+        cv = CellVisual(c, self.get_cell_position(c))
         mask = c.get_wall_mask()
-        p = self.get_cell_position(c)
         if mask[0]:
-            walls.append(p['top_left'])
-            walls.append(p['top_right'])
+            cv.create_wall(LEFT, TOP, RIGHT, TOP)
+        else:
+            cv.add_face((RIGHT_BORDER, RIGHT_BORDER, LEFT_BORDER, LEFT_BORDER), (TOP_BORDER, TOP, TOP, TOP_BORDER), connection=True)
         if mask[3]:
-            walls.append(p['bot_right'])
-            walls.append(p['top_right'])
+            cv.create_wall(RIGHT, BOT, RIGHT, TOP)
+        else:
+            cv.add_face((RIGHT_BORDER, RIGHT, RIGHT, RIGHT_BORDER), (BOT_BORDER, BOT_BORDER, TOP_BORDER, TOP_BORDER), connection=True)
         if self.need_wall_to(c.neighbors[2]):
-            walls.append(p['bot_right'])
-            walls.append(p['bot_left'])
+            cv.create_wall(RIGHT, BOT, LEFT, BOT)
         if self.need_wall_to(c.neighbors[1]):
-            walls.append(p['top_left'])
-            walls.append(p['bot_left'])
+            cv.create_wall(LEFT, TOP, LEFT, BOT)
 
-        cell_corners = 4
+        cv.add_face((RIGHT_BORDER, LEFT_BORDER, LEFT_BORDER, RIGHT_BORDER), (TOP_BORDER, TOP_BORDER, BOT_BORDER, BOT_BORDER), connection=False)
 
-        cells.append(Vector([p[RIGHT_BORDER], p[TOP_BORDER], 0]))
-        if not mask[0]:
-            cells.append(Vector([p[RIGHT_BORDER], p[TOP], 0]))
-            cells.append(Vector([p[LEFT_BORDER], p[TOP], 0]))
-            cell_corners += 2
-
-        cells.append(Vector([p[LEFT_BORDER], p[TOP_BORDER], 0]))
         if not mask[1]:
-            cells.append(Vector([p[LEFT], p[TOP_BORDER], 0]))
-            cells.append(Vector([p[LEFT], p[BOT_BORDER], 0]))
-            cell_corners += 2
-
-        cells.append(Vector([p[LEFT_BORDER], p[BOT_BORDER], 0]))
+            cv.add_face((LEFT_BORDER, LEFT, LEFT, LEFT_BORDER), (TOP_BORDER, TOP_BORDER, BOT_BORDER, BOT_BORDER), connection=True)
         if not mask[2]:
-            cells.append(Vector([p[LEFT_BORDER], p[BOT], 0]))
-            cells.append(Vector([p[RIGHT_BORDER], p[BOT], 0]))
-            cell_corners += 2
-        cells.append(Vector([p[RIGHT_BORDER], p[BOT_BORDER], 0]))
+            cv.add_face((LEFT_BORDER, LEFT_BORDER, RIGHT_BORDER, RIGHT_BORDER), (BOT_BORDER, BOT, BOT, BOT_BORDER), connection=True)
 
-        if not mask[3]:
-            cells.append(Vector([p[RIGHT], p[BOT_BORDER], 0]))
-            cells.append(Vector([p[RIGHT], p[TOP_BORDER], 0]))
-            cell_corners += 2
-
-        return walls, cells, cell_corners
+        return cv

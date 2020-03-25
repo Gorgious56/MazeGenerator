@@ -1,3 +1,15 @@
+WALL_WELD_NAME = 'MG_WELD'
+WALL_SCREW_NAME = 'MG_SCREW'
+WALL_SOLIDIFY_NAME = 'MG_SOLIDIFY'
+WALL_BEVEL_NAME = 'MG_BEVEL'
+
+CELL_WELD_NAME = 'MG_WELD'
+CELL_SOLIDIFY_NAME = 'MG_SOLIDIFY'
+CELL_DECIMATE_NAME = 'MG_DECIMATE'
+# CELL_WIREFRAME_NAME = 'MG_WIREFRAME'
+CELL_BEVEL_NAME = 'MG_BEVEL'
+
+
 def add_modifier(obj, mod_type, mod_name, remove_if_already_exists=False, remove_all_modifiers=False, properties=None):
     mod_name = mod_name if mod_name != "" else "Fallback"
 
@@ -20,7 +32,7 @@ def add_modifier(obj, mod_type, mod_name, remove_if_already_exists=False, remove
                     setattr(mod, prop, value)
 
 
-def add_driver_to_object(obj, obj_prop, var_name, id_type, id, prop_path, expression=None):
+def add_driver_to(obj, obj_prop, var_name, id_type, id, prop_path, expression=None):
     if obj:
         driver = obj.driver_add(obj_prop).driver
         if len(driver.variables) > 0:

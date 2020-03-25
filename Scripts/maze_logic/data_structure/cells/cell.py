@@ -73,6 +73,9 @@ class Cell:
         except IndexError:
             return None
 
+    def get_neighbor_return(self, index):
+        return self.neighbors_return[index]
+
     def get_biased_unmasked_linked_neighbor(self, bias, relative_weight=5):
         return self.get_biased_choice(self.get_linked_neighbors(), bias, relative_weight)
 
