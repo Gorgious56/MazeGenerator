@@ -90,6 +90,9 @@ class Grid:
         for c in self.get_unmasked_cells():
             yield c
 
+    def all_cells(self):
+        return self.cells
+
     def get_dead_ends(self):
         return [c for c in self.get_unmasked_cells() if len(c.links) == 1]
 
@@ -129,7 +132,7 @@ class Grid:
                     if culled_cells >= max_cells_to_cull:
                         return
                 except StopIteration:
-                    return
+                    pass
                 except AttributeError:
                     pass
 
@@ -154,10 +157,10 @@ class Grid:
                     self.mask_cell(c, r)
 
     def get_unmasked_cells(self):
-        return [c for c in self.cells if not c.is_masked]
+        return [c for c in self.all_cells() if not c.is_masked]
 
     def get_unmasked_and_linked_cells(self):
-        return [c for c in self.each_cell() if any(c.links)]
+        return [c for c in self.all_cells() if any(c.links)]
 
     def get_cell_position(self, c):
         positions = {}
