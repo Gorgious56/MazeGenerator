@@ -1,5 +1,5 @@
 import bmesh
-from .. visual . cell_visual_manager import VERTEX_GROUPS
+from .. visual . cell_visual import VERTEX_GROUPS
 
 
 def remove_all_vertex_layers(mesh):

@@ -13,7 +13,7 @@ from .. maze_logic . data_structure . grids . grid_weave import GridWeave
 from .. maze_logic . data_structure . cell import CellUnder
 from .. maze_logic import algorithm_manager
 from .. visual . cell_type_manager import POLAR, TRIANGLE, HEXAGON, get_cell_vertices
-from .. visual . cell_visual_manager import DISTANCE, GROUP, NEIGHBORS, DISPLACE
+from .. visual . cell_visual import DISTANCE, GROUP, NEIGHBORS, DISPLACE
 
 
 class MazeVisual:

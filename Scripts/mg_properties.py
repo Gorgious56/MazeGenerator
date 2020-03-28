@@ -3,7 +3,7 @@ from bpy.props import IntProperty, BoolProperty, EnumProperty, FloatProperty, Po
 import bpy.ops
 from . maze_logic . algorithm_manager import generate_algo_enum, DEFAULT_ALGO
 from . visual . cell_type_manager import generate_cell_type_enum, DEFAULT_CELL_TYPE
-from . visual . cell_visual_manager import generate_cell_visual_enum, DEFAULT_CELL_VISUAL_TYPE
+from . visual . cell_visual import generate_cell_visual_enum, DEFAULT_CELL_VISUAL_TYPE
 from . visual . maze_visual import MazeVisual
 from random import random
 
@@ -261,7 +261,7 @@ class MGProperties(PropertyGroup):
         description="Tweak the cell's thickness",
         default=0,
         soft_max=1,
-        soft_min=0,
+        soft_min=-1,
     )
 
     cell_contour: FloatProperty(

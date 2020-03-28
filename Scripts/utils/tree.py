@@ -3,6 +3,7 @@ from random import shuffle
 
 class Tree:
     tree_attr = 'tree'
+    id = 0
 
     staticmethod
 
@@ -22,14 +23,18 @@ class Tree:
     staticmethod
 
     def can_merge(obj_a, obj_b):
-        return obj_a and obj_b and not Tree.get(obj_a).is_connected_to(Tree.get(obj_b))
+        return obj_a and obj_b and not Tree.get(obj_a).is_connected_to(Tree.get(obj_b))    
+        
+    staticmethod
+
+    def next_id():
+        Tree.id += 1
+        return Tree.id
 
     def __init__(self):
         self._parent = None
         self._childs = set()
-        name = list('A-B-C')
-        shuffle(name)
-        self.name = ''.join(name)
+        self.id = Tree.next_id()
 
     def __repr__(self):
         return self.__str__()

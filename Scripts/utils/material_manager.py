@@ -1,7 +1,7 @@
 import bpy
 from random import seed, random
 from . modifier_manager import add_driver_to
-from .. visual . cell_visual_manager import DISTANCE, UNIFORM
+from .. visual . cell_visual import DISTANCE, UNIFORM
 
 
 class MaterialManager:

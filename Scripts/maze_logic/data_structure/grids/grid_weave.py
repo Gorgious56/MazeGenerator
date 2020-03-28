@@ -1,12 +1,10 @@
-from random import random, shuffle
 from . grid import Grid
 from .. cell import CellUnder, CellOver, Cell
-from .... visual . cell_visual_manager import DISPLACE
+from .... visual . cell_visual import DISPLACE
 
 
 class GridWeave(Grid):
     def __init__(self, *args, use_kruskal=False, weave=0, **kwargs):
-        # self.cells_under = {}
         self.cells_under = []
         self.use_kruskal = use_kruskal
         self.weave = weave / 100
@@ -23,7 +21,6 @@ class GridWeave(Grid):
                 self[c, r] = CellOver(row=r, col=c, grid=self)
 
     def tunnel_under(self, cell_over):
-        # self.cells_under[cell_over] = CellUnder(cell_over)
         self.cells_under.append(CellUnder(cell_over))
 
     def all_cells(self):
@@ -35,7 +32,6 @@ class GridWeave(Grid):
         for c in super().each_cell():
             yield c
 
-        # for co, cu in self.cells_under.items():
         for cu in self.cells_under:
             yield cu
 

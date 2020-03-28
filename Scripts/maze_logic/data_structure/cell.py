@@ -107,6 +107,10 @@ class Cell:
     def get_biased_unmasked_unlinked_neighbor(self, bias, relative_weight=5):
         return self.get_biased_choice(self.get_unlinked_neighbors(), bias, relative_weight)
 
+    def get_biased_unmasked_unlinked_neighbors(self, bias, relative_weight=5):
+        neighbors = self.get_unlinked_neighbors()
+        return self.get_biased_choice(neighbors, bias, relative_weight, k=len(neighbors))
+
     def get_biased_unmasked_unlinked_directional_neighbor(self, bias, direction):
         direction = int(direction)
         if direction == -1 or type(self) is not Cell:
