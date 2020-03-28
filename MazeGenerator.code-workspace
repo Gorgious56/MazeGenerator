@@ -4,9 +4,8 @@
 			"path": "."
 		},
 		{
-			"name": "Scripts",
-			"path": "Scripts"
+			"name": "git",
+			"path": "git"
 		}
-	],
-	"settings": {}
+	]
 }
