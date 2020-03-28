@@ -1,16 +1,23 @@
-from mathutils import Vector
+from random import random, shuffle
+from copy import copy
 from . grid import Grid
-from .. cells . cell_under import CellUnder
-from .. cells . cell_over import CellOver
+from .. cell import CellUnder, CellOver, Cell
+from .... visual . cell_visual_manager import DISPLACE
 
 
 class GridWeave(Grid):
-    def __init__(self, cell_thickness=0, *args, **kwargs):
+    def __init__(self, *args, use_kruskal=False, weave=0, **kwargs):
         self.cells_under = []
+        self.use_kruskal = use_kruskal
+        self.weave = weave / 100
         super().__init__(*args, **kwargs)
-        self.cell_thickness = cell_thickness
 
     def prepare_grid(self):
+        if self.use_kruskal:
+            CellOver.get_neighbors = Cell.get_neighbors
+        else:
+            CellOver.get_neighbors = CellOver.get_neighbors_copy
+
         for c in range(self.columns):
             for r in range(self.rows):
                 self[c, r] = CellOver(row=r, col=c, grid=self)
@@ -26,15 +33,9 @@ class GridWeave(Grid):
             yield cu
 
     def get_cell_walls(self, c):
-        cell_visual = super().get_cell_walls(c)
-        delta_z = self.cell_thickness + 0.05
+        cv = super().get_cell_walls(c)
         if type(c) is CellUnder:
-            cell_visual.walls = []
-            for f in cell_visual.faces:
-                if f.connection:
-                    f.vertices[0] -= Vector([0, 0, delta_z])
-                    f.vertices[3] -= Vector([0, 0, delta_z])
-                else:
-                    for v in f.vertices:
-                        v -= Vector([0, 0, delta_z])
-        return cell_visual
+            cv.walls = []
+            for f in cv.faces:
+                f.set_vertex_group(DISPLACE, [v_level for v_level in f.vertices_levels])
+        return cv

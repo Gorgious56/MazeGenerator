@@ -1,6 +1,6 @@
 from random import choice, seed, shuffle
 from mathutils import Vector
-from .. cells . cell import Cell
+from .. cell import Cell
 from .... visual . cell_visual import CellVisual
 
 TOP = 'TOP'
@@ -51,7 +51,6 @@ class Grid:
     def configure_cells(self):
         for c in self.cells:
             row, col = c.row, c.column
-
             # North :
             c.neighbors[0] = self[col, row + 1]
             # West :
@@ -105,10 +104,12 @@ class Grid:
             stop_index = int(len(dead_ends_shuffle) * min(max(0, braid), 1))
             for c in dead_ends_shuffle[0:stop_index]:
                 if len(c.links) == 1:
-                    unconnected_neighbors = [_c for _c in c.get_neighbors() if _c not in c.links and _c.has_any_link()]
+                    unconnected_neighbors = [n for n in c.get_neighbors() if n not in c.links and n.has_any_link()]
                     if len(unconnected_neighbors) > 0:
-                        best = [_c for _c in unconnected_neighbors if len(c.links) < 2]
-                        if len(best) == 0:
+                        best = [n for n in unconnected_neighbors if len(n.links) < 2]
+                        if best:
+                            dead_ends -= 1
+                        else:
                             best = unconnected_neighbors
                         c.link(choice(best))
                         dead_ends -= 1
@@ -129,11 +130,8 @@ class Grid:
                         return
                 except StopIteration:
                     return
-
-    def cull_dead_ends(self, culled_cells):
-        for c in self.get_dead_ends():
-            for i, n in enumerate(c.get_neighbors()):
-                c.unlink(n)
+                except AttributeError:
+                    pass
 
     def mask_cell(self, column, row):
         c = self[column, row]
@@ -143,6 +141,11 @@ class Grid:
             for i, n in enumerate(c.get_neighbors()):
                 n.neighbors[c.neighbors_return[i]] = None
                 c.unlink(n)
+
+    def shuffled_cells(self):
+        shuffled_cells = self.get_unmasked_cells()
+        shuffle(shuffled_cells)
+        return shuffled_cells
 
     def mask_ring(self, center_row, center_col, radius):
         for r in range(self.rows):
@@ -158,13 +161,7 @@ class Grid:
 
     def get_cell_position(self, c):
         positions = {}
-        cell_size = self.cell_size
-        border = (1 - cell_size) / 2
-        positions['center'] = Vector([c.column, c.row, 0])
-        positions['top_left'] = Vector([c.column - 0.5, c.row + 0.5, 0])
-        positions['top_right'] = Vector([c.column + 0.5, c.row + 0.5, 0])
-        positions['bot_right'] = Vector([c.column + 0.5, c.row - 0.5, 0])
-        positions['bot_left'] = Vector([c.column - 0.5, c.row - 0.5, 0])
+        border = (1 - self.cell_size) / 2
         positions[TOP] = c.row + 0.5
         positions[BOT] = c.row - 0.5
         positions[LEFT] = c.column - 0.5
@@ -185,26 +182,45 @@ class Grid:
         return not c or c.is_masked or not c.has_any_link()
 
     def get_cell_walls(self, c):
-        cv = CellVisual(c, self.get_cell_position(c))
+        cv = CellVisual(c)
+        p = self.get_cell_position(c)
         mask = c.get_wall_mask()
+        left = p[LEFT]
+        right = p[RIGHT]
+        top = p[TOP]
+        bot = p[BOT]
+        left_b = p[LEFT_BORDER]
+        right_b = p[RIGHT_BORDER]
+        bot_b = p[BOT_BORDER]
+        top_b = p[TOP_BORDER]
         if mask[0]:
-            cv.create_wall(LEFT, TOP, RIGHT, TOP)
+            cv.create_wall(Vector((left, top, 0)), Vector((right, top, 0)))
         else:
-            cv.add_face((RIGHT_BORDER, RIGHT_BORDER, LEFT_BORDER, LEFT_BORDER), (TOP_BORDER, TOP, TOP, TOP_BORDER), connection=True)
+            cv.add_face(
+                (Vector((right_b, top_b, 0)), Vector((right_b, top, 0)), Vector((left_b, top, 0)), Vector((left_b, top_b, 0))),
+                vertices_levels=(1, 0, 0, 1))
         if mask[3]:
-            cv.create_wall(RIGHT, BOT, RIGHT, TOP)
+            cv.create_wall(Vector((right, bot, 0)), Vector((right, top, 0)))
         else:
-            cv.add_face((RIGHT_BORDER, RIGHT, RIGHT, RIGHT_BORDER), (BOT_BORDER, BOT_BORDER, TOP_BORDER, TOP_BORDER), connection=True)
+            cv.add_face(
+                (Vector((right_b, bot_b, 0)), Vector((right, bot_b, 0)), Vector((right, top_b, 0)), Vector((right_b, top_b, 0))),
+                vertices_levels=(1, 0, 0, 1))
         if self.need_wall_to(c.neighbors[2]):
-            cv.create_wall(RIGHT, BOT, LEFT, BOT)
+            cv.create_wall(Vector((right, bot, 0)), Vector((left, bot, 0)))
         if self.need_wall_to(c.neighbors[1]):
-            cv.create_wall(LEFT, TOP, LEFT, BOT)
+            cv.create_wall(Vector((left, top, 0)), Vector((left, bot, 0)))
 
-        cv.add_face((RIGHT_BORDER, LEFT_BORDER, LEFT_BORDER, RIGHT_BORDER), (TOP_BORDER, TOP_BORDER, BOT_BORDER, BOT_BORDER), connection=False)
+        cv.add_face(
+            (Vector((right_b, top_b, 0)), Vector((left_b, top_b, 0)), Vector((left_b, bot_b, 0)), Vector((right_b, bot_b, 0))),
+            vertices_levels=(1, 1, 1, 1))
 
         if not mask[1]:
-            cv.add_face((LEFT_BORDER, LEFT, LEFT, LEFT_BORDER), (TOP_BORDER, TOP_BORDER, BOT_BORDER, BOT_BORDER), connection=True)
+            cv.add_face(
+                (Vector((left_b, top_b, 0)), Vector((left, top_b, 0)), Vector((left, bot_b, 0)), Vector((left_b, bot_b, 0))),
+                vertices_levels=(1, 0, 0, 1))
         if not mask[2]:
-            cv.add_face((LEFT_BORDER, LEFT_BORDER, RIGHT_BORDER, RIGHT_BORDER), (BOT_BORDER, BOT, BOT, BOT_BORDER), connection=True)
+            cv.add_face(
+                (Vector((left_b, bot_b, 0)), Vector((left_b, bot, 0)), Vector((right_b, bot, 0)), Vector((right_b, bot_b, 0))),
+                vertices_levels=(1, 0, 0, 1))
 
         return cv

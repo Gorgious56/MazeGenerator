@@ -1,7 +1,6 @@
 from bpy.types import Operator
-from bpy.props import IntProperty
 from time import time
-from . visual . grid_visual import GridVisual
+from . visual . maze_visual import MazeVisual
 
 
 class GenerateMazeOperator(Operator):
@@ -17,7 +16,6 @@ class GenerateMazeOperator(Operator):
     def execute(self, context):
         start_time = time()
         if context.mode == 'OBJECT':
-            GridVisual(context.scene)
+            MazeVisual(context.scene)
         context.scene.mg_props.generation_time = int((time() - start_time) * 1000)
         return {'FINISHED'}
-        

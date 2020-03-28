@@ -1,5 +1,5 @@
 import bpy
-from .. maze_logic . algorithms . algorithm_manager import BIASED_ALGORITHMS
+from .. maze_logic . algorithm_manager import is_algo_biased, is_algo_weaved, ALGO_KRUSKAL_RANDOM
 from . cell_type_manager import TRIANGLE, HEXAGON, POLAR, SQUARE
 
 
@@ -18,12 +18,13 @@ class MazeGeneratorPanel(bpy.types.Panel):
 
         row = layout.row(align=True)
         row.scale_y = 2
-        sub = row.row()
+        sub = row.row(align=True)
         sub.operator("maze.generate", icon='VIEW_ORTHO')
         sub.scale_x = 10.0
 
-        sub = row.row()
+        sub = row.row(align=True)
         sub.prop(mg_props, 'auto_update', toggle=True, icon='FILE_REFRESH', text='')
+        sub.prop(mg_props, 'auto_overwrite', toggle=True, icon='TRASH', text='')
 
         # row.operator("object.simple_operator")
 
@@ -84,12 +85,24 @@ class CellsPanel(bpy.types.Panel):
 
         box = layout.box()
         row = box.row()
-        row.prop(mg_props, 'maze_weave', toggle=True)
-        row.enabled = mg_props.cell_type == SQUARE
+        row_2 = row.row()
+        if mg_props.maze_algorithm == ALGO_KRUSKAL_RANDOM:
+            row_2.prop(mg_props, 'maze_weave', slider=True)
+        else:
+            row_2.prop(mg_props, 'maze_weave_toggle', toggle=True)
+        row_2.enabled = is_algo_weaved(mg_props)
         row = box.row(align=True)
         row.prop(mg_props, 'cell_inset', slider=True, text='Inset')
         row.prop(mg_props, 'cell_contour', slider=True, text='Contour')
-        box.prop(mg_props, 'cell_thickness', slider=True, text='Thickness')
+
+        row = box.row(align=True)
+        sub = row.row(align=True)
+        sub.prop(mg_props, 'cell_thickness', slider=True, text='Thickness')
+
+        sub = row.row(align=True)
+        sub.prop(mg_props, 'cell_use_smooth', toggle=True, icon='SHADING_RENDERED', text='')
+
+        row.prop(mg_props, 'cell_subdiv', text='Subidivions')
 
         box = layout.box()
         box.prop(mg_props, 'paint_style')
@@ -149,7 +162,7 @@ class ParametersPanel(bpy.types.Panel):
         row.prop(mg_props, 'steps', icon='MOD_DYNAMICPAINT')
         row = layout.row()
         row.prop(mg_props, 'maze_bias', slider=True, icon='FORCE_VORTEX')
-        row.enabled = mg_props.maze_algorithm in BIASED_ALGORITHMS
+        row.enabled = is_algo_biased(mg_props)
         layout.prop(mg_props, 'braid_dead_ends', slider=True, text='Open Dead Ends')
         layout.prop(mg_props, 'sparse_dead_ends')
 

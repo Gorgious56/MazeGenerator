@@ -1,10 +1,10 @@
 from bpy.types import PropertyGroup, Scene
 from bpy.props import IntProperty, BoolProperty, EnumProperty, FloatProperty, PointerProperty, FloatVectorProperty
 import bpy.ops
-from . maze_logic . algorithms . algorithm_manager import generate_algo_enum, DEFAULT_ALGO
+from . maze_logic . algorithm_manager import generate_algo_enum, DEFAULT_ALGO
 from . visual . cell_type_manager import generate_cell_type_enum, DEFAULT_CELL_TYPE
 from . visual . cell_visual_manager import generate_cell_visual_enum, DEFAULT_CELL_VISUAL_TYPE
-from . visual . grid_visual import GridVisual
+from . visual . maze_visual import MazeVisual
 from random import random
 
 
@@ -14,22 +14,40 @@ def generate_maze(self, context):
 
 
 def update_paint(self, context):
-    if GridVisual.Instance:
-        GridVisual.Instance.set_materials()
-        GridVisual.Instance.update_visibility()
+    if MazeVisual.Instance:
+        MazeVisual.Instance.set_materials()
+        MazeVisual.Instance.update_visibility()
 
 
 def click_randomize_color_button(self, value):
     self.seed_color = random() * 100000
-    if GridVisual.Instance:
-        GridVisual.Instance.set_materials()
-        GridVisual.Instance.paint_cells()
+    if MazeVisual.Instance:
+        MazeVisual.Instance.set_materials()
+        MazeVisual.Instance.paint_cells()
 
 
 def update_modifiers(self, context):
-    if GridVisual.Instance:
-        GridVisual.Instance.generate_modifiers()
-        GridVisual.Instance.generate_drivers()
+    if MazeVisual.Instance:
+        MazeVisual.Instance.generate_modifiers()
+        MazeVisual.Instance.generate_drivers()
+
+
+def update_cell_smooth(self, context):
+    if MazeVisual.Instance:
+        MazeVisual.Instance.update_cell_smooth()
+
+
+def toggle_maze_weave(self, context):
+    if self.maze_weave_toggle:
+        if self.maze_weave == 0:
+            self.maze_weave = 50
+    else:
+        self.maze_weave = 0
+
+
+def tweak_maze_weave(self, context):
+    self['maze_weave_toggle'] = self.maze_weave > 0
+    generate_maze(self, context)
 
 
 class MGProperties(PropertyGroup):
@@ -37,6 +55,13 @@ class MGProperties(PropertyGroup):
         name='Auto Update',
         default=True,
         description='Generate a new maze each time a parameter is modified. This will hurt performance when generating big mazes',
+        update=generate_maze
+    )
+
+    auto_overwrite: BoolProperty(
+        name="Auto Overwrite",
+        description="Caution : Enabling this WILL overwrite any material and modifiers with new ones when generating",
+        default=False,
         update=generate_maze
     )
 
@@ -54,6 +79,22 @@ class MGProperties(PropertyGroup):
         items=generate_cell_type_enum(),
         default=DEFAULT_CELL_TYPE,
         update=generate_maze
+    )
+
+    cell_use_smooth: BoolProperty(
+        name='Smooth Shade Cells',
+        description='Enforce smooth shading everytime the maze is generated',
+        default=False,
+        update=update_cell_smooth
+    )
+
+    cell_subdiv: IntProperty(
+        name='Cell Subidivison',
+        description='Subidivide the cells. WARNING : Will take a long time to compute on larger mazes.',
+        default=0,
+        min=0,
+        soft_max=3,
+        max=6
     )
 
     rows_or_radius: IntProperty(
@@ -130,7 +171,7 @@ class MGProperties(PropertyGroup):
         name='Wall Color',
         description="Change the wall's displayed color",
         subtype='COLOR',
-        default=(0.5, 0.5, 0.5),
+        default=(0, 0, 0),
         min=0,
         max=1,
         update=update_paint
@@ -219,8 +260,8 @@ class MGProperties(PropertyGroup):
         name="Cell Thickness",
         description="Tweak the cell's thickness",
         default=0,
-        soft_max=0.5,
-        min=0,
+        soft_max=1,
+        soft_min=0,
     )
 
     cell_contour: FloatProperty(
@@ -255,11 +296,21 @@ class MGProperties(PropertyGroup):
         name="Dead Ends",
     )
 
-    maze_weave: BoolProperty(
+    maze_weave: IntProperty(
         name='Weave Maze',
-        description='Check if you want the cells to weave over and under each other',
+        description='Tweak this value to weave the maze. Not all algorithms allow it',
+        default=0,
+        min=0,
+        max=100,
+        subtype='PERCENTAGE',
+        update=tweak_maze_weave
+    )    
+
+    maze_weave_toggle: BoolProperty(
+        name='Weave Maze',
+        description='Toggle this value to weave the maze. Not all algorithms allow it',
         default=False,
-        update=generate_maze
+        update=toggle_maze_weave
     )
 
     def register():

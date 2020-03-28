@@ -1,6 +1,6 @@
 from mathutils import Vector
 from .. grids . grid import Grid
-from .. cells . cell_hex import CellHex
+from .. cell import CellHex
 
 
 class GridHex(Grid):

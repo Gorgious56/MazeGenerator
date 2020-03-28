@@ -1,6 +1,6 @@
 from mathutils import Vector
-from .. grids . grid import Grid
-from .. cells . cell_triangle import CellTriangle
+from .. grids . grid import Grid, CellVisual
+from .. cell import CellTriangle
 
 
 class GridTriangle(Grid):
@@ -31,52 +31,71 @@ class GridTriangle(Grid):
                 # N
                 c.neighbors[2] = self[col, row + 1]
 
-    def get_cell_walls(self, c, cell_size=1):
-        walls = []
-        cells = []
-        mask = c.get_wall_mask()
-        positions = self.get_cell_position(c, cell_size)
+    def get_cell_walls(self, c):
+        cv = CellVisual(c)
+        center, north_or_south, west, east = self.get_cell_position(c)
+        cs = self.cell_size
 
-        if c.is_upright():
-            if not c.exists_and_is_linked_neighbor_index(0):
-                #c
-                walls.append(positions[1])
-                walls.append(positions[3])
-            if not c.exists_and_is_linked_neighbor_index(1):
-                #b
-                walls.append(positions[1])
-                walls.append(positions[2])
-            if not c.exists_and_is_linked_neighbor_index(2):
-                #a
-                walls.append(positions[2])
-                walls.append(positions[3])
-        else:
-            if not c.exists_and_is_linked_neighbor_index(0):
-                #b
-                walls.append(positions[1])
-                walls.append(positions[2])   
-            if not c.exists_and_is_linked_neighbor_index(1):   
-                #c
-                walls.append(positions[1])
-                walls.append(positions[3]) 
-            if not c.exists_and_is_linked_neighbor_index(2):  
-                #a
-                walls.append(positions[2])
-                walls.append(positions[3])
-        cells.append(positions[3])
-        cells.append(positions[1])
-        cells.append(positions[2])  
-      
-        return walls, cells, []
+        if self.cell_size == 1:
+            if c.is_upright():
+                if not c.exists_and_is_linked_neighbor_index(0):
+                    cv.create_wall(north_or_south, east)
+                if not c.exists_and_is_linked_neighbor_index(1):
+                    cv.create_wall(north_or_south, west)
+                if not c.exists_and_is_linked_neighbor_index(2):
+                    cv.create_wall(west, east)
+            else:
+                if not c.exists_and_is_linked_neighbor_index(0):
+                    cv.create_wall(north_or_south, west)
+                if not c.exists_and_is_linked_neighbor_index(1):
+                    cv.create_wall(north_or_south, east)
+                if not c.exists_and_is_linked_neighbor_index(2):
+                    cv.create_wall(west, east)
+            if c.is_upright():
+                cv.add_face((east, north_or_south, west))
+            else:
+                cv.add_face((east, west, north_or_south))
+        else:            
+            horiz_left = west + (east - west) * (0.5 - (cs / 2))
+            horiz_right = west + (east - west) * (0.5 + (cs / 2))
 
-    def get_cell_position(self, c, size):
+            _, north_or_south_b, west_b, east_b = self.get_cell_position(c, size=self.cell_size)
+
+            if c.is_upright():
+                nw_bot = west + (north_or_south - west) * (0.5 - (cs / 2))
+                nw_top = west + (north_or_south - west) * (0.5 + (cs / 2))
+                ne_bot = east + (north_or_south - east) * (0.5 - (cs / 2))
+                ne_top = east + (north_or_south - east) * (0.5 + (cs / 2))
+                cv.add_face((east_b, north_or_south_b, west_b))
+                if c.exists_and_is_linked_neighbor_index(0):
+                    cv.add_face((north_or_south_b, east_b, ne_bot, ne_top))
+                if c.exists_and_is_linked_neighbor_index(1):
+                    cv.add_face((north_or_south_b, nw_top, nw_bot, west_b))
+                if c.exists_and_is_linked_neighbor_index(2):
+                    cv.add_face((west_b, horiz_left, horiz_right, east_b))
+            else:
+                nw_bot = north_or_south + (west - north_or_south) * (0.5 - (cs / 2))
+                nw_top = north_or_south + (west - north_or_south) * (0.5 + (cs / 2))
+                ne_bot = north_or_south + (east - north_or_south) * (0.5 - (cs / 2))
+                ne_top = north_or_south + (east - north_or_south) * (0.5 + (cs / 2))
+                cv.add_face((west_b, north_or_south_b, east_b))    
+                if c.exists_and_is_linked_neighbor_index(0):
+                    cv.add_face((west_b, nw_top, nw_bot, north_or_south_b))
+                if c.exists_and_is_linked_neighbor_index(1):
+                    cv.add_face((north_or_south_b, ne_bot, ne_top, east_b))
+                if c.exists_and_is_linked_neighbor_index(2):
+                    cv.add_face((east_b, horiz_right, horiz_left, west_b))            
+
+        return cv
+
+    def get_cell_position(self, c, size=1):
         width = size
         half_width = width / 2
 
         height = size * (3 ** 0.5) / 2
         half_height = height / 2
 
-        center = Vector([size * c.column * 0.5, size * (c.row * (3 ** 0.5) / 2), 0])
+        center = Vector((c.column * 0.5, c.row * (3 ** 0.5) / 2, 0))
         
         # cx = half_width + c.column * half_width
         # cy = half_height + c.row * height
@@ -87,14 +106,17 @@ class GridTriangle(Grid):
         mid_x = cx
         east_x = cx + half_width
 
-        if not c.is_upright():
-            base_y = cy + half_height
-            apex_y = cy - half_height
-        else:
+        if c.is_upright():
             base_y = cy - half_height
             apex_y = cy + half_height
+
+
+        else:
+            base_y = cy + half_height
+            apex_y = cy - half_height
                 
-        north_or_south = (mid_x, apex_y, 0)
-        west = (west_x, base_y, 0)
-        east = (east_x, base_y, 0)
+        north_or_south = Vector((mid_x, apex_y, 0))
+        west = Vector((west_x, base_y, 0))
+        east = Vector((east_x, base_y, 0))
+        
         return center, north_or_south, west, east
