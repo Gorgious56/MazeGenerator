@@ -1,7 +1,8 @@
-import heapq
 from random import seed, choice, choices, random, randint, shuffle
 from . data_structure . cell import CellPolar, CellTriangle, CellHex
+from .. utils . priority_queue import PriorityQueue
 from .. visual . cell_type_manager import POLAR, TRIANGLE, HEXAGON, SQUARE
+from .. utils . union_find import UnionFind
 
 ALGO_BINARY_TREE = 'Binary Tree'
 ALGO_SIDEWINDER = 'Sidewinder'
@@ -9,6 +10,7 @@ ALGO_ELLER = 'Eller'
 ALGO_CROSS_STITCH = 'Cross Stitch'
 ALGO_KRUSKAL_RANDOM = 'Kruskal Randomized'
 ALGO_PRIM = 'Prim'
+ALGO_GROWING_TREE = 'Growing Tree'
 ALGO_ALDOUS_BRODER = 'Aldous-Broder'
 ALGO_WILSON = 'Wilson'
 ALGO_HUNT_AND_KILL = 'Hunt And Kill'
@@ -16,8 +18,8 @@ ALGO_RECURSIVE_BACKTRACKER = 'Recursive Backtracker'
 
 DEFAULT_ALGO = ALGO_RECURSIVE_BACKTRACKER
 
-BIASED_ALGORITHMS = ALGO_RECURSIVE_BACKTRACKER, ALGO_HUNT_AND_KILL, ALGO_SIDEWINDER, ALGO_BINARY_TREE, ALGO_CROSS_STITCH, ALGO_ELLER, ALGO_KRUSKAL_RANDOM, ALGO_PRIM
-WEAVED_ALGORITHMS = ALGO_RECURSIVE_BACKTRACKER, ALGO_HUNT_AND_KILL, ALGO_WILSON, ALGO_ALDOUS_BRODER, ALGO_KRUSKAL_RANDOM, ALGO_CROSS_STITCH, ALGO_PRIM
+BIASED_ALGORITHMS = ALGO_RECURSIVE_BACKTRACKER, ALGO_HUNT_AND_KILL, ALGO_SIDEWINDER, ALGO_BINARY_TREE, ALGO_CROSS_STITCH, ALGO_ELLER, ALGO_KRUSKAL_RANDOM, ALGO_PRIM, ALGO_GROWING_TREE
+WEAVED_ALGORITHMS = ALGO_RECURSIVE_BACKTRACKER, ALGO_HUNT_AND_KILL, ALGO_WILSON, ALGO_ALDOUS_BRODER, ALGO_KRUSKAL_RANDOM, ALGO_CROSS_STITCH, ALGO_PRIM, ALGO_GROWING_TREE
 
 
 def is_algo_biased(props):
@@ -31,7 +33,7 @@ def is_algo_weaved(props):
 
 
 def all_algorithms_names():
-    return ALGO_BINARY_TREE, ALGO_SIDEWINDER, ALGO_ELLER, ALGO_CROSS_STITCH, ALGO_KRUSKAL_RANDOM, ALGO_PRIM, ALGO_ALDOUS_BRODER, ALGO_WILSON, ALGO_HUNT_AND_KILL, ALGO_RECURSIVE_BACKTRACKER
+    return ALGO_BINARY_TREE, ALGO_SIDEWINDER, ALGO_ELLER, ALGO_CROSS_STITCH, ALGO_KRUSKAL_RANDOM, ALGO_PRIM, ALGO_GROWING_TREE, ALGO_ALDOUS_BRODER, ALGO_WILSON, ALGO_HUNT_AND_KILL, ALGO_RECURSIVE_BACKTRACKER
 
 
 def generate_algo_enum():
@@ -60,11 +62,13 @@ def work(algorithm, grid, seed, max_steps=-1, bias=0):
         algo = KruskalRandom
     elif algorithm == ALGO_PRIM:
         algo = Prim
+    elif algorithm == ALGO_GROWING_TREE:
+        algo = GrowingTree
     if algo:
         algo(grid, seed, max_steps, bias)
 
 
-class MazeAlgorithm:
+class MazeAlgorithm(object):
     def __init__(self, grid=None, _seed=None, _max_steps=0, bias=0):
         self.grid = grid
         self.bias = bias
@@ -89,15 +93,10 @@ class MazeAlgorithm:
             for pp in potential_passages[0: round(grid.weave * len(potential_passages))]:
                 self.add_crossing(pp)
 
-    def color_cells_by_tree_root(self):
-        trees = []
+    def color_cells_by_tree_root(self, union_find):
         for c in self.grid.all_cells():
-            try:
-                this_root = c.get_root()
-            except ValueError:
-                trees.append(this_root)
-            finally:
-                c.group = this_root.id
+            link = union_find.find(c)
+            c.group = link.column - 500 + link.row * 700
 
     def add_crossing(self, cell):
         can_cross = not cell.has_any_link() and not cell.neighbors[1].is_same_tree(cell.neighbors[3]) and not cell.neighbors[0].is_same_tree(cell.neighbors[2])
@@ -440,17 +439,22 @@ class Eller(MazeAlgorithm):
         super().__init__(*args, **kwargs)
         self.bias = (self.bias + 1) / 2
 
+        self.union_find = UnionFind(self.grid.all_cells())
+
         self.run()
-        self.color_cells_by_tree_root()
+
+        self.color_cells_by_tree_root(self.union_find)
 
     def run(self):
+        uf = self.union_find
         grid = self.grid
         for row in grid.each_row():
             tree_roots_this_row = {}
-            for c in row:
-                this_root = c.get_root()
-                if c.neighbors[3] and (c.row == grid.rows - 1 or (self.bias < random() and not c.is_same_tree(c.neighbors[3]))):
+            for c in row:                
+                this_root = uf.find(c)
+                if c.neighbors[3] and (c.row == grid.rows - 1 or (self.bias < random() and not uf.connected(c, c.neighbors[3]))):
                     c.link(c.neighbors[3])
+                    uf.union(c, c.neighbors[3])
                     if self.is_last_step():
                         return
                 try:
@@ -463,6 +467,7 @@ class Eller(MazeAlgorithm):
                     for c in choices(cells, k=min(len(cells), max(1, round((random() + self.bias - 0.5) * len(cells))))):
                         if c.neighbors[0]:
                             c.link(c.neighbors[0])
+                            uf.union(c, c.neighbors[0])
                             if self.is_last_step():
                                 return
 
@@ -472,16 +477,20 @@ class KruskalRandom(MazeAlgorithm):
         super().__init__(*args, **kwargs)
 
         self.add_template_passages()
+
+        self.union_find = UnionFind(self.grid.all_cells())
+
         self.run()
-        self.color_cells_by_tree_root()
+        self.color_cells_by_tree_root(self.union_find)
 
     def run(self):
         grid = self.grid
         unvisited_cells = grid.shuffled_cells()
         for c in unvisited_cells:
             for n in c.get_biased_unmasked_neighbors(self.bias):
-                if not c.is_same_tree(n):
+                if not self.union_find.connected(c, n):
                     c.link(n)
+                    self.union_find.union(c, n)
                     if self.is_last_step():
                         return
 
@@ -490,9 +499,13 @@ class Prim(MazeAlgorithm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.bias = round((1 - abs(self.bias)) * 10)
+
+        self.union_find = UnionFind(self.grid.all_cells())
+
         self.q = PriorityQueue()
         self.run()
-        self.color_cells_by_tree_root()
+        self.color_cells_by_tree_root(self.union_find)
 
     def run(self):
         start_cell = self.grid.random_cell()
@@ -500,8 +513,9 @@ class Prim(MazeAlgorithm):
 
         while not self.q.is_empty():
             cell, neighbor = self.q.pop()
-            if not cell.is_same_tree(neighbor):
+            if not self.union_find.connected(cell, neighbor):
                 cell.link(neighbor)
+                self.union_find.union(cell, neighbor)
                 if self.is_last_step():
                     return
                 self.push_to_queue(neighbor)
@@ -511,22 +525,31 @@ class Prim(MazeAlgorithm):
         [self.push_to_queue(n) for n in cell.get_unlinked_neighbors()]
 
     def push_to_queue(self, cell, priority=None):
-        unlinked_neighbor = cell.get_biased_unmasked_unlinked_neighbor(bias=self.bias)
-        if unlinked_neighbor:
-            self.q.push((cell, unlinked_neighbor), priority if priority else randint(0, 101))
+        try:
+            self.q.push((cell, choice(cell.get_unlinked_neighbors())), priority if priority else (randint(0, self.bias)))
+        except IndexError:
+            pass
 
 
-class PriorityQueue:
-    def __init__(self):
-        self._queue = []
-        self._index = 0
+class GrowingTree(MazeAlgorithm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.weights = 0.5 - self.bias / 2, 0.5 + self.bias / 2
 
-    def is_empty(self):
-        return not self._queue
+        self.run()
+        self.color_cells_by_tree_root()
 
-    def push(self, item, priority):
-        heapq.heappush(self._queue, (priority, self._index, item))
-        self._index += 1
+    def run(self):
+        active_cells = [self.grid.random_cell()]
 
-    def pop(self):
-        return heapq.heappop(self._queue)[-1]
+        while active_cells:
+            cell = choices((self.last_element_in_list, choice), weights=self.weights)[0](active_cells)
+            try:
+                available_neighbor = choice(cell.get_unlinked_neighbors())
+                cell.link(available_neighbor)
+                active_cells.append(available_neighbor)
+            except IndexError:
+                active_cells.remove(cell)
+
+    def last_element_in_list(self, l):
+        return l[-1] if l else None

@@ -1,5 +1,4 @@
 from random import random, choice, choices, shuffle
-from ... utils . tree import Tree
 
 
 class Cell:
@@ -17,7 +16,6 @@ class Cell:
         self.links = {}
 
         self.is_masked = False
-        self.tree = Tree()
 
     def __str__(self):
         return 'Cell(r' + str(self.row) + ';c' + str(self.column) + ')'
@@ -36,17 +34,9 @@ class Cell:
             self.links[other_cell] = True
             if bidirectional:
                 other_cell.link(self, False)
-            self.tree.connect_to(other_cell.tree)
-
-    def is_same_tree(self, other_cell):
-        return self.tree.is_connected_to(other_cell.tree)
-
-    def get_root(self):
-        return self.tree.get_root()
 
     def unlink(self, other_cell, bidirectional=True):
         if other_cell:
-            #  Disconnect tree ?? How-to ?
             try:
                 del self.links[other_cell]
             except KeyError:

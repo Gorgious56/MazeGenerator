@@ -2,7 +2,6 @@ from random import choice, seed, shuffle
 from mathutils import Vector
 from .. cell import Cell
 from .... visual . cell_visual import CellVisual
-
 TOP = 'TOP'
 BOT = 'BOT'
 LEFT = 'LEFT'
@@ -174,9 +173,6 @@ class Grid:
         positions[LEFT_BORDER] = positions[LEFT] + border
         positions[RIGHT_BORDER] = positions[RIGHT] - border
         return positions
-
-    def sub_vec(self, vec1, vec2):
-        return (vec1[0] - vec2[0], vec1[1] - vec2[1], vec1[2] - vec2[2])
 
     def get_blueprint(self):
         return [self.get_cell_walls(c) for c in self.get_unmasked_and_linked_cells()]
