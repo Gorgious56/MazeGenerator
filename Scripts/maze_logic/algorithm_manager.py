@@ -96,27 +96,47 @@ class MazeAlgorithm(object):
     def color_cells_by_tree_root(self, union_find):
         for c in self.grid.all_cells():
             link = union_find.find(c)
-            c.group = link.column - 500 + link.row * 700
+            if link:
+                c.group = link.column - 500 + link.row * 700
 
     def add_crossing(self, cell):
-        can_cross = not cell.has_any_link() and not cell.neighbors[1].is_same_tree(cell.neighbors[3]) and not cell.neighbors[0].is_same_tree(cell.neighbors[2])
+        can_cross = not cell.has_any_link() \
+            # and not self.union_find.connected(cell, cell.neighbors[0]) \
+            # and not self.union_find.connected(cell, cell.neighbors[1]) \
+            # and not self.union_find.connected(cell, cell.neighbors[2]) \
+            # and not self.union_find.connected(cell, cell.neighbors[3])
         if can_cross:
+            north = cell.neighbors[0]
+            west = cell.neighbors[1]
+            south = cell.neighbors[2]
+            east = cell.neighbors[3]
             if random() > 0.5:  # Vertical underway
-                cell.link(cell.neighbors[1])
-                cell.link(cell.neighbors[3])
+                pass
+                cell.link(west)
+                self.union_find.union(cell, east)
+                cell.link(east)
+                self.union_find.union(cell, east)
 
-                self.grid.tunnel_under(cell)
+                new_cell_under = self.grid.tunnel_under(cell)
+                self.union_find.data[new_cell_under] = new_cell_under
 
-                cell.neighbors[0].link(cell.neighbors[0].neighbors[cell.neighbors_return[0]])
-                cell.neighbors[2].link(cell.neighbors[2].neighbors[cell.neighbors_return[2]])
+                north.link(north.neighbors[cell.neighbors_return[0]])
+                self.union_find.union(north, north.neighbors[cell.neighbors_return[0]])
+                south.link(south.neighbors[cell.neighbors_return[2]])
+                self.union_find.union(south, south.neighbors[cell.neighbors_return[2]])
             else:
-                cell.link(cell.neighbors[0])
-                cell.link(cell.neighbors[2])
+                cell.link(north)
+                self.union_find.union(cell, north)
+                cell.link(south)
+                self.union_find.union(cell, south)
 
-                self.grid.tunnel_under(cell)
+                new_cell_under = self.grid.tunnel_under(cell)
+                self.union_find.data[new_cell_under] = new_cell_under
 
-                cell.neighbors[1].link(cell.neighbors[1].neighbors[cell.neighbors_return[1]])
-                cell.neighbors[3].link(cell.neighbors[3].neighbors[cell.neighbors_return[3]])
+                west.link(west.neighbors[cell.neighbors_return[1]])
+                self.union_find.union(west, west.neighbors[cell.neighbors_return[1]])
+                east.link(east.neighbors[cell.neighbors_return[3]])
+                self.union_find.union(east, east.neighbors[cell.neighbors_return[3]])
 
 
 class BinaryTree(MazeAlgorithm):
@@ -334,6 +354,8 @@ class Sidewinder(MazeAlgorithm):
         super().__init__(*args, **kwargs)
         self.bias = (self.bias + 1) / 2
 
+        # self.union_find = UnionFind(self.grid.all_cells())
+
         self.run()
         self.color_cells_by_tree_root()
 
@@ -476,9 +498,9 @@ class KruskalRandom(MazeAlgorithm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.add_template_passages()
-
         self.union_find = UnionFind(self.grid.all_cells())
+
+        self.add_template_passages()
 
         self.run()
         self.color_cells_by_tree_root(self.union_find)
@@ -537,7 +559,6 @@ class GrowingTree(MazeAlgorithm):
         self.weights = 0.5 - self.bias / 2, 0.5 + self.bias / 2
 
         self.run()
-        self.color_cells_by_tree_root()
 
     def run(self):
         active_cells = [self.grid.random_cell()]

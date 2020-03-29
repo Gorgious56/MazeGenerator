@@ -1,3 +1,4 @@
+# Awesome implementation from Tomáš Bouda : https://medium.com/100-days-of-algorithms/day-41-union-find-d0027148376d
 class UnionFind(object):
     def __init__(self, all_cells):
         self.data = {}
@@ -5,9 +6,12 @@ class UnionFind(object):
 
     def find(self, i):
         data = self.data
-        if i != data[i]:
-            data[i] = self.find(data[i])
-        return data[i]
+        try:
+            if i != data[i]:
+                data[i] = self.find(data[i])
+            return data[i]
+        except KeyError:
+            return None
 
     def union(self, i, j):
         data = self.data
@@ -20,7 +24,10 @@ class UnionFind(object):
 
 
 
-# I am saving the rest for later if/when performance tweaking gets important
+# I am saving what's next for later if/when performance tweaking
+# Debajyoti Nandi
+# https://github.com/deehzee/unionfind
+# MIT
 
 # """
 # A union-find disjoint set data structure.

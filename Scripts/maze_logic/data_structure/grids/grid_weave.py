@@ -5,7 +5,6 @@ from .... visual . cell_visual import DISPLACE
 
 class GridWeave(Grid):
     def __init__(self, *args, use_kruskal=False, weave=0, **kwargs):
-        self.cells_under = []
         self.use_kruskal = use_kruskal
         self.weave = weave / 100
         super().__init__(*args, **kwargs)
@@ -19,21 +18,13 @@ class GridWeave(Grid):
         for c in range(self.columns):
             for r in range(self.rows):
                 self[c, r] = CellOver(row=r, col=c, grid=self)
-
+    """
+    Tunnel under the specified cell of type 'CellOver'
+    Returns the resulting 'CellUnder'
+    """
     def tunnel_under(self, cell_over):
-        self.cells_under.append(CellUnder(cell_over))
-
-    def all_cells(self):
-        all_cells = super().all_cells()
-        all_cells.extend(self.cells_under)
-        return all_cells
-
-    def each_cell(self):
-        for c in super().each_cell():
-            yield c
-
-        for cu in self.cells_under:
-            yield cu
+        self.cells.append(CellUnder(cell_over))
+        return self.cells[-1]
 
     def get_cell_walls(self, c):
         cv = super().get_cell_walls(c)
