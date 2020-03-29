@@ -5,71 +5,18 @@ from .. utils . priority_queue import PriorityQueue
 from .. visual . cell_type_manager import POLAR, TRIANGLE, HEXAGON, SQUARE
 from .. utils . union_find import UnionFind
 
-ALGO_BINARY_TREE = 'Binary Tree'
-ALGO_SIDEWINDER = 'Sidewinder'
-ALGO_ELLER = 'Eller'
-ALGO_CROSS_STITCH = 'Cross Stitch'
-ALGO_KRUSKAL_RANDOM = 'Kruskal Randomized'
-ALGO_PRIM = 'Prim'
-ALGO_GROWING_TREE = 'Growing Tree'
-ALGO_ALDOUS_BRODER = 'Aldous-Broder'
-ALGO_WILSON = 'Wilson'
-ALGO_HUNT_AND_KILL = 'Hunt And Kill'
-ALGO_RECURSIVE_BACKTRACKER = 'Recursive Backtracker'
-
-DEFAULT_ALGO = ALGO_RECURSIVE_BACKTRACKER
-
-BIASED_ALGORITHMS = ALGO_RECURSIVE_BACKTRACKER, ALGO_HUNT_AND_KILL, ALGO_SIDEWINDER, ALGO_BINARY_TREE, ALGO_CROSS_STITCH, ALGO_ELLER, ALGO_KRUSKAL_RANDOM, ALGO_PRIM, ALGO_GROWING_TREE
-WEAVED_ALGORITHMS = ALGO_RECURSIVE_BACKTRACKER, ALGO_HUNT_AND_KILL, ALGO_WILSON, ALGO_ALDOUS_BRODER, ALGO_KRUSKAL_RANDOM, ALGO_CROSS_STITCH, ALGO_PRIM, ALGO_GROWING_TREE
-
-
-def is_algo_biased(props):
-    return \
-        props.maze_algorithm in BIASED_ALGORITHMS \
-        and not (props.maze_algorithm in (ALGO_RECURSIVE_BACKTRACKER, ALGO_HUNT_AND_KILL) and props.cell_type in (TRIANGLE, POLAR, HEXAGON))
-
-
-def is_algo_weaved(props):
-    return props.cell_type == SQUARE and props.maze_algorithm in WEAVED_ALGORITHMS
-
-
-def all_algorithms_names():
-    return ALGO_BINARY_TREE, ALGO_SIDEWINDER, ALGO_ELLER, ALGO_CROSS_STITCH, ALGO_KRUSKAL_RANDOM, ALGO_PRIM, ALGO_GROWING_TREE, ALGO_ALDOUS_BRODER, ALGO_WILSON, ALGO_HUNT_AND_KILL, ALGO_RECURSIVE_BACKTRACKER
-
-
-def generate_algo_enum():
-    return [(alg, alg, '') for alg in all_algorithms_names()]
-
 
 def work(algorithm, grid, seed, max_steps=-1, bias=0):
-    algo = None
-    if algorithm == ALGO_BINARY_TREE:
-        algo = BinaryTree
-    elif algorithm == ALGO_SIDEWINDER:
-        algo = Sidewinder
-    elif algorithm == ALGO_CROSS_STITCH:
-        algo = CrossStitch
-    elif algorithm == ALGO_ALDOUS_BRODER:
-        algo = AldousBroder
-    elif algorithm == ALGO_WILSON:
-        algo = Wilson
-    elif algorithm == ALGO_HUNT_AND_KILL:
-        algo = HuntAndKill
-    elif algorithm == ALGO_RECURSIVE_BACKTRACKER:
-        algo = RecursiveBacktracker
-    elif algorithm == ALGO_ELLER:
-        algo = Eller
-    elif algorithm == ALGO_KRUSKAL_RANDOM:
-        algo = KruskalRandom
-    elif algorithm == ALGO_PRIM:
-        algo = Prim
-    elif algorithm == ALGO_GROWING_TREE:
-        algo = GrowingTree
-    if algo:
-        algo(grid, seed, max_steps, bias)
+    try:
+        ALGORITHM_FROM_NAME[algorithm](grid, seed, max_steps, bias)
+    except KeyError:
+        pass
 
 
 class MazeAlgorithm(object):
+    biased = True
+    weaved = True
+
     def __init__(self, grid=None, _seed=None, _max_steps=0, bias=0):
         self.grid = grid
         self.bias = bias
@@ -107,10 +54,6 @@ class MazeAlgorithm(object):
 
     def add_crossing(self, cell):
         can_cross = not cell.has_any_link()
-        # and not self.union_find.connected(cell, cell.neighbors[0]) \
-        # and not self.union_find.connected(cell, cell.neighbors[1]) \
-        # and not self.union_find.connected(cell, cell.neighbors[2]) \
-        # and not self.union_find.connected(cell, cell.neighbors[3])
         if can_cross:
             north = cell.neighbors[0]
             west = cell.neighbors[1]
@@ -146,10 +89,12 @@ class MazeAlgorithm(object):
 
 
 class BinaryTree(MazeAlgorithm):
+    name = 'Binary Tree'
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.run()
-        self.color_cells_by_tree_root()
+        # self.color_cells_by_tree_root()
 
     def run(self):
         grid = self.grid
@@ -176,186 +121,9 @@ class BinaryTree(MazeAlgorithm):
                 return
 
 
-class AldousBroder(MazeAlgorithm):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        grid = self.grid
-
-        expeditions = 1
-        current = grid.random_cell(self._seed, True)
-        current.group = expeditions
-
-        unvisited = grid.size - 1 - len(grid.masked_cells)
-        while unvisited > 0:
-
-            neighbor = choice(current.get_neighbors())
-
-            if len(neighbor.links) <= 0:
-                current.link(neighbor)
-                unvisited -= 1
-                if self.is_last_step():
-                    return
-            current = neighbor
-            current.group = expeditions
-
-
-class CrossStitch(MazeAlgorithm):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.expeditions = 1
-        self.unvisited_legit_cells = []
-        self.current = None
-
-        self.run()
-
-    def run(self):
-        grid = self.grid
-        _seed = self._seed
-        direction = -1
-        self.set_current(grid.random_cell(_seed))
-
-        self.current.group = 1
-
-        while self.current:
-            unvisited_neighbor, direction = self.current.get_biased_unmasked_unlinked_directional_neighbor(self.bias, direction)
-
-            if unvisited_neighbor:
-                self.link_to(self.current, unvisited_neighbor)
-                self.set_current(unvisited_neighbor)
-                if self.is_last_step():
-                    return
-            else:
-                self.set_current(None)
-
-            while self.unvisited_legit_cells:
-                c = self.unvisited_legit_cells[0]
-                if not c.has_any_link():
-                    neighbor = c.get_biased_unmasked_linked_neighbor(self.bias, 5)
-                    if neighbor:
-                        self.set_current(c)
-                        self.link_to(self.current, neighbor)
-                        if self.is_last_step():
-                            return
-
-    def link_to(self, c, other_c):
-        c.link(other_c)
-        try:
-            self.unvisited_legit_cells.remove(other_c)
-        except ValueError:
-            pass
-        try:
-            self.unvisited_legit_cells.remove(c)
-        except ValueError:
-            pass
-        other_c.group = self.expeditions + 2
-
-    def set_current(self, c):
-        self.current = c
-        if c:
-            c.group = self.expeditions
-            unvisited_neighbors = self.current.get_unlinked_neighbors()
-            self.add_to_unvisited_legit_cells(unvisited_neighbors)
-        else:
-            self.direction = - 1
-
-    def add_to_unvisited_legit_cells(self, visited_cells):
-        self.unvisited_legit_cells.extend([c for c in visited_cells if c not in self.unvisited_legit_cells])
-
-
-class HuntAndKill(MazeAlgorithm):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.unvisited_legit_cells = []
-        self.expeditions = 2
-        self.direction = - 1
-
-        self.run()
-
-    def run(self):
-        self.set_current(self.grid.random_cell(self._seed))
-
-        self.add_to_unvisited_legit_cells(self.current.get_unlinked_neighbors())
-
-        while self.current:
-            while self.current:
-                neighbor, self.direction = self.current.get_biased_unmasked_unlinked_directional_neighbor(self.bias, self.direction)
-                if neighbor:
-                    self.link_to(self.current, neighbor)
-                    self.set_current(neighbor)
-                    if self.is_last_step():
-                        return
-                else:
-                    self.current = None
-            try:
-                self.expeditions += 1
-                self.set_current(choice(self.unvisited_legit_cells))
-                neighbor = choice(self.current.get_linked_neighbors())
-                self.link_to(neighbor, self.current)
-                if self.is_last_step():
-                    return
-
-                self.direction = neighbor.get_direction(self.current)
-
-                self.add_to_unvisited_legit_cells(self.current.get_unlinked_neighbors())
-            except IndexError:  # Neighbors is empty
-                break
-
-    def link_to(self, c, other_c):
-        c.link(other_c)
-        try:
-            self.unvisited_legit_cells.remove(other_c)
-        except ValueError:
-            pass
-        try:
-            self.unvisited_legit_cells.remove(c)
-        except ValueError:
-            pass
-        other_c.group = self.expeditions
-
-    def set_current(self, c):
-        self.current = c
-        c.group = self.expeditions
-        unvisited_neighbors = self.current.get_unlinked_neighbors()
-        self.add_to_unvisited_legit_cells(unvisited_neighbors)
-
-    def add_to_unvisited_legit_cells(self, visited_cells):
-        self.unvisited_legit_cells.extend([c for c in visited_cells if c not in self.unvisited_legit_cells])
-
-
-class RecursiveBacktracker(MazeAlgorithm):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        expeditions = 1
-
-        stack = [self.grid.random_cell(self._seed)]
-        stack[-1].group = expeditions + 1
-
-        backtracking = False
-        direction = - 1
-
-        while len(stack) > 0:
-            current = stack[-1]
-
-            unlinked_neighbor, direction = current.get_biased_unmasked_unlinked_directional_neighbor(self.bias, direction)
-            if unlinked_neighbor:
-                current.link(unlinked_neighbor)
-                if self.is_last_step():
-                    return
-                stack.append(unlinked_neighbor)
-                unlinked_neighbor.group = expeditions + 1
-                backtracking = False
-            else:
-                stack.pop()
-                if backtracking:
-                    current.group = - 1
-                else:
-                    expeditions += 1
-                backtracking = True
-
-
 class Sidewinder(MazeAlgorithm):
+    name = 'Sidewinder'
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.bias = (self.bias + 1) / 2
@@ -431,38 +199,9 @@ class Sidewinder(MazeAlgorithm):
         return self.bias > random()
 
 
-class Wilson(MazeAlgorithm):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        grid = self.grid
-
-        unvisited = grid.get_unmasked_cells().copy()
-        target_cell = choice(unvisited)
-        unvisited.remove(target_cell)
-        target_cell.group = -1
-
-        while len(unvisited) > 0:
-            cell = choice(unvisited)
-            cell.group = 1
-            path = [cell]
-
-            while cell in unvisited:
-                cell = choice([c for c in cell.get_neighbors() if c != path[-1]])
-                try:
-                    path = path[0:path.index(cell) + 1]
-                except ValueError:
-                    path.append(cell)
-
-            for i in range(0, len(path) - 1):
-                path[i].link(path[i + 1])
-                path[i].group = 1
-                path[i + 1].group = 1
-                unvisited.remove(path[i])
-                if self.is_last_step():
-                    return
-
-
 class Eller(MazeAlgorithm):
+    name = 'Eller'
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.bias = (self.bias + 1) / 2
@@ -503,7 +242,75 @@ class Eller(MazeAlgorithm):
                                 return
 
 
+class CrossStitch(MazeAlgorithm):
+    name = 'Cross-Stitch'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.expeditions = 1
+        self.unvisited_legit_cells = []
+        self.current = None
+
+        self.run()
+
+    def run(self):
+        grid = self.grid
+        _seed = self._seed
+        direction = -1
+        self.set_current(grid.random_cell(_seed))
+
+        self.current.group = 1
+
+        while self.current:
+            unvisited_neighbor, direction = self.current.get_biased_unmasked_unlinked_directional_neighbor(self.bias, direction)
+
+            if unvisited_neighbor:
+                self.link_to(self.current, unvisited_neighbor)
+                self.set_current(unvisited_neighbor)
+                if self.is_last_step():
+                    return
+            else:
+                self.set_current(None)
+
+            while self.unvisited_legit_cells:
+                c = self.unvisited_legit_cells[0]
+                if not c.has_any_link():
+                    neighbor = c.get_biased_unmasked_linked_neighbor(self.bias, 5)
+                    if neighbor:
+                        self.set_current(c)
+                        self.link_to(self.current, neighbor)
+                        if self.is_last_step():
+                            return
+
+    def link_to(self, c, other_c):
+        c.link(other_c)
+        try:
+            self.unvisited_legit_cells.remove(other_c)
+        except ValueError:
+            pass
+        try:
+            self.unvisited_legit_cells.remove(c)
+        except ValueError:
+            pass
+        other_c.group = self.expeditions + 2
+
+    def set_current(self, c):
+        self.current = c
+        if c:
+            c.group = self.expeditions
+            unvisited_neighbors = self.current.get_unlinked_neighbors()
+            self.add_to_unvisited_legit_cells(unvisited_neighbors)
+        else:
+            self.direction = - 1
+
+    def add_to_unvisited_legit_cells(self, visited_cells):
+        self.unvisited_legit_cells.extend([c for c in visited_cells if c not in self.unvisited_legit_cells])
+
+
 class KruskalRandom(MazeAlgorithm):
+    name = 'Kruskal Randomized'
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -527,6 +334,8 @@ class KruskalRandom(MazeAlgorithm):
 
 
 class Prim(MazeAlgorithm):
+    name = 'Prim'
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -563,6 +372,8 @@ class Prim(MazeAlgorithm):
 
 
 class GrowingTree(MazeAlgorithm):
+    name = 'Growing Tree'
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.weights = 0.5 - self.bias / 2, 0.5 + self.bias / 2
@@ -583,3 +394,180 @@ class GrowingTree(MazeAlgorithm):
 
     def last_element_in_list(self, l):
         return l[-1] if l else None
+
+
+class AldousBroder(MazeAlgorithm):
+    name = 'Aldous-Broder'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        grid = self.grid
+
+        expeditions = 1
+        current = grid.random_cell(self._seed, True)
+        current.group = expeditions
+
+        unvisited = grid.size - 1 - len(grid.masked_cells)
+        while unvisited > 0:
+
+            neighbor = choice(current.get_neighbors())
+
+            if len(neighbor.links) <= 0:
+                current.link(neighbor)
+                unvisited -= 1
+                if self.is_last_step():
+                    return
+            current = neighbor
+            current.group = expeditions
+
+
+class Wilson(MazeAlgorithm):
+    name = 'Wilson'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        grid = self.grid
+
+        unvisited = grid.get_unmasked_cells().copy()
+        target_cell = choice(unvisited)
+        unvisited.remove(target_cell)
+        target_cell.group = -1
+
+        while len(unvisited) > 0:
+            cell = choice(unvisited)
+            cell.group = 1
+            path = [cell]
+
+            while cell in unvisited:
+                cell = choice([c for c in cell.get_neighbors() if c != path[-1]])
+                try:
+                    path = path[0:path.index(cell) + 1]
+                except ValueError:
+                    path.append(cell)
+
+            for i in range(0, len(path) - 1):
+                path[i].link(path[i + 1])
+                path[i].group = 1
+                path[i + 1].group = 1
+                unvisited.remove(path[i])
+                if self.is_last_step():
+                    return
+
+
+class HuntAndKill(MazeAlgorithm):
+    name = 'Hunt And Kill'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.unvisited_legit_cells = []
+        self.expeditions = 2
+        self.direction = - 1
+
+        self.run()
+
+    def run(self):
+        self.set_current(self.grid.random_cell(self._seed))
+
+        self.add_to_unvisited_legit_cells(self.current.get_unlinked_neighbors())
+
+        while self.current:
+            while self.current:
+                neighbor, self.direction = self.current.get_biased_unmasked_unlinked_directional_neighbor(self.bias, self.direction)
+                if neighbor:
+                    self.link_to(self.current, neighbor)
+                    self.set_current(neighbor)
+                    if self.is_last_step():
+                        return
+                else:
+                    self.current = None
+            try:
+                self.expeditions += 1
+                self.set_current(choice(self.unvisited_legit_cells))
+                neighbor = choice(self.current.get_linked_neighbors())
+                self.link_to(neighbor, self.current)
+                if self.is_last_step():
+                    return
+
+                self.direction = neighbor.get_direction(self.current)
+
+                self.add_to_unvisited_legit_cells(self.current.get_unlinked_neighbors())
+            except IndexError:  # Neighbors is empty
+                break
+
+    def link_to(self, c, other_c):
+        c.link(other_c)
+        try:
+            self.unvisited_legit_cells.remove(other_c)
+        except ValueError:
+            pass
+        try:
+            self.unvisited_legit_cells.remove(c)
+        except ValueError:
+            pass
+        other_c.group = self.expeditions
+
+    def set_current(self, c):
+        self.current = c
+        c.group = self.expeditions
+        unvisited_neighbors = self.current.get_unlinked_neighbors()
+        self.add_to_unvisited_legit_cells(unvisited_neighbors)
+
+    def add_to_unvisited_legit_cells(self, visited_cells):
+        self.unvisited_legit_cells.extend([c for c in visited_cells if c not in self.unvisited_legit_cells])
+
+
+class RecursiveBacktracker(MazeAlgorithm):
+    name = 'Recursive Backtracker'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        expeditions = 1
+
+        stack = [self.grid.random_cell(self._seed)]
+        stack[-1].group = expeditions + 1
+
+        backtracking = False
+        direction = - 1
+
+        while len(stack) > 0:
+            current = stack[-1]
+
+            unlinked_neighbor, direction = current.get_biased_unmasked_unlinked_directional_neighbor(self.bias, direction)
+            if unlinked_neighbor:
+                current.link(unlinked_neighbor)
+                if self.is_last_step():
+                    return
+                stack.append(unlinked_neighbor)
+                unlinked_neighbor.group = expeditions + 1
+                backtracking = False
+            else:
+                stack.pop()
+                if backtracking:
+                    current.group = - 1
+                else:
+                    expeditions += 1
+                backtracking = True
+
+
+ALGORITHMS = MazeAlgorithm.__subclasses__()
+ALGORITHMS_NAMES = [alg_class.name for alg_class in ALGORITHMS]
+ALGORITHM_FROM_NAME = {}
+[ALGORITHM_FROM_NAME.update({alg_class.name: alg_class}) for alg_class in ALGORITHMS]
+DEFAULT_ALGO = RecursiveBacktracker.name
+
+BIASED_ALGORITHMS = [algo.name for algo in ALGORITHMS if algo.biased]
+WEAVED_ALGORITHMS = [algo.name for algo in ALGORITHMS if algo.weaved]
+
+
+def is_algo_biased(props):
+    return props.cell_type == SQUARE and props.maze_algorithm in BIASED_ALGORITHMS
+
+
+def is_algo_weaved(props):
+    return props.cell_type == SQUARE and props.maze_algorithm in WEAVED_ALGORITHMS
+
+
+def generate_algo_enum():
+    print([(alg_name, alg_name, '') for alg_name in ALGORITHMS_NAMES])
+    return [(alg_name, alg_name, '') for alg_name in ALGORITHMS_NAMES]
