@@ -1,6 +1,7 @@
 from . grid import Grid
 from .. cell import CellUnder, CellOver, Cell
 from .... visual . cell_visual import DISPLACE
+from .... utils . event import EventHandler, Event
 
 
 class GridWeave(Grid):
@@ -17,7 +18,8 @@ class GridWeave(Grid):
 
         for c in range(self.columns):
             for r in range(self.rows):
-                self[c, r] = CellOver(row=r, col=c, grid=self)
+                self[c, r] = CellOver(row=r, col=c)
+                self[c, r].request_tunnel_under += lambda cell, neighbor: self.tunnel_under(neighbor)
     """
     Tunnel under the specified cell of type 'CellOver'
     Returns the resulting 'CellUnder'

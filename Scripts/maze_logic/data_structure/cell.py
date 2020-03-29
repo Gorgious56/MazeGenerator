@@ -1,4 +1,5 @@
 from random import random, choice, choices, shuffle
+from ... utils . event import Event, EventHandler
 
 
 class Cell:
@@ -163,10 +164,10 @@ class CellHex(Cell):
 
 
 class CellOver(Cell):
-    def __init__(self, grid, *args, **kwards):
+    def __init__(self, *args, **kwards):
         super().__init__(*args, **kwards)
         self.neighbors_over = None
-        self.grid = grid
+        self.request_tunnel_under = EventHandler(Event('Tunnel Under'), self)
 
     def get_neighbors(self):
         if self.neighbors_over is None:
@@ -203,7 +204,7 @@ class CellOver(Cell):
         if other_cell:
             for i, neighbor in enumerate(self.neighbors):
                 if neighbor and neighbor == other_cell.neighbors[self.get_neighbor_return(i)]:
-                    self.grid.tunnel_under(neighbor)
+                    self.request_tunnel_under(neighbor)
                     return
             else:
                 super().link(other_cell, bidirectional=bidirectional)
