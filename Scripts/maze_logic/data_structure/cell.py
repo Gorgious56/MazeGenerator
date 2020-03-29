@@ -5,14 +5,15 @@ from ... utils . event import Event, EventHandler
 class Cell:
     neighbors_return = [2, 3, 0, 1]
 
-    def __init__(self, row, col):
+    def __init__(self, row, col, level=0):
         self.row = row
         self.column = col
+        self.level = level
 
         self.group = 0
 
-        self.neighbors = [None] * 4
-        # 0>North - 1>West - 2>South - 3>East
+        self.neighbors = [None] * 6
+        # 0>North - 1>West - 2>South - 3>East - 4>Up - 5>Down
 
         self.links = {}
 
@@ -102,10 +103,19 @@ class Cell:
         neighbors = self.get_unlinked_neighbors()
         return self.get_biased_choice(neighbors, bias, relative_weight, k=len(neighbors))
 
+    """
+    Get a random unmasked neighbor
+    A bias of 0 will prefer selecting a cell on the same level
+    A bias of 1 will prefer selecting a cell on a different level
+    """
+    def get_neighbor_level_biased(self, bias=0):
+        pass
+
     def get_biased_unmasked_unlinked_directional_neighbor(self, bias, direction):
         direction = int(direction)
         if direction == -1 or type(self) is not Cell:
             try:
+                # unlinked_neighbor = self.get_neighbor_level_biased((1 + bias) / 2)
                 unlinked_neighbor = choice(self.get_unlinked_neighbors())
                 return unlinked_neighbor, self.get_direction(unlinked_neighbor)
             except IndexError:

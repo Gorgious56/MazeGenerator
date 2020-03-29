@@ -11,7 +11,7 @@ class GenerateMazeOperator(Operator):
     @classmethod
     def poll(cls, context):
         mg_props = context.scene.mg_props
-        return mg_props.rows_or_radius > 0 and context.mode == 'OBJECT'
+        return mg_props.maze_rows_or_radius > 0 and mg_props.maze_columns > 0 and mg_props.maze_levels > 0 and context.mode == 'OBJECT'
 
     def execute(self, context):
         start_time = time()

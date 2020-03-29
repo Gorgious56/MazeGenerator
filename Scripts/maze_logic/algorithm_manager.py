@@ -1,6 +1,6 @@
-from random import seed, choice, choices, random, randint, shuffle
+from random import seed, choice, choices, random, randint, shuffle, randrange
 from math import ceil
-from . data_structure . cell import CellPolar, CellTriangle, CellHex
+from . data_structure . cell import CellPolar, CellTriangle, CellHex, Cell
 from .. utils . priority_queue import PriorityQueue
 from .. visual . cell_type_manager import POLAR, TRIANGLE, HEXAGON, SQUARE
 from .. utils . union_find import UnionFind
@@ -14,6 +14,7 @@ def work(algorithm_name, grid, seed, max_steps=-1, bias=0):
 
 
 class MazeAlgorithm(object):
+    name = 'NOT REGISTERED'
     biased = True
     weaved = True
 
@@ -123,10 +124,13 @@ class BinaryTree(MazeAlgorithm):
                     neighbors.append(c.ccw)
             else:  # Square Cell
                 neighbors = [n for n in c.neighbors[0:2] if n]
+                if c.row == self.grid.rows - 1 and c.neighbors[4]:
+                    neighbors.append(c.neighbors[4])
 
             link_neighbor = c.get_biased_choice(neighbors, bias, 5)
-            c.link(link_neighbor)
-            self.union_find.union(c, link_neighbor)
+            if not self.union_find.connected(c, link_neighbor):
+                c.link(link_neighbor)
+                self.union_find.union(c, link_neighbor)
 
             if self.is_last_step():
                 return
@@ -150,28 +154,34 @@ class Sidewinder(MazeAlgorithm):
         for row in grid.each_row():
             run = []
             for c in row:
+                link = None
                 run.append(c)
 
                 c_type = type(c)
                 if c_type is CellTriangle:
                     if c.is_upright():
                         if c.neighbors[0]:
-                            self.link(c, c.neighbors[0])
+                            link = c, 0
+                            # self.link(c, c.neighbors[0])
                         else:
                             if len(run) == 1:
-                                c.link(c.neighbors[0])
+                                link = c, 0
+                                # c.link(c.neighbors[0])
                             else:
                                 member = choice([c for c in run if not c.is_upright()])
                                 if member.neighbors[2]:
-                                    self.link(member, member.neighbors[2])
+                                    link = member, 1
+                                    # self.link(member, member.neighbors[2])
                             run = []
                         if c.row == grid.rows - 1 and c.neighbors[1]:
-                            self.link(c, c.neighbors[1])
+                            link = c, 1
+                            # self.link(c, c.neighbors[1])
                     else:
                         if (c.neighbors[1] is None) or (c.neighbors[1] is not None and self.must_close_run()):
                             member = choice([c for c in run if not c.is_upright()])
                             if member.neighbors[2]:
-                                self.link(member, member.neighbors[2])
+                                link = member, 2
+                                # self.link(member, member.neighbors[2])
                             run = []
                         else:
                             self.link(c, c.neighbors[1])
@@ -181,28 +191,36 @@ class Sidewinder(MazeAlgorithm):
                         member = choice(run)
                         north_neighbors = [n for n in c.neighbors[0:3] if n and not n.has_any_link()]
                         if north_neighbors:
-                            self.link(member, choice(north_neighbors))
+                            link = member, choice(north_neighbors)
+                            # self.link(member, choice(north_neighbors))
                         elif c.neighbors[5]:
-                            self.link(c, c.neighbors[other])
+                            link = c, other
+                            # self.link(c, c.neighbors[other])
                         run = []
                     else:
-                        self.link(c, c.neighbors[other])
+                        link = c, other
+                        # self.link(c, c.neighbors[other])
                 elif c_type is CellPolar:
                     if (c.ccw and c.ccw.column == 0) or (c.has_outward_neighbor() and self.must_close_run()) or (c.row == 0):
                         member = choice(run)
                         if member.has_outward_neighbor():
-                            self.link(member, member.outward)
+                            link = member, member.outward
+                            # self.link(member, member.outward)
                         run = []
                     else:
-                        self.link(c, c.ccw)
-                else:
+                        link = c, c.ccw
+                        # self.link(c, c.ccw)
+                else:  # Cell is Square
                     if (c.neighbors[3] is None) or (c.neighbors[0] and self.must_close_run()):
                         member = choice(run)
                         if member.neighbors[0]:
-                            self.link(member, member.neighbors[0])
+                            link = member, 0
                         run = []
                     else:
-                        self.link(c, c.neighbors[3])
+                        link = c, 3
+
+                if link:
+                    self.link(link[0], link[1] if link[1] is Cell else link[0].neighbors[link[1]])
 
                 if self.is_last_step():
                     return
@@ -248,9 +266,7 @@ class Eller(MazeAlgorithm):
                     sets_this_row[this_set] = [c]
             if c.row != grid.rows - 1:
                 for tree, cells in sets_this_row.items():
-                    b = ceil(self.bias * len(cells))
-                    rd= randint(1, b + 1)
-                    ch_len = min(len(cells), rd)
+                    ch_len = min(len(cells), randint(1, ceil(self.bias * len(cells)) + 1))
                     for c in choices(cells, k=ch_len):
                         if c.neighbors[0]:
                             c.link(c.neighbors[0])
@@ -413,6 +429,75 @@ class GrowingTree(MazeAlgorithm):
 
     def last_element_in_list(self, l):
         return l[-1] if l else None
+
+
+class RecursiveDivision(MazeAlgorithm):
+    name = 'Recursive Division'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.union_find = UnionFind(self.grid.all_cells())
+
+        self.run()
+
+        self.color_cells_by_tree_root()
+
+    def run(self):
+        self.divide(0, 0, self.grid.rows, self.grid.columns)
+
+    def divide(self, mx, my, ax, ay):
+        HORIZONTAL, VERTICAL = 0, 1
+        grid = self.grid
+
+        dx = ax - mx
+        dy = ay - my
+        if dx < 2 or dy < 2:
+            # make a hallway
+            if dx > 1:
+                y = my
+                for x in range(mx, ax):
+                    self.link(grid[y, x], 2)
+                    if self.is_last_step():
+                        return
+            elif dy > 1:
+                x = mx
+                for y in range(my, ay):
+                    self.link(grid[y, x], 3)
+                    if self.is_last_step():
+                        return
+            return
+
+        wall = HORIZONTAL if dy > dx else (VERTICAL if dx > dy else randrange(2))
+
+        xp = randrange(mx, ax - (wall == VERTICAL))
+        yp = randrange(my, ay - (wall == HORIZONTAL))
+
+        if wall == HORIZONTAL:
+            nx, ny = ax, yp + 1
+            neighbor = 3
+            ox, oy = mx, ny
+        else:
+            nx, ny = xp + 1, ay
+            neighbor = 2
+            ox, oy = nx, my
+        if self.link(grid[yp, xp], neighbor):
+            if self.is_last_step():
+                return
+
+        self.divide(mx, my, nx, ny)
+        self.divide(ox, oy, ax, ay)
+
+    def link(self, cell, neighbor_number):
+        n = cell.neighbors[neighbor_number]
+        # if n:
+        if n and not self.union_find.connected(cell, n):
+            cell.link(n)
+            self.union_find.union(cell, n)
+            return True
+        else:
+            return False
+
 
 
 class AldousBroder(MazeAlgorithm):

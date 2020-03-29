@@ -10,14 +10,18 @@ TOP_BORDER = 'TOP_BORDER'
 BOT_BORDER = 'BOT_BORDER'
 LEFT_BORDER = 'LEFT_BORDER'
 RIGHT_BORDER = 'RIGHT_BORDER'
+CENTER = 'CENTER'
+BORDER = 'BORDER'
 
 
 class Grid:
-    def __init__(self, rows=2, columns=2, name="", coord_system='cartesian', sides=4, cell_size=1):
+    def __init__(self, rows=2, columns=2, levels=1, name="", coord_system='cartesian', sides=4, cell_size=1):
         self.rows = rows
         self.columns = columns
-        self.cells = [None] * (rows * columns)
-        self.size = rows * columns
+        self.levels = levels
+        self.__cells = [None] * (rows * columns * levels)
+        self.size = rows * columns * levels
+        self.size_2D = rows * columns
         self.masked_cells = []
         self.name = name
 
@@ -33,37 +37,48 @@ class Grid:
         self.cell_size = cell_size
 
     def __delitem__(self, key):
-        del self.cells[key[0] + key[1] * self.columns]
+        del self.__cells[key[0] + key[1] * self.columns]
 
     def __getitem__(self, key):
-        return self.cells[key[0] + key[1] * self.columns] \
-            if (self.columns > key[0] >= 0 and self.rows > key[1] >= 0) else None
+        if len(key) == 2:
+            return self.__getitem__((key[0], key[1], 0))
+        else:
+            return self.__cells[key[0] + key[1] * self.columns + key[2] * self.size_2D] \
+                if (self.columns > key[0] >= 0 and self.rows > key[1] >= 0 and self.levels > key[2] >= 0) else None
 
     def __setitem__(self, key, value):
-        self.cells[key[0] + key[1] * self.columns] = value
+        if len(key) == 2:
+            self.__setitem__((key[0], key[1], 0), value)
+        else:
+            self.__cells[key[0] + key[1] * self.columns + key[2] * self.size_2D] = value
 
     def prepare_grid(self):
-        for c in range(self.columns):
-            for r in range(self.rows):
-                self[c, r] = Cell(r, c)
+        for l in range(self.levels):
+            for c in range(self.columns):
+                for r in range(self.rows):
+                    self[c, r, l] = Cell(r, c, l)
 
     def configure_cells(self):
-        for c in self.cells:
-            row, col = c.row, c.column
+        for c in self.all_cells():
+            row, col, level = c.row, c.column, c.level
             # North :
-            c.neighbors[0] = self[col, row + 1]
+            c.neighbors[0] = self[col, row + 1, level]
             # West :
-            c.neighbors[1] = self[col - 1, row]
+            c.neighbors[1] = self[col - 1, row, level]
             # South :
-            c.neighbors[2] = self[col, row - 1]
+            c.neighbors[2] = self[col, row - 1, level]
             # East :
-            c.neighbors[3] = self[col + 1, row]
+            c.neighbors[3] = self[col + 1, row, level]
+            # Up :
+            c.neighbors[4] = self[col, row, level + 1]
+            # Up :
+            c.neighbors[5] = self[col, row, level - 1]
 
     def random_cell(self, _seed=None, filter_mask=True):
         if _seed:
             seed(_seed)
         try:
-            return choice(self.get_unmasked_cells()) if filter_mask else choice(self.cells)
+            return choice(self.get_unmasked_cells()) if filter_mask else choice(self.all_cells())
         except IndexError:
             return None
 
@@ -77,20 +92,20 @@ class Grid:
 
     def each_row(self):
         cols = self.columns
-        for r in range(self.rows):
-            yield [c for c in self.cells[r * cols: (r + 1) * cols] if not c.is_masked]
+        for l in range(self.levels):
+            for r in range(self.rows):
+                yield [c for c in self.__cells[r * cols + l * self.size_2D: (r + 1) * cols + l * self.size_2D] if not c.is_masked]
 
-    def each_column(self):
-        cols = self.columns
-        for c in range(cols):
-            yield [self.cells[r * cols + c] for r in range(self.rows) if not self.cells[r * cols + c].is_masked]
+    def each_level(self):
+        for l in range(self.levels):
+            yield [c for c in self.__cells[l * self.size_2D: (l + 1) * self.size_2D] if not c.is_masked]
 
     def each_cell(self):
         for c in self.get_unmasked_cells():
             yield c
 
     def all_cells(self):
-        return self.cells
+        return self.__cells
 
     def get_dead_ends(self):
         return [c for c in self.get_unmasked_cells() if len(c.links) == 1]
@@ -161,17 +176,21 @@ class Grid:
     def get_unmasked_and_linked_cells(self):
         return [c for c in self.all_cells() if any(c.links)]
 
-    def get_cell_position(self, c):
+    def get_cell_position(self, c, cell_size=None):
         positions = {}
-        border = (1 - self.cell_size) / 2
+        delta_level = c.level * (self.columns + 1)
+        cell_size = self.cell_size if cell_size is None else cell_size
+        border = (1 - cell_size) / 2
         positions[TOP] = c.row + 0.5
         positions[BOT] = c.row - 0.5
-        positions[LEFT] = c.column - 0.5
-        positions[RIGHT] = c.column + 0.5
+        positions[LEFT] = c.column - 0.5 + delta_level
+        positions[RIGHT] = c.column + 0.5 + delta_level
         positions[TOP_BORDER] = positions[TOP] - border
         positions[BOT_BORDER] = positions[BOT] + border
         positions[LEFT_BORDER] = positions[LEFT] + border
         positions[RIGHT_BORDER] = positions[RIGHT] - border
+        positions[CENTER] = Vector((c.column + delta_level, c.row, 0))
+        positions[BORDER] = cell_size * 0.05
         return positions
 
     def get_blueprint(self):
@@ -192,6 +211,9 @@ class Grid:
         right_b = p[RIGHT_BORDER]
         bot_b = p[BOT_BORDER]
         top_b = p[TOP_BORDER]
+        cx = (right + left) / 2
+        cy = (top + bot) / 2
+        b = p[BORDER]
         if mask[0]:
             cv.create_wall(Vector((left, top, 0)), Vector((right, top, 0)))
         else:
@@ -221,5 +243,16 @@ class Grid:
             cv.add_face(
                 (Vector((left_b, bot_b, 0)), Vector((left_b, bot, 0)), Vector((right_b, bot, 0)), Vector((right_b, bot_b, 0))),
                 vertices_levels=(1, 0, 0, 1))
+
+        zd = 0.1
+        if not mask[4]:
+            cv.add_face(
+                (Vector((cx, top_b - b * 1.5, zd)), Vector((cx, bot_b + b * 1.5, zd)), Vector((right_b - b * 1.5, cy, zd))),
+                vertices_levels=(1, 1, 1))
+        if not mask[5]:
+            cv.add_face(
+                (Vector((cx, top_b - b * 1.5, zd)), Vector((left_b + b, cy, zd)), Vector((cx, bot_b + b * 1.5, zd))),
+                vertices_levels=(1, 1, 1))
+
 
         return cv

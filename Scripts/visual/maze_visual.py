@@ -25,6 +25,8 @@ class MazeVisual:
         self.mesh_walls = None
         self.obj_cells = None
         self.mesh_cells = None
+        self.obj_ladders = None
+        self.cur_ladders = None
         self.grid = None
 
         self.scene = scene
@@ -74,15 +76,16 @@ class MazeVisual:
         else:
             if props.maze_weave:
                 self.grid = GridWeave(
-                    rows=props.rows_or_radius,
-                    columns=props.rows_or_radius,
+                    rows=props.maze_rows_or_radius,
+                    columns=props.maze_columns,
+                    levels=1,
                     cell_size=1 - max(0.1, props.cell_inset),
                     use_kruskal=algorithm_manager.is_kruskal_random(props.maze_algorithm),
                     weave=props.maze_weave)
                 return
             else:
                 grid = Grid
-        g = grid(rows=props.rows_or_radius, columns=props.rows_or_radius, cell_size=1 - props.cell_inset)
+        g = grid(rows=props.maze_rows_or_radius, columns=props.maze_columns, levels=props.maze_levels, cell_size=1 - props.cell_inset)
         self.grid = g
 
     def generate_objects(self):
@@ -115,45 +118,59 @@ class MazeVisual:
             self.obj_cells = bpy.data.objects.new('Cells', self.mesh_cells)
             scene.collection.objects.link(self.obj_cells)
 
+        # # Get or add the Ladders Curve data
+        # try:
+        #     self.cur_ladders = bpy.data.curves['Ladders Curve']
+        #     self.cur_ladders.clear_geometry()
+        # except KeyError:
+        #     self.mesh_cells = bpy.data.meshes.new('Ladders Curve')
+        
+        # # Get or add the Wall object and link it to the wall mesh
+        # try:
+        #     self.obj_ladders = scene.objects['Ladders']
+        # except KeyError:
+        #     self.obj_ladders = bpy.data.objects.new('Ladders', self.mesh_cells)
+        #     scene.collection.objects.link(self.obj_cells)
+
     def generate_modifiers(self):
         props = self.props
         if props.auto_overwrite:
             self.obj_walls.modifiers.clear()
-        add_modifier(self.obj_walls, 'WELD', WALL_WELD_NAME, properties={'show_expanded': False})
-        add_modifier(self.obj_walls, 'SCREW', WALL_SCREW_NAME, properties={'show_expanded': False, 'angle': 0, 'steps': 2, 'render_steps': 2, 'screw_offset': props.wall_height})
-        add_modifier(self.obj_walls, 'SOLIDIFY', WALL_SOLIDIFY_NAME, properties={'show_expanded': False, 'solidify_mode': 'NON_MANIFOLD', 'thickness': props.wall_width, 'offset': 0})
-        add_modifier(self.obj_walls, 'BEVEL', WALL_BEVEL_NAME, properties={'show_expanded': False, 'segments': 4, 'limit_method': 'ANGLE'})
+            add_modifier(self.obj_walls, 'WELD', WALL_WELD_NAME, properties={'show_expanded': False})
+            add_modifier(self.obj_walls, 'SCREW', WALL_SCREW_NAME, properties={'show_expanded': False, 'angle': 0, 'steps': 2, 'render_steps': 2, 'screw_offset': props.wall_height})
+            add_modifier(self.obj_walls, 'SOLIDIFY', WALL_SOLIDIFY_NAME, properties={'show_expanded': False, 'solidify_mode': 'NON_MANIFOLD', 'thickness': props.wall_width, 'offset': 0})
+            add_modifier(self.obj_walls, 'BEVEL', WALL_BEVEL_NAME, properties={'show_expanded': False, 'segments': 4, 'limit_method': 'ANGLE'})
 
-        if props.auto_overwrite:
             self.obj_cells.modifiers.clear()
-        add_modifier(self.obj_cells, 'WELD', CELL_WELD_NAME, properties={'show_expanded': False, 'vertex_group': DISPLACE, 'invert_vertex_group': True})
-        add_modifier(self.obj_cells, 'WELD', CELL_WELD_2_NAME, properties={'show_expanded': False, 'vertex_group': DISPLACE, 'invert_vertex_group': False})
-        add_modifier(self.obj_cells, 'SOLIDIFY', CELL_SOLIDIFY_NAME, properties={'show_expanded': False, 'use_even_offset': True, 'vertex_group': DISPLACE, 'invert_vertex_group': True})
-        # add_modifier(self.obj_cells, 'DECIMATE', CELL_DECIMATE_NAME, properties={'show_expanded': False, 'decimate_type': 'DISSOLVE'})
-        add_modifier(self.obj_cells, 'BEVEL', CELL_BEVEL_NAME, properties={'show_expanded': False, 'segments': 2, 'limit_method': 'ANGLE', 'material': 1, 'profile': 1, 'angle_limit': 1.5, 'use_clamp_overlap': False})
-        add_modifier(self.obj_cells, 'SUBSURF', CELL_SUBSURF_NAME, properties={'show_expanded': False})
-        add_modifier(self.obj_cells, 'DISPLACE', CELL_DISPLACE_NAME, properties={'show_expanded': False, 'direction': 'Z', 'vertex_group': DISPLACE, 'mid_level': 0})
+            add_modifier(self.obj_cells, 'WELD', CELL_WELD_NAME, properties={'show_expanded': False, 'vertex_group': DISPLACE, 'invert_vertex_group': True})
+            add_modifier(self.obj_cells, 'WELD', CELL_WELD_2_NAME, properties={'show_expanded': False, 'vertex_group': DISPLACE, 'invert_vertex_group': False})
+            add_modifier(self.obj_cells, 'SOLIDIFY', CELL_SOLIDIFY_NAME, properties={'show_expanded': False, 'use_even_offset': True, 'vertex_group': DISPLACE, 'invert_vertex_group': True})
+            # add_modifier(self.obj_cells, 'DECIMATE', CELL_DECIMATE_NAME, properties={'show_expanded': False, 'decimate_type': 'DISSOLVE'})
+            add_modifier(self.obj_cells, 'BEVEL', CELL_BEVEL_NAME, properties={'show_expanded': False, 'segments': 2, 'limit_method': 'ANGLE', 'material': 1, 'profile': 1, 'angle_limit': 1.5, 'use_clamp_overlap': False})
+            add_modifier(self.obj_cells, 'SUBSURF', CELL_SUBSURF_NAME, properties={'show_expanded': False})
+            add_modifier(self.obj_cells, 'DISPLACE', CELL_DISPLACE_NAME, properties={'show_expanded': False, 'direction': 'Z', 'vertex_group': DISPLACE, 'mid_level': 0})
 
     def set_materials(self):
         if MazeVisual.mat_mgr:
             MazeVisual.mat_mgr.set_materials()
 
     def generate_drivers(self):
-        add_driver_to(self.obj_walls.modifiers[WALL_SCREW_NAME], 'screw_offset', 'wall_height', 'SCENE', self.scene, 'mg_props.wall_height')
-        add_driver_to(self.obj_walls.modifiers[WALL_SCREW_NAME], 'use_smooth_shade', 'wall_bevel', 'SCENE', self.scene, 'mg_props.wall_bevel', expression='wall_bevel > .005')
-        add_driver_to(self.obj_walls.modifiers[WALL_SOLIDIFY_NAME], 'thickness', 'wall_thickness', 'SCENE', self.scene, 'mg_props.wall_width')
-        add_driver_to(self.obj_walls.modifiers[WALL_BEVEL_NAME], 'width', 'wall_bevel', 'SCENE', self.scene, 'mg_props.wall_bevel')
+        if self.props.auto_overwrite:
+            add_driver_to(self.obj_walls.modifiers[WALL_SCREW_NAME], 'screw_offset', 'wall_height', 'SCENE', self.scene, 'mg_props.wall_height')
+            add_driver_to(self.obj_walls.modifiers[WALL_SCREW_NAME], 'use_smooth_shade', 'wall_bevel', 'SCENE', self.scene, 'mg_props.wall_bevel', expression='wall_bevel > .005')
+            add_driver_to(self.obj_walls.modifiers[WALL_SOLIDIFY_NAME], 'thickness', 'wall_thickness', 'SCENE', self.scene, 'mg_props.wall_width')
+            add_driver_to(self.obj_walls.modifiers[WALL_BEVEL_NAME], 'width', 'wall_bevel', 'SCENE', self.scene, 'mg_props.wall_bevel')
 
-        add_driver_to(self.obj_cells.modifiers[CELL_SOLIDIFY_NAME], 'thickness', 'cell_thickness', 'SCENE', self.scene, 'mg_props.cell_thickness')
-        add_driver_to(self.obj_cells.modifiers[CELL_SOLIDIFY_NAME], 'thickness_vertex_group', 'cell_thickness', 'SCENE', self.scene, 'mg_props.cell_thickness', expression='max(0, 1 - abs(cell_thickness / 2))')
-        add_driver_to(self.obj_cells.modifiers[CELL_BEVEL_NAME], 'width', 'cell_contour', 'SCENE', self.scene, 'mg_props.cell_contour')
-        # add_driver_to(self.obj_cells.modifiers[CELL_DECIMATE_NAME], 'show_viewport', 'cell_inset', 'SCENE', self.scene, 'mg_props.cell_inset', expression='cell_inset > 0')
-        # add_driver_to(self.obj_cells.modifiers[CELL_DECIMATE_NAME], 'show_render', 'cell_inset', 'SCENE', self.scene, 'mg_props.cell_inset', expression='cell_inset > 0')
-        add_driver_to(self.obj_cells.modifiers[CELL_SUBSURF_NAME], 'levels', 'cell_subdiv', 'SCENE', self.scene, 'mg_props.cell_subdiv')
-        add_driver_to(self.obj_cells.modifiers[CELL_SUBSURF_NAME], 'render_levels', 'cell_subdiv', 'SCENE', self.scene, 'mg_props.cell_subdiv')
-        add_driver_to(self.obj_cells.modifiers[CELL_DISPLACE_NAME], 'strength', 'cell_thickness', 'SCENE', self.scene, 'mg_props.cell_thickness', expression='- (cell_thickness + (abs(cell_thickness) / cell_thickness * 0.1)) if cell_thickness != 0 else 0')
-        add_driver_to(self.obj_cells.modifiers[CELL_DISPLACE_NAME], 'show_viewport', 'cell_thickness', 'SCENE', self.scene, 'mg_props.cell_thickness', expression='cell_thickness != 0')
-        add_driver_to(self.obj_cells.modifiers[CELL_DISPLACE_NAME], 'show_render', 'cell_thickness', 'SCENE', self.scene, 'mg_props.cell_thickness', expression='cell_thickness != 0')
+            add_driver_to(self.obj_cells.modifiers[CELL_SOLIDIFY_NAME], 'thickness', 'cell_thickness', 'SCENE', self.scene, 'mg_props.cell_thickness')
+            add_driver_to(self.obj_cells.modifiers[CELL_SOLIDIFY_NAME], 'thickness_vertex_group', 'cell_thickness', 'SCENE', self.scene, 'mg_props.cell_thickness', expression='max(0, 1 - abs(cell_thickness / 2))')
+            add_driver_to(self.obj_cells.modifiers[CELL_BEVEL_NAME], 'width', 'cell_contour', 'SCENE', self.scene, 'mg_props.cell_contour')
+            # add_driver_to(self.obj_cells.modifiers[CELL_DECIMATE_NAME], 'show_viewport', 'cell_inset', 'SCENE', self.scene, 'mg_props.cell_inset', expression='cell_inset > 0')
+            # add_driver_to(self.obj_cells.modifiers[CELL_DECIMATE_NAME], 'show_render', 'cell_inset', 'SCENE', self.scene, 'mg_props.cell_inset', expression='cell_inset > 0')
+            add_driver_to(self.obj_cells.modifiers[CELL_SUBSURF_NAME], 'levels', 'cell_subdiv', 'SCENE', self.scene, 'mg_props.cell_subdiv')
+            add_driver_to(self.obj_cells.modifiers[CELL_SUBSURF_NAME], 'render_levels', 'cell_subdiv', 'SCENE', self.scene, 'mg_props.cell_subdiv')
+            add_driver_to(self.obj_cells.modifiers[CELL_DISPLACE_NAME], 'strength', 'cell_thickness', 'SCENE', self.scene, 'mg_props.cell_thickness', expression='- (cell_thickness + (abs(cell_thickness) / cell_thickness * 0.1)) if cell_thickness != 0 else 0')
+            add_driver_to(self.obj_cells.modifiers[CELL_DISPLACE_NAME], 'show_viewport', 'cell_thickness', 'SCENE', self.scene, 'mg_props.cell_thickness', expression='cell_thickness != 0')
+            add_driver_to(self.obj_cells.modifiers[CELL_DISPLACE_NAME], 'show_render', 'cell_thickness', 'SCENE', self.scene, 'mg_props.cell_thickness', expression='cell_thickness != 0')
 
     def offset_objects(self):
         if self.props.cell_type == POLAR:

@@ -146,17 +146,23 @@ class ParametersPanel(bpy.types.Panel):
         layout.prop_menu_enum(mg_props, 'cell_type', icon=cell_enum_icon)
         layout.prop(mg_props, 'maze_algorithm', icon='HAND', text='Solver')
 
-        row = layout.row(align=True)
-        sub = row.row()
-        sub.operator('maze.tweak_row_number', text='', icon='REMOVE').add_or_remove = False
+        def maze_size_ui(prop_name, decrease, increase, text):
+            row = layout.row(align=True)
+            sub = row.row()
+            sub.operator('maze.tweak_maze_size', text='', icon='REMOVE').tweak_size = decrease
 
-        sub = row.row()
-        sub.prop(mg_props, 'rows_or_radius', slider=True, text='Size')
-        sub.scale_x = 10.0
+            sub = row.row()
+            sub.prop(mg_props, prop_name, slider=True, text=text)
+            sub.scale_x = 10.0
 
-        sub = row.row()
-        sub.operator('maze.tweak_row_number', text='', icon='ADD').add_or_remove = True
+            sub = row.row()
+            sub.operator('maze.tweak_maze_size', text='', icon='ADD').tweak_size = increase
 
+        maze_size_ui('maze_columns', [-1, 0, 0], [1, 0, 0], 'Columns')
+        maze_size_ui('maze_rows_or_radius', [0, -1, 0], [0, 1, 0], 'Rows')
+        maze_size_ui('maze_levels', [0, 0, -1], [0, 0, 1], 'Levels')
+
+        layout.prop(mg_props, 'maze_levels')
         row = layout.row()
         row.prop(mg_props, 'seed')
         row.prop(mg_props, 'steps', icon='MOD_DYNAMICPAINT')

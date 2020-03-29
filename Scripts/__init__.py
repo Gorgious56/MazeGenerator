@@ -4,13 +4,13 @@ from . visual import ui_panel
 
 bl_info = {
     "name": "Maze Generator",
-    "author": "NH",
-    "description": "",
-    "blender": (2, 80, 0),
-    "version":  (0, 0, 1),
+    "author": "Nathan Hild",
+    "description": "Add-on for generating mazes with a bunch of settings",
+    "blender": (2, 80, 3),
+    "version": (0, 0, 2),
     "location": "",
     "warning": "",
-    "category": "Generic"
+    "category": "Add Mesh"
 }
 
 auto_load.init()

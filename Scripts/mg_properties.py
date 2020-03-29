@@ -61,7 +61,7 @@ class MGProperties(PropertyGroup):
     auto_overwrite: BoolProperty(
         name="Auto Overwrite",
         description="Caution : Enabling this WILL overwrite any material and modifiers with new ones when generating",
-        default=False,
+        default=True,
         update=generate_maze
     )
 
@@ -97,12 +97,30 @@ class MGProperties(PropertyGroup):
         max=6
     )
 
-    rows_or_radius: IntProperty(
+    maze_rows_or_radius: IntProperty(
         name="Rows | Radius",
-        description="Choose the size along the y axis or the radius if using polar coordinates",
+        description="Choose the size along the Y axis or the radius if using polar coordinates",
         default=5,
         min=2,
         soft_max=100,
+        update=generate_maze
+    )
+
+    maze_columns: IntProperty(
+        name="Columns",
+        description="Choose the size along the X axis",
+        default=5,
+        min=2,
+        soft_max=100,
+        update=generate_maze
+    )
+
+    maze_levels: IntProperty(
+        name="Maze Levels",
+        description="Choose the size along the Z axis",
+        default=1,
+        min=1,
+        soft_max=5,
         update=generate_maze
     )
 
