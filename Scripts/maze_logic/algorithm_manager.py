@@ -6,9 +6,9 @@ from .. visual . cell_type_manager import POLAR, TRIANGLE, HEXAGON, SQUARE
 from .. utils . union_find import UnionFind
 
 
-def work(algorithm, grid, seed, max_steps=-1, bias=0):
+def work(algorithm_name, grid, seed, max_steps=-1, bias=0):
     try:
-        ALGORITHM_FROM_NAME[algorithm](grid, seed, max_steps, bias)
+        ALGORITHM_FROM_NAME[algorithm_name](grid, seed, max_steps, bias)
     except KeyError:
         pass
 
@@ -41,16 +41,20 @@ class MazeAlgorithm(object):
             for pp in potential_passages[0: round(grid.weave * len(potential_passages))]:
                 self.add_crossing(pp)
 
-    def color_cells_by_tree_root(self, union_find):
-        links = []
-        for c in self.grid.all_cells():
-            link = union_find.find(c)
-            if link:
-                try:
-                    c.group = links.index(link)
-                except ValueError:
-                    links.append(link)
-                    c.group = len(links) - 1
+    def color_cells_by_tree_root(self):
+        try:
+            union_find = getattr(self, 'union_find')
+            links = []
+            for c in self.grid.all_cells():
+                link = union_find.find(c)
+                if link:
+                    try:
+                        c.group = links.index(link)
+                    except ValueError:
+                        links.append(link)
+                        c.group = len(links) - 1
+        except AttributeError:
+            print('No Union Find Algorithm declared for this algorithm')
 
     def add_crossing(self, cell):
         can_cross = not cell.has_any_link()
@@ -90,11 +94,16 @@ class MazeAlgorithm(object):
 
 class BinaryTree(MazeAlgorithm):
     name = 'Binary Tree'
+    weaved = False
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.union_find = UnionFind(self.grid.all_cells())
+
         self.run()
-        # self.color_cells_by_tree_root()
+
+        self.color_cells_by_tree_root()
 
     def run(self):
         grid = self.grid
@@ -115,7 +124,9 @@ class BinaryTree(MazeAlgorithm):
             else:  # Square Cell
                 neighbors = [n for n in c.neighbors[0:2] if n]
 
-            c.link(c.get_biased_choice(neighbors, bias, 5))
+            link_neighbor = c.get_biased_choice(neighbors, bias, 5)
+            c.link(link_neighbor)
+            self.union_find.union(c, link_neighbor)
 
             if self.is_last_step():
                 return
@@ -123,12 +134,13 @@ class BinaryTree(MazeAlgorithm):
 
 class Sidewinder(MazeAlgorithm):
     name = 'Sidewinder'
+    weaved = False
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.bias = (self.bias + 1) / 2
 
-        # self.union_find = UnionFind(self.grid.all_cells())
+        self.union_find = UnionFind(self.grid.all_cells())
 
         self.run()
         self.color_cells_by_tree_root()
@@ -144,53 +156,53 @@ class Sidewinder(MazeAlgorithm):
                 if c_type is CellTriangle:
                     if c.is_upright():
                         if c.neighbors[0]:
-                            c.link(c.neighbors[0])
+                            self.link(c, c.neighbors[0])
                         else:
                             if len(run) == 1:
-                                c.link(c.neighbors[1])
+                                c.link(c.neighbors[0])
                             else:
                                 member = choice([c for c in run if not c.is_upright()])
                                 if member.neighbors[2]:
-                                    member.link(member.neighbors[2])
+                                    self.link(member, member.neighbors[2])
                             run = []
                         if c.row == grid.rows - 1 and c.neighbors[1]:
-                            c.link(c.neighbors[1])
+                            self.link(c, c.neighbors[1])
                     else:
                         if (c.neighbors[1] is None) or (c.neighbors[1] is not None and self.must_close_run()):
                             member = choice([c for c in run if not c.is_upright()])
                             if member.neighbors[2]:
-                                member.link(member.neighbors[2])
+                                self.link(member, member.neighbors[2])
                             run = []
                         else:
-                            c.link(c.neighbors[1])
+                            self.link(c, c.neighbors[1])
                 elif c_type is CellHex:
                     other = 5 if c.column % 2 == 0 else 0
                     if (c.neighbors[other] is None) or (c.neighbors[other] and self.must_close_run()):
                         member = choice(run)
                         north_neighbors = [n for n in c.neighbors[0:3] if n and not n.has_any_link()]
                         if north_neighbors:
-                            member.link(choice(north_neighbors))
+                            self.link(member, choice(north_neighbors))
                         elif c.neighbors[5]:
-                            c.link(c.neighbors[other])
+                            self.link(c, c.neighbors[other])
                         run = []
                     else:
-                        c.link(c.neighbors[other])
+                        self.link(c, c.neighbors[other])
                 elif c_type is CellPolar:
                     if (c.ccw and c.ccw.column == 0) or (c.has_outward_neighbor() and self.must_close_run()) or (c.row == 0):
                         member = choice(run)
                         if member.has_outward_neighbor():
-                            member.link(choice(member.outward))
+                            self.link(member, member.outward)
                         run = []
                     else:
-                        c.link(c.ccw)
+                        self.link(c, c.ccw)
                 else:
                     if (c.neighbors[3] is None) or (c.neighbors[0] and self.must_close_run()):
                         member = choice(run)
                         if member.neighbors[0]:
-                            member.link(member.neighbors[0])
+                            self.link(member, member.neighbors[0])
                         run = []
                     else:
-                        c.link(c.neighbors[3])
+                        self.link(c, c.neighbors[3])
 
                 if self.is_last_step():
                     return
@@ -198,9 +210,14 @@ class Sidewinder(MazeAlgorithm):
     def must_close_run(self):
         return self.bias > random()
 
+    def link(self, cell_a, cell_b):
+        cell_a.link(cell_b)
+        self.union_find.union(cell_a, cell_b)
+
 
 class Eller(MazeAlgorithm):
     name = 'Eller'
+    weaved = False
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -210,7 +227,7 @@ class Eller(MazeAlgorithm):
 
         self.run()
 
-        self.color_cells_by_tree_root(self.union_find)
+        self.color_cells_by_tree_root()
 
     def run(self):
         uf = self.union_find
@@ -319,7 +336,7 @@ class KruskalRandom(MazeAlgorithm):
         self.add_template_passages()
 
         self.run()
-        self.color_cells_by_tree_root(self.union_find)
+        self.color_cells_by_tree_root()
 
     def run(self):
         grid = self.grid
@@ -345,7 +362,7 @@ class Prim(MazeAlgorithm):
 
         self.q = PriorityQueue()
         self.run()
-        self.color_cells_by_tree_root(self.union_find)
+        self.color_cells_by_tree_root()
 
     def run(self):
         start_cell = self.grid.random_cell()
@@ -389,6 +406,8 @@ class GrowingTree(MazeAlgorithm):
                 available_neighbor = choice(cell.get_unlinked_neighbors())
                 cell.link(available_neighbor)
                 active_cells.append(available_neighbor)
+                if self.is_last_step():
+                    return
             except IndexError:
                 active_cells.remove(cell)
 
@@ -398,6 +417,7 @@ class GrowingTree(MazeAlgorithm):
 
 class AldousBroder(MazeAlgorithm):
     name = 'Aldous-Broder'
+    biased = False
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -423,6 +443,7 @@ class AldousBroder(MazeAlgorithm):
 
 class Wilson(MazeAlgorithm):
     name = 'Wilson'
+    biased = False
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -568,6 +589,9 @@ def is_algo_weaved(props):
     return props.cell_type == SQUARE and props.maze_algorithm in WEAVED_ALGORITHMS
 
 
+def is_kruskal_random(algo_name):
+    return algo_name == KruskalRandom.name
+
+
 def generate_algo_enum():
-    print([(alg_name, alg_name, '') for alg_name in ALGORITHMS_NAMES])
     return [(alg_name, alg_name, '') for alg_name in ALGORITHMS_NAMES]

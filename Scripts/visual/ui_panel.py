@@ -1,5 +1,5 @@
 import bpy
-from .. maze_logic . algorithm_manager import is_algo_biased, is_algo_weaved, ALGO_KRUSKAL_RANDOM
+from .. maze_logic . algorithm_manager import is_algo_biased, is_algo_weaved, KruskalRandom
 from . cell_type_manager import TRIANGLE, HEXAGON, POLAR, SQUARE
 
 
@@ -86,7 +86,7 @@ class CellsPanel(bpy.types.Panel):
         box = layout.box()
         row = box.row()
         row_2 = row.row()
-        if mg_props.maze_algorithm == ALGO_KRUSKAL_RANDOM:
+        if mg_props.maze_algorithm == KruskalRandom.name:
             row_2.prop(mg_props, 'maze_weave', slider=True)
         else:
             row_2.prop(mg_props, 'maze_weave_toggle', toggle=True)

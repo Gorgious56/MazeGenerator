@@ -77,7 +77,7 @@ class MazeVisual:
                     rows=props.rows_or_radius,
                     columns=props.rows_or_radius,
                     cell_size=1 - max(0.1, props.cell_inset),
-                    use_kruskal=props.maze_algorithm == algorithm_manager.ALGO_KRUSKAL_RANDOM,
+                    use_kruskal=algorithm_manager.is_kruskal_random(props.maze_algorithm),
                     weave=props.maze_weave)
                 return
             else:
