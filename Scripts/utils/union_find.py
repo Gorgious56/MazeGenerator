@@ -1,4 +1,4 @@
-# Awesome implementation from Tomáš Bouda : https://medium.com/100-days-of-algorithms/day-41-union-find-d0027148376d
+# Courtesy of Tomáš Bouda : https://medium.com/100-days-of-algorithms/day-41-union-find-d0027148376d
 class UnionFind(object):
     def __init__(self, all_cells):
         self.data = {}

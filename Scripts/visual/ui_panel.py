@@ -161,7 +161,7 @@ class ParametersPanel(bpy.types.Panel):
         row.prop(mg_props, 'seed')
         row.prop(mg_props, 'steps', icon='MOD_DYNAMICPAINT')
         row = layout.row()
-        row.prop(mg_props, 'maze_bias', slider=True, icon='FORCE_VORTEX')
+        row.prop(mg_props, 'maze_bias')
         row.enabled = is_algo_biased(mg_props)
         layout.prop(mg_props, 'braid_dead_ends', slider=True, text='Open Dead Ends')
         layout.prop(mg_props, 'sparse_dead_ends')

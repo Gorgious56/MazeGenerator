@@ -120,6 +120,7 @@ class MGProperties(PropertyGroup):
         default=0,
         soft_min=-1,
         soft_max=1,
+        subtype='FACTOR',
         update=generate_maze
     )
 

@@ -1,4 +1,5 @@
 from random import seed, choice, choices, random, randint, shuffle
+from math import ceil
 from . data_structure . cell import CellPolar, CellTriangle, CellHex
 from .. utils . priority_queue import PriorityQueue
 from .. visual . cell_type_manager import POLAR, TRIANGLE, HEXAGON, SQUARE
@@ -94,17 +95,22 @@ class MazeAlgorithm(object):
                 self.add_crossing(pp)
 
     def color_cells_by_tree_root(self, union_find):
+        links = []
         for c in self.grid.all_cells():
             link = union_find.find(c)
             if link:
-                c.group = link.column - 500 + link.row * 700
+                try:
+                    c.group = links.index(link)
+                except ValueError:
+                    links.append(link)
+                    c.group = len(links) - 1
 
     def add_crossing(self, cell):
-        can_cross = not cell.has_any_link() \
-            # and not self.union_find.connected(cell, cell.neighbors[0]) \
-            # and not self.union_find.connected(cell, cell.neighbors[1]) \
-            # and not self.union_find.connected(cell, cell.neighbors[2]) \
-            # and not self.union_find.connected(cell, cell.neighbors[3])
+        can_cross = not cell.has_any_link()
+        # and not self.union_find.connected(cell, cell.neighbors[0]) \
+        # and not self.union_find.connected(cell, cell.neighbors[1]) \
+        # and not self.union_find.connected(cell, cell.neighbors[2]) \
+        # and not self.union_find.connected(cell, cell.neighbors[3])
         if can_cross:
             north = cell.neighbors[0]
             west = cell.neighbors[1]
@@ -471,22 +477,25 @@ class Eller(MazeAlgorithm):
         uf = self.union_find
         grid = self.grid
         for row in grid.each_row():
-            tree_roots_this_row = {}
-            for c in row:                
-                this_root = uf.find(c)
+            sets_this_row = {}
+            for c in row:
                 if c.neighbors[3] and (c.row == grid.rows - 1 or (self.bias < random() and not uf.connected(c, c.neighbors[3]))):
                     c.link(c.neighbors[3])
                     uf.union(c, c.neighbors[3])
                     if self.is_last_step():
                         return
+            for c in row:
+                this_set = uf.find(c)
                 try:
-                    tree_roots_this_row[this_root] = [c]
-                except IndexError:
-                    tree_roots_this_row[this_root].append(c)
-
+                    sets_this_row[this_set].append(c)
+                except KeyError:
+                    sets_this_row[this_set] = [c]
             if c.row != grid.rows - 1:
-                for tree, cells in tree_roots_this_row.items():
-                    for c in choices(cells, k=min(len(cells), max(1, round((random() + self.bias - 0.5) * len(cells))))):
+                for tree, cells in sets_this_row.items():
+                    b = ceil(self.bias * len(cells))
+                    rd= randint(1, b + 1)
+                    ch_len = min(len(cells), rd)
+                    for c in choices(cells, k=ch_len):
                         if c.neighbors[0]:
                             c.link(c.neighbors[0])
                             uf.union(c, c.neighbors[0])
