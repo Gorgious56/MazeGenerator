@@ -1,30 +1,30 @@
-from random import seed, choice, choices, random, randint, shuffle, randrange
-from math import ceil
+from random import seed, choice, choices, random, shuffle, randrange
+from math import ceil, hypot
 from . data_structure . cell import CellPolar, CellTriangle, CellHex, Cell
 from .. utils . priority_queue import PriorityQueue
 from .. visual . cell_type_manager import POLAR, TRIANGLE, HEXAGON, SQUARE
 from .. utils . union_find import UnionFind
 
 
-def work(algorithm_name, grid, seed, max_steps=-1, bias=0):
+def work(grid, props):
+
     try:
-        ALGORITHM_FROM_NAME[algorithm_name](grid, seed, max_steps, bias)
+        ALGORITHM_FROM_NAME[props.maze_algorithm](grid, props)
     except KeyError:
         pass
 
 
 class MazeAlgorithm(object):
     name = 'NOT REGISTERED'
-    biased = True
     weaved = True
-    custom_settings = ['maze_bias']
+    settings = ['maze_bias']
 
-    def __init__(self, grid=None, _seed=None, _max_steps=0, bias=0):
+    def __init__(self, grid=None, props=None):
         self.grid = grid
-        self.bias = bias
-        self._seed = _seed
+        self.bias = props.maze_bias
+        self._seed = props.seed
         seed(self._seed)
-        self.__max_steps = 100000 if _max_steps <= 0 else _max_steps
+        self.__max_steps = 100000 if props.steps <= 0 else props.steps
         self.__steps = 0
 
     def is_last_step(self):
@@ -267,7 +267,7 @@ class Eller(MazeAlgorithm):
                     sets_this_row[this_set] = [c]
             if c.row != grid.rows - 1:
                 for tree, cells in sets_this_row.items():
-                    ch_len = min(len(cells), randint(1, ceil(self.bias * len(cells)) + 1))
+                    ch_len = min(len(cells), randrange(1, ceil(self.bias * len(cells))))
                     for c in choices(cells, k=ch_len):
                         if c.neighbors[0]:
                             c.link(c.neighbors[0])
@@ -400,7 +400,7 @@ class Prim(MazeAlgorithm):
 
     def push_to_queue(self, cell, priority=None):
         try:
-            self.q.push((cell, choice(cell.get_unlinked_neighbors())), priority if priority else (randint(0, self.bias)))
+            self.q.push((cell, choice(cell.get_unlinked_neighbors())), priority if priority else (randrange(0, self.bias + 1)))
         except IndexError:
             pass
 
@@ -434,6 +434,7 @@ class GrowingTree(MazeAlgorithm):
 
 class RecursiveDivision(MazeAlgorithm):
     name = 'Recursive Division'
+    settings = ['maze_room_size']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -502,94 +503,78 @@ class RecursiveDivision(MazeAlgorithm):
 
 class RecursiveVoronoiDivision(MazeAlgorithm):
     name = 'Recursive Voronoi Division'
+    settings = ['maze_room_size', 'maze_room_size_deviation', 'maze_rooms']
 
-  
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, grid, props=None, *args, **kwargs):
+        super().__init__(grid=grid, props=props, *args, **kwargs)
 
-        self.union_find = UnionFind(self.grid.all_cells())
-        
-        self.neighbors_a = {}
-        self.neighbors_b = {}
+        self.room_size = props.maze_room_size
+        self.room_size_deviation = props.maze_room_size_deviation
+        self.rooms = props.maze_rooms if props.maze_rooms > 0 else float('inf')
 
-        all_cells = self.grid.all_cells()
-        for c in all_cells:
-            for n in c.get_neighbors():
-                c.link(n, False)
+        self.expeditions = 0
 
-        self.run(all_cells.copy())
+        all_cells = self.grid.all_cells().copy()
 
-        self.color_cells_by_tree_root()
+        # Destroy all walls:
+        [[c.link(n, False) for n in c.get_neighbors() if n.level == c.level] for c in all_cells]
+        self.run(all_cells)
 
     def run(self, cells):
-        # We could use actual sets for most of the data but then we lose determinism
-        if len(cells) <= 20:
+        # Interpretation of https://rosettacode.org/wiki/Voronoi_diagram#Python with two points.
+        # We could use actual sets for the data at the cost of determinism.
+        if len(cells) <= max(2, randrange(int(self.room_size * (1 - (self.room_size_deviation / 100))), self.room_size + 1)) or self.rooms <= 0:
             return
 
-        frontier = []
-        random_cell_a = cells.pop(randint(0, len(cells) - 1))
-        random_cell_b = cells.pop(randint(0, len(cells) - 1))
+        # Choose two cells at random
+        c_a, c_b = cells.pop(randrange(0, len(cells))), cells.pop(randrange(0, len(cells)))
 
-        set_a = []
-        set_b = []
+        set_a, set_b, frontier = [c_a], [c_b], []
 
-        neighbors_a = {}
-        neighbors_b = {}
+        # Build the voronoi diagram : Each set will contain the cell if it is closest to one of the randomly chosen point
+        # There is a slight bias toward set_b but the calculation save is worth it
+        [(set_a if hypot(c.column - c_a.column, c.row - c_a.row) < hypot(c.column - c_b.column, c.row - c_b.row) else set_b).append(c) for c in cells]
 
-        neighbors_a[random_cell_a] = [n for n in random_cell_a.get_neighbors() if n in cells]
-        neighbors_b[random_cell_b] = [n for n in random_cell_b.get_neighbors() if n in cells]
+        # Add the frontier walls to a container
+        [[frontier.append((c_set_a, c_set_b)) for c_set_b in [_n for _n in c_set_a.get_neighbors() if _n in set_b]] for c_set_a in set_a]
+        # [[frontier.append((n, c)) for n in [_n for _n in c.get_neighbors() if _n in set_a]] for c in set_b]
 
-        set_a.append(random_cell_a)
-        set_b.append(random_cell_b)
+        union_find_a = UnionFind(set_a)
+        union_find_b = UnionFind(set_a)
 
-        while neighbors_a or neighbors_b:
-            try:
-                cell, neighbors = list(neighbors_a.items())[0]
-                for n in neighbors:
-                    if n in set_b:
-                        frontier.append((cell, n))
-                    else:
-                        set_a.append(n)
-                        new_neighbors = [_n for _n in n.get_neighbors() if _n not in set_a and _n in cells]
-                        if new_neighbors:
-                            neighbors_a[n] = new_neighbors
+        for c in set_a:
+            c.group = self.expeditions
+            for n in [n for n in c.get_neighbors() if n in set_a]:
+                union_find_a.union(c, n)
+        for c in set_b:
+            c.group = self.expeditions
+            for n in [n for n in c.get_neighbors() if n in set_b]:
+                union_find_b.union(c, n)
+        self.expeditions += 1
 
-                del neighbors_a[cell]
-            except IndexError:
-                pass
-
-            try:
-                cell, neighbors = list(neighbors_b.items())[0]
-                for n in neighbors:
-                    if n in set_a:
-                        frontier.append((n, cell))
-                    else:
-                        set_b.append(n)
-                        new_neighbors = [_n for _n in n.get_neighbors() if _n not in set_b and _n in cells]
-                        if new_neighbors:
-                            neighbors_b[n] = new_neighbors
-                del neighbors_b[cell]
-            except IndexError:
-                pass
-
-        if len(frontier) > 1:
-            psg_to_keep = frontier.pop(randint(0, len(frontier) - 1))
-            try:
-                frontier.remove((psg_to_keep[0], psg_to_keep[1]))
-            except ValueError:
-                pass
+        # Unlink all the cells in the frontier but one
+        if len(frontier) > 0:
+            actual_psg = frontier.pop(randrange(0, len(frontier)))
+            actual_psg[0].link(actual_psg[1])
+            # frontier.append(actual_psg)
+            self.rooms -= 1
             for psg in frontier:
-                psg[0].unlink(psg[1])
                 if self.is_last_step():
                     return
-
-        self.run(list(set_a))
-        self.run(list(set_b))
+                # Make sure we don't close dead-ends or cells which got isolated from their set
+                if len(psg[0].links) > 1 \
+                        and len(psg[1].links) > 1\
+                        and union_find_a.connected(psg[0], c_a) \
+                        and union_find_b.connected(psg[1], c_b):
+                        # and len([n for n in psg[0].get_neighbors() if n in set_a]) > 0 \
+                        # and len([n for n in psg[1].get_neighbors() if n in set_b]) > 0:
+                    psg[0].unlink(psg[1])
+            [self.run(s_x) for s_x in (set_a, set_b)]
 
 
 class AldousBroder(MazeAlgorithm):
     name = 'Aldous-Broder'
-    biased = False
+    settings = []
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -615,7 +600,7 @@ class AldousBroder(MazeAlgorithm):
 
 class Wilson(MazeAlgorithm):
     name = 'Wilson'
-    biased = False
+    settings = []
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -743,21 +728,13 @@ class RecursiveBacktracker(MazeAlgorithm):
                 backtracking = True
 
 
-
-
-
 ALGORITHMS = MazeAlgorithm.__subclasses__()
 ALGORITHMS_NAMES = [alg_class.name for alg_class in ALGORITHMS]
 ALGORITHM_FROM_NAME = {}
 [ALGORITHM_FROM_NAME.update({alg_class.name: alg_class}) for alg_class in ALGORITHMS]
 DEFAULT_ALGO = RecursiveBacktracker.name
 
-BIASED_ALGORITHMS = [algo.name for algo in ALGORITHMS if algo.biased]
 WEAVED_ALGORITHMS = [algo.name for algo in ALGORITHMS if algo.weaved]
-
-
-def is_algo_biased(props):
-    return props.cell_type == SQUARE and props.maze_algorithm in BIASED_ALGORITHMS
 
 
 def is_algo_weaved(props):

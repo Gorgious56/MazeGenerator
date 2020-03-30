@@ -110,6 +110,9 @@ class Grid:
     def get_dead_ends(self):
         return [c for c in self.get_unmasked_cells() if len(c.links) == 1]
 
+    def get_double_links(self):
+        return [c for c in self.get_unmasked_cells() if len(c.links) == 2]
+
     def braid_dead_ends(self, braid=0, _seed=None):
         dead_ends_shuffle = self.get_dead_ends()
         dead_ends = len(dead_ends_shuffle)

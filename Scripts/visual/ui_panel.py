@@ -1,5 +1,5 @@
 import bpy
-from .. maze_logic . algorithm_manager import is_algo_biased, is_algo_weaved, KruskalRandom
+from .. maze_logic . algorithm_manager import is_algo_weaved, KruskalRandom, ALGORITHM_FROM_NAME
 from . cell_type_manager import TRIANGLE, HEXAGON, POLAR, SQUARE
 
 
@@ -164,11 +164,13 @@ class ParametersPanel(bpy.types.Panel):
         row = layout.row()
         row.prop(mg_props, 'seed')
         row.prop(mg_props, 'steps', icon='MOD_DYNAMICPAINT')
-        row = layout.row()
-        row.prop(mg_props, 'maze_bias')
-        row.enabled = is_algo_biased(mg_props)
+        # row = layout.row()
         layout.prop(mg_props, 'braid_dead_ends', slider=True, text='Open Dead Ends')
         layout.prop(mg_props, 'sparse_dead_ends')
+
+        box = layout.box()
+        for setting in ALGORITHM_FROM_NAME[mg_props.maze_algorithm].settings:
+            box.prop(mg_props, setting)
 
 
 class InfoPanel(bpy.types.Panel):
