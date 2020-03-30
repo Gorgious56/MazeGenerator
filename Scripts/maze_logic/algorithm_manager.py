@@ -17,6 +17,7 @@ class MazeAlgorithm(object):
     name = 'NOT REGISTERED'
     biased = True
     weaved = True
+    custom_settings = ['maze_bias']
 
     def __init__(self, grid=None, _seed=None, _max_steps=0, bias=0):
         self.grid = grid
@@ -499,6 +500,92 @@ class RecursiveDivision(MazeAlgorithm):
             return False
 
 
+class RecursiveVoronoiDivision(MazeAlgorithm):
+    name = 'Recursive Voronoi Division'
+
+  
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.union_find = UnionFind(self.grid.all_cells())
+        
+        self.neighbors_a = {}
+        self.neighbors_b = {}
+
+        all_cells = self.grid.all_cells()
+        for c in all_cells:
+            for n in c.get_neighbors():
+                c.link(n, False)
+
+        self.run(all_cells.copy())
+
+        self.color_cells_by_tree_root()
+
+    def run(self, cells):
+        # We could use actual sets for most of the data but then we lose determinism
+        if len(cells) <= 20:
+            return
+
+        frontier = []
+        random_cell_a = cells.pop(randint(0, len(cells) - 1))
+        random_cell_b = cells.pop(randint(0, len(cells) - 1))
+
+        set_a = []
+        set_b = []
+
+        neighbors_a = {}
+        neighbors_b = {}
+
+        neighbors_a[random_cell_a] = [n for n in random_cell_a.get_neighbors() if n in cells]
+        neighbors_b[random_cell_b] = [n for n in random_cell_b.get_neighbors() if n in cells]
+
+        set_a.append(random_cell_a)
+        set_b.append(random_cell_b)
+
+        while neighbors_a or neighbors_b:
+            try:
+                cell, neighbors = list(neighbors_a.items())[0]
+                for n in neighbors:
+                    if n in set_b:
+                        frontier.append((cell, n))
+                    else:
+                        set_a.append(n)
+                        new_neighbors = [_n for _n in n.get_neighbors() if _n not in set_a and _n in cells]
+                        if new_neighbors:
+                            neighbors_a[n] = new_neighbors
+
+                del neighbors_a[cell]
+            except IndexError:
+                pass
+
+            try:
+                cell, neighbors = list(neighbors_b.items())[0]
+                for n in neighbors:
+                    if n in set_a:
+                        frontier.append((n, cell))
+                    else:
+                        set_b.append(n)
+                        new_neighbors = [_n for _n in n.get_neighbors() if _n not in set_b and _n in cells]
+                        if new_neighbors:
+                            neighbors_b[n] = new_neighbors
+                del neighbors_b[cell]
+            except IndexError:
+                pass
+
+        if len(frontier) > 1:
+            psg_to_keep = frontier.pop(randint(0, len(frontier) - 1))
+            try:
+                frontier.remove((psg_to_keep[0], psg_to_keep[1]))
+            except ValueError:
+                pass
+            for psg in frontier:
+                psg[0].unlink(psg[1])
+                if self.is_last_step():
+                    return
+
+        self.run(list(set_a))
+        self.run(list(set_b))
+
 
 class AldousBroder(MazeAlgorithm):
     name = 'Aldous-Broder'
@@ -654,6 +741,9 @@ class RecursiveBacktracker(MazeAlgorithm):
                 else:
                     expeditions += 1
                 backtracking = True
+
+
+
 
 
 ALGORITHMS = MazeAlgorithm.__subclasses__()

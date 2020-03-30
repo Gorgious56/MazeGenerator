@@ -161,8 +161,6 @@ class ParametersPanel(bpy.types.Panel):
         maze_size_ui('maze_columns', [-1, 0, 0], [1, 0, 0], 'Columns')
         maze_size_ui('maze_rows_or_radius', [0, -1, 0], [0, 1, 0], 'Rows')
         maze_size_ui('maze_levels', [0, 0, -1], [0, 0, 1], 'Levels')
-
-        layout.prop(mg_props, 'maze_levels')
         row = layout.row()
         row.prop(mg_props, 'seed')
         row.prop(mg_props, 'steps', icon='MOD_DYNAMICPAINT')
