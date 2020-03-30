@@ -20,7 +20,24 @@ class UnionFind(object):
             data[pi] = pj
 
     def connected(self, i, j):
-        return self.find(i) == self.find(j)
+        return self.find(i) == self.find(j) if (i is not None and j is not None) else False
+
+    def sets(self):
+        sets = set()
+        [sets.add(group) for item, group in self.data.items()]
+        return sets
+
+    def ungroup(self, i):
+        for it in self.data:
+            if self.connected(it, i):
+                self.data[it] = it
+        self.data[i] = i
+
+    def get_all(self, group):
+        return [it for it in self.data if self.connected(it, group)]
+        
+
+
 
 
 
