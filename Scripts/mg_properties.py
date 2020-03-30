@@ -142,6 +142,34 @@ class MGProperties(PropertyGroup):
         update=generate_maze
     )
 
+    maze_room_size: IntProperty(
+        name='Room Size',
+        description='tweak this to stop the recursive division when the room size is lower than the number',
+        default=5,
+        min=2,
+        soft_max=200,
+        update=generate_maze
+    )
+
+    maze_rooms: IntProperty(
+        name='Rooms',
+        description='The algorithm will stop when this number of rooms has been created. 0 = infinite',
+        default=0,
+        min=0,
+        soft_max=500,
+        update=generate_maze
+    )
+
+    maze_room_size_deviation: IntProperty(
+        name='Room Size Deviation',
+        description='tweak this to add randomness to the room size property. At a value of 1, the room size will vary between the minimum and the value in the room property',
+        default=0,
+        min=0,
+        soft_max=100,
+        subtype='PERCENTAGE',
+        update=generate_maze
+    )
+
     steps: IntProperty(
         name="Steps",
         description="Set the number of steps at which to stop the algorithm (0 = unlimited)",
