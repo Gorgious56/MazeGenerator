@@ -4,8 +4,9 @@ from .. cell import CellTriangle
 
 
 class GridTriangle(Grid):
-    def __init__(self, rows, columns, name="", cell_size=1):
-        super().__init__(rows, columns, name, 'cartesian', sides=3, cell_size=cell_size)
+    def __init__(self, rows, columns, levels, cell_size, space_rep, mask=None):
+        super().__init__(rows, columns, levels, cell_size, space_rep, mask)
+        self.offset = Vector((-self.columns / 4, -self.rows / 3, 0))
 
     def prepare_grid(self):
         for r in range(self.rows):
@@ -95,10 +96,8 @@ class GridTriangle(Grid):
         height = size * (3 ** 0.5) / 2
         half_height = height / 2
 
-        center = Vector((c.column * 0.5, c.row * (3 ** 0.5) / 2, 0))
+        center = Vector((c.column * 0.5, c.row * (3 ** 0.5) / 2, 0)) + self.offset
         
-        # cx = half_width + c.column * half_width
-        # cy = half_height + c.row * height
         cx = center.x
         cy = center.y
 
@@ -109,7 +108,6 @@ class GridTriangle(Grid):
         if c.is_upright():
             base_y = cy - half_height
             apex_y = cy + half_height
-
 
         else:
             base_y = cy + half_height

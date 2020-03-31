@@ -31,8 +31,6 @@ class Cell:
 
         self.links = {}
 
-        self.is_masked = False
-
     def __str__(self):
         return 'Cell(r' + str(self.row) + ';c' + str(self.column) + ')'
 
@@ -92,29 +90,29 @@ class Cell:
     def get_neighbor_return(self, index):
         return self.neighbors_return[index]
 
-    def get_biased_unmasked_neighbors(self, bias, relative_weight=15):
+    def get_biased_neighbors(self, bias, relative_weight=15):
         neighbors = self.get_neighbors()
         return Cell.get_biased_choice(neighbors, bias, relative_weight, k=len(neighbors))
 
-    def get_biased_unmasked_linked_neighbor(self, bias, relative_weight=5):
+    def get_biased_linked_neighbor(self, bias, relative_weight=5):
         return Cell.get_biased_choice(self.get_linked_neighbors(), bias, relative_weight)
 
-    def get_biased_unmasked_unlinked_neighbor(self, bias, relative_weight=5):
-        return Cell.get_biased_choice(self.get_unlinked_neighbors(), bias, relative_weight)
+    # def get_biased_unlinked_neighbor(self, bias, relative_weight=5):
+    #     return Cell.get_biased_choice(self.get_unlinked_neighbors(), bias, relative_weight)
 
-    def get_biased_unmasked_unlinked_neighbors(self, bias, relative_weight=5):
-        neighbors = self.get_unlinked_neighbors()
-        return Cell.get_biased_choice(neighbors, bias, relative_weight, k=len(neighbors))
+    # def get_biased_unlinked_neighbors(self, bias, relative_weight=5):
+    #     neighbors = self.get_unlinked_neighbors()
+    #     return Cell.get_biased_choice(neighbors, bias, relative_weight, k=len(neighbors))
 
     """
-    Get a random unmasked neighbor
+    Get a random neighbor
     A bias of 0 will prefer selecting a cell on the same level
     A bias of 1 will prefer selecting a cell on a different level
     """
     def get_neighbor_level_biased(self, bias=0):
         pass
 
-    def get_biased_unmasked_unlinked_directional_neighbor(self, bias, direction):
+    def get_biased_unlinked_directional_neighbor(self, bias, direction):
         direction = int(direction)
         if direction == -1 or type(self) is not Cell:
             try:

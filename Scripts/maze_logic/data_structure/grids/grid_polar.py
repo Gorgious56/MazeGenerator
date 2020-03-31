@@ -4,40 +4,28 @@ from mathutils import Vector
 from .. cell import CellPolar
 from .. grids . grid import Grid, CellVisual
 
-# CW_OUT = 'CW_OUT'
-# CW_IN = 'CW_IN'
-# CCW_IN = 'CCW_IN'
-# CCW_OUT = 'CCW_OUT'
-# ALL_CORNERS = 'ALL_CORNERS'
-# CCW_IN_B_B = 'CCW_IN_B_IN'
-# CCW_IN_B_CCW = 'CCW_IN_B_CCW'
-# CCW_IN_B_IN = 'CCW_IN_B_IN'
-# CCW_OUT_B_B = 'CCW_OUT_B_B'
-# CCW_OUT_B_CCW = 'CCW_OUT_B_CCW'
-# CCW_OUT_B_IN = 'CCW_OUT_B_IN'
-# CW_IN_B_B = 'CW_IN_B_IN'
-# CW_IN_B_CCW = 'CW_IN_B_CCW'
-# CW_IN_B_IN = 'CW_IN_B_IN'
-# CW_OUT_B_B = 'CW_OUT_B_B'
-# CW_OUT_B_CCW = 'CW_OUT_B_CCW'
-# CW_OUT_B_IN = 'CW_OUT_B_IN'
-
-# R_IN = 'R_IN'
-# R_OUT = 'R_OUT'
-# R_IN_B = 'R_IN_B'
-# R_OUT_B = 'R_OUT_B'
-# T_CW = 'T_CW'
-# T_CCW = 'T_CCW'
-# T_CW_B = 'T_CW_B'
-# T_CCW_B = 'T_CCW_B'
-
 
 class GridPolar(Grid):
-    def __init__(self, cell_size=1, *args, **kwargs):
-        self.cell_size = max(0, cell_size)
+    def __init__(self, rows, columns, levels, cell_size=1, space_rep=0, *args, **kwargs):
         self.rows_polar = []
         self.doubling_rows = []
-        super().__init__(*args, **kwargs)
+        cell_size = max(0, cell_size)
+        super().__init__(rows=rows, columns=1, levels=levels, space_rep='1', cell_size=cell_size, *args, **kwargs)
+
+    def __delitem__(self, key):
+        del self[key[0], key[1]]
+
+    def __getitem__(self, key):
+        try:
+            return self.rows_polar[key[0]][key[1]]
+        except IndexError:
+            return None
+
+    def __setitem__(self, key, value):
+        try:
+            self.rows_polar[key[0]][key[1]] = value
+        except IndexError:
+            pass
 
     def prepare_grid(self):
         rows = [None] * self.rows
@@ -58,36 +46,6 @@ class GridPolar(Grid):
             rows[r] = [CellPolar(r, col) for col in range(cells)]
         self.rows_polar = rows
 
-    def __delitem__(self, key):
-        del self[key[0], key[1]]
-
-    def __getitem__(self, key):
-        try:
-            return self.rows_polar[key[0]][key[1]]
-        except IndexError:
-            return None
-
-    def __setitem__(self, key, value):
-        try:
-            self.rows_polar[key[0]][key[1]] = value
-        except IndexError:
-            pass
-
-    def each_row(self):
-        for r in self.rows_polar:
-            yield r
-
-    def each_cell(self):
-        for r in self.each_row():
-            for c in r:
-                if c and not c.is_masked:
-                    yield c
-
-    def random_cell(self, _seed=None, filter_mask=True):
-        if _seed:
-            seed(_seed)
-        return choice([c for c in choice(self.rows_polar) if not c.is_masked])
-
     def configure_cells(self):
         # 0>cw - 1>ccw - 2>inward - 3>outward
         for c in self.each_cell():
@@ -101,6 +59,29 @@ class GridPolar(Grid):
                 parent.outward.append(c)
 
                 c.inward = parent
+
+    def each_row(self):
+        for r in self.rows_polar:
+            yield r
+
+    def each_cell(self):
+        for r in self.each_row():
+            for c in r:
+                if c:
+                    yield c
+
+    def all_cells(self):
+        cells = []
+        for r in self.each_row():
+            for c in r:
+                if c:
+                    cells.append(c)
+        return cells
+
+    def random_cell(self, _seed=None, filter_mask=True):
+        if _seed:
+            seed(_seed)
+        return choice([c for c in choice(self.rows_polar)])
 
     def get_cell_walls(self, c):
         cv = CellVisual(c)
@@ -178,9 +159,6 @@ class GridPolar(Grid):
                     cv.add_face((self.get_position(r_in_b, t_cw_b), self.get_position(r_in_b, t_cw), self.get_position(r_out_b, t_cw), self.get_position(r_out_b, t_cw_b)))
 
         return cv
-
-    def get_unmasked_cells(self):
-        return [c for c in self.each_cell() if not c.is_masked]
 
     def get_position(self, radius, angle):
         return Vector((radius * cos(angle), radius * sin(angle), 0))

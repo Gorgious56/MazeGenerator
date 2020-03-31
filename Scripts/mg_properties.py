@@ -111,7 +111,7 @@ class MGProperties(PropertyGroup):
         description='Set the wireframe Thickness.',
         default=0,
         min=0,
-        soft_max=0.04
+        soft_max=0.08
     )
 
     cell_inset: FloatProperty(

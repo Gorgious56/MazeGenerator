@@ -1,5 +1,5 @@
 import bpy
-from .. maze_logic . algorithm_manager import is_algo_weaved, KruskalRandom, ALGORITHM_FROM_NAME
+from .. maze_logic . algorithm_manager import is_algo_weaved, ALGORITHM_FROM_NAME, KruskalRandom, is_algo_incompatible
 from . cell_type_manager import TRIANGLE, HEXAGON, POLAR, SQUARE
 
 
@@ -86,6 +86,10 @@ class ParametersPanel(bpy.types.Panel):
         layout.prop_menu_enum(mg_props, 'cell_type', icon=cell_enum_icon)
         layout.prop(mg_props, 'maze_algorithm', icon='HAND', text='Solver')
 
+        algo_incompatibility = is_algo_incompatible(mg_props)
+        if algo_incompatibility:
+            layout.label(text=algo_incompatibility, icon='ERROR')
+
         space_enum_icon = 'MESH_PLANE'
         if mg_props.maze_space_dimension == '1':
             space_enum_icon = 'MESH_CYLINDER'
@@ -98,12 +102,16 @@ class ParametersPanel(bpy.types.Panel):
 
         layout.prop_menu_enum(mg_props, 'maze_space_dimension', icon=space_enum_icon)
 
-        if mg_props.maze_space_dimension == '2' and mg_props.maze_columns <= 3 * mg_props.maze_rows_or_radius:
+        if mg_props.cell_type == POLAR:
+            layout.label(text='Only Regular available with Polar', icon='ERROR', )
+        elif mg_props.maze_space_dimension in ('1', '2', '3') and mg_props.cell_type == TRIANGLE:
+            layout.label(text='Needs PAIR Columns (2, 4, 6, ...)', icon='ERROR', )
+        elif mg_props.maze_space_dimension == '2' and mg_props.maze_columns <= 3 * mg_props.maze_rows_or_radius:
             layout.label(text='Set Columns > 3 * Rows', icon='ERROR', )
         elif mg_props.maze_space_dimension == '3' and 2 * mg_props.maze_columns > mg_props.maze_rows_or_radius:
             layout.label(text='Set Rows > 2 * Columns', icon='ERROR', )
         elif mg_props.maze_space_dimension == '4':
-            layout.label(text='Work In Project', icon='ERROR', )
+            layout.label(text='Dimensions are 1 face of the cube', icon='QUESTION')
         else:
             layout.label()
 
@@ -120,14 +128,13 @@ class ParametersPanel(bpy.types.Panel):
             sub.operator('maze.tweak_maze_size', text='', icon='ADD').tweak_size = increase
             return row
 
-        maze_size_ui('maze_columns', [-1, 0, 0], [1, 0, 0], 'Columns')
-        maze_size_ui('maze_rows_or_radius', [0, -1, 0], [0, 1, 0], 'Rows')
-        row = maze_size_ui('maze_levels', [0, 0, -1], [0, 0, 1], 'Levels')
-        row.enabled = mg_props.maze_space_dimension == '0'
+        maze_size_ui('maze_columns', [-1, 0, 0], [1, 0, 0], 'Columns').enabled = mg_props.cell_type != POLAR
+        row = maze_size_ui('maze_rows_or_radius', [0, -1, 0], [0, 1, 0], 'Rows').enabled = True
+        row = maze_size_ui('maze_levels', [0, 0, -1], [0, 0, 1], 'Levels').enabled = mg_props.maze_space_dimension == '0'
         row = layout.row()
         row.prop(mg_props, 'seed')
         row.prop(mg_props, 'steps', icon='MOD_DYNAMICPAINT')
-        # row = layout.row()
+
         layout.prop(mg_props, 'braid_dead_ends', slider=True, text='Open Dead Ends')
         layout.prop(mg_props, 'sparse_dead_ends')
 
@@ -185,7 +192,7 @@ class CellsPanel(bpy.types.Panel):
         if mg_props.cell_subdiv > 0 and mg_props.cell_contour > 0:
             box.label(text='Contour conflicts with Subdivision', icon='ERROR')
         if mg_props.cell_wireframe > 0 and mg_props.cell_contour > 0:
-            box.label(text='Contour conflicts with Wireframe', icon='ERROR')
+            box.label(text='Contour can conflict with Wireframe', icon='QUESTION')
 
         box = layout.box()
         box.prop(mg_props, 'paint_style')

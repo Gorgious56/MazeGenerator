@@ -7,7 +7,6 @@ from .. utils . union_find import UnionFind
 
 
 def work(grid, props):
-
     try:
         ALGORITHM_FROM_NAME[props.maze_algorithm](grid, props)
     except KeyError:
@@ -205,12 +204,10 @@ class Sidewinder(MazeAlgorithm):
                     if (c.ccw and c.ccw.column == 0) or (c.has_outward_neighbor() and self.must_close_run()) or (c.row == 0):
                         member = choice(run)
                         if member.has_outward_neighbor():
-                            link = member, member.outward
-                            # self.link(member, member.outward)
+                            link = member, choice(member.outward)
                         run = []
                     else:
                         link = c, c.ccw
-                        # self.link(c, c.ccw)
                 else:  # Cell is Square
                     if (c.neighbors[3] is None) or (c.neighbors[0] and self.must_close_run()):
                         member = choice(run)
@@ -221,7 +218,7 @@ class Sidewinder(MazeAlgorithm):
                         link = c, 3
 
                 if link:
-                    self.link(link[0], link[1] if link[1] is Cell else link[0].neighbors[link[1]])
+                    self.link(link[0], link[1] if isinstance(link[1], Cell) else link[0].neighbors[link[1]])
 
                 if self.is_last_step():
                     return
@@ -254,11 +251,18 @@ class Eller(MazeAlgorithm):
         for row in grid.each_row():
             sets_this_row = {}
             for c in row:
-                if c.neighbors[3] and (c.row == grid.rows - 1 or (self.bias < random() and not uf.connected(c, c.neighbors[3]))):
-                    c.link(c.neighbors[3])
-                    uf.union(c, c.neighbors[3])
-                    if self.is_last_step():
-                        return
+                if type(c) is CellPolar:
+                    if c.inward and (c.row == grid.rows - 1 or (self.bias < random() and not uf.connected(c, c.inward))):
+                        c.link(c.inward)
+                        uf.union(c, c.inward)
+                        if self.is_last_step():
+                            return
+                else:
+                    if c.neighbors[3] and (c.row == grid.rows - 1 or (self.bias < random() and not uf.connected(c, c.neighbors[3]))):
+                        c.link(c.neighbors[3])
+                        uf.union(c, c.neighbors[3])
+                        if self.is_last_step():
+                            return
             for c in row:
                 this_set = uf.find(c)
                 try:
@@ -297,7 +301,7 @@ class CrossStitch(MazeAlgorithm):
         self.current.group = 1
 
         while self.current:
-            unvisited_neighbor, direction = self.current.get_biased_unmasked_unlinked_directional_neighbor(self.bias, direction)
+            unvisited_neighbor, direction = self.current.get_biased_unlinked_directional_neighbor(self.bias, direction)
 
             if unvisited_neighbor:
                 self.link_to(self.current, unvisited_neighbor)
@@ -310,7 +314,7 @@ class CrossStitch(MazeAlgorithm):
             while self.unvisited_legit_cells:
                 c = self.unvisited_legit_cells[0]
                 if not c.has_any_link():
-                    neighbor = c.get_biased_unmasked_linked_neighbor(self.bias, 5)
+                    neighbor = c.get_biased_linked_neighbor(self.bias, 5)
                     if neighbor:
                         self.set_current(c)
                         self.link_to(self.current, neighbor)
@@ -359,7 +363,7 @@ class KruskalRandom(MazeAlgorithm):
         grid = self.grid
         unvisited_cells = grid.shuffled_cells()
         for c in unvisited_cells:
-            for n in c.get_biased_unmasked_neighbors(self.bias):
+            for n in c.get_biased_neighbors(self.bias):
                 if not self.union_find.connected(c, n):
                     c.link(n)
                     self.union_find.union(c, n)
@@ -492,14 +496,14 @@ class RecursiveDivision(MazeAlgorithm):
         self.divide(ox, oy, ax, ay)
 
     def link(self, cell, neighbor_number):
-        n = cell.neighbors[neighbor_number]
-        # if n:
-        if n and not self.union_find.connected(cell, n):
-            cell.link(n)
-            self.union_find.union(cell, n)
-            return True
-        else:
-            return False
+        if cell:
+            n = cell.neighbors[neighbor_number]
+            # if n:
+            if n and not self.union_find.connected(cell, n):
+                cell.link(n)
+                self.union_find.union(cell, n)
+                return True
+        return False
 
 
 class RecursiveVoronoiDivision(MazeAlgorithm):
@@ -673,7 +677,7 @@ class Wilson(MazeAlgorithm):
         super().__init__(*args, **kwargs)
         grid = self.grid
 
-        unvisited = grid.get_unmasked_cells().copy()
+        unvisited = grid.all_cells().copy()
         target_cell = choice(unvisited)
         unvisited.remove(target_cell)
         target_cell.group = -1
@@ -717,7 +721,7 @@ class HuntAndKill(MazeAlgorithm):
 
         while self.current:
             while self.current:
-                neighbor, self.direction = self.current.get_biased_unmasked_unlinked_directional_neighbor(self.bias, self.direction)
+                neighbor, self.direction = self.current.get_biased_unlinked_directional_neighbor(self.bias, self.direction)
                 if neighbor:
                     self.link_to(self.current, neighbor)
                     self.set_current(neighbor)
@@ -778,7 +782,7 @@ class RecursiveBacktracker(MazeAlgorithm):
         while len(stack) > 0:
             current = stack[-1]
 
-            unlinked_neighbor, direction = current.get_biased_unmasked_unlinked_directional_neighbor(self.bias, direction)
+            unlinked_neighbor, direction = current.get_biased_unlinked_directional_neighbor(self.bias, direction)
             if unlinked_neighbor:
                 current.link(unlinked_neighbor)
                 if self.is_last_step():
@@ -802,6 +806,12 @@ ALGORITHM_FROM_NAME = {}
 DEFAULT_ALGO = RecursiveBacktracker.name
 
 WEAVED_ALGORITHMS = [algo.name for algo in ALGORITHMS if algo.weaved]
+
+
+def is_algo_incompatible(props):
+    if ALGORITHM_FROM_NAME[props.maze_algorithm] == AldousBroder and props.maze_space_dimension == '4':
+        return "Aldous-Broder can't solve a box representation"
+    return False
 
 
 def is_algo_weaved(props):

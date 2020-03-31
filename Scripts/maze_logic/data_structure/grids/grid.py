@@ -15,20 +15,15 @@ BORDER = 'BORDER'
 
 
 class Grid:
-    def __init__(self, rows=2, columns=2, levels=1, name="", coord_system='cartesian', sides=4, cell_size=1, space_rep=0, mask=None):
+    def __init__(self, rows=2, columns=2, levels=1, cell_size=1, space_rep=0, mask=None):
         self.rows = rows
         self.columns = columns
         self.levels = levels
         self._cells = [None] * (rows * columns * levels)
         self.size = rows * columns * levels
         self.size_2D = rows * columns
-        self.masked_cells = []
-        self.name = name
+        self.masked_cells = []  # This container is used in some algorithms.
         self.space_rep = space_rep
-
-        self.coord_system = coord_system
-
-        self.sides_per_cell = sides
 
         self.mask = mask
 
@@ -142,10 +137,12 @@ class Grid:
             for r in range(first_cell_y, last_cell_y + 1):
                 self[c, r] = 0
 
+    def get_linked_cells(self):
+        return [c for c in self.all_cells() if any(c.links)]
+
     def mask_cell(self, column, row):
         c = self[column, row]
         if c is not None:
-            c.is_masked = True
             self.masked_cells.append(c)
             for i, n in enumerate(c.get_neighbors()):
                 n.neighbors[c.neighbors_return[i]] = None
@@ -155,15 +152,15 @@ class Grid:
         if _seed:
             seed(_seed)
         try:
-            return choice(self.get_unmasked_cells()) if filter_mask else choice(self.all_cells())
+            return choice(self.all_cells()) if filter_mask else choice(self.all_cells())
         except IndexError:
             return None
 
-    def get_random_unmasked_and_linked_cell(self, _seed=None):
+    def get_random_linked_cell(self, _seed=None):
         if _seed:
             seed(_seed)
         try:
-            return choice(self.get_unmasked_and_linked_cells())
+            return choice(self.get_linked_cells())
         except IndexError:
             return None
 
@@ -171,21 +168,21 @@ class Grid:
         cols = self.columns
         for l in range(self.levels):
             for r in range(self.rows):
-                yield [c for c in self._cells[r * cols + l * self.size_2D: (r + 1) * cols + l * self.size_2D] if not c.is_masked]
+                yield [c for c in self._cells[r * cols + l * self.size_2D: (r + 1) * cols + l * self.size_2D] if c]
 
     def each_level(self):
         for l in range(self.levels):
-            yield [c for c in self._cells[l * self.size_2D: (l + 1) * self.size_2D] if not c.is_masked]
+            yield [c for c in self._cells[l * self.size_2D: (l + 1) * self.size_2D]]
 
     def each_cell(self):
-        for c in self.get_unmasked_cells():
+        for c in self.all_cells():
             yield c
 
     def all_cells(self):
         return [c for c in self._cells if c]
 
     def get_dead_ends(self):
-        return [c for c in self.get_unmasked_cells() if len(c.links) == 1]
+        return [c for c in self.all_cells() if len(c.links) == 1]
 
     def braid_dead_ends(self, braid=0, _seed=None):
         dead_ends_shuffle = self.get_dead_ends()
@@ -210,7 +207,7 @@ class Grid:
         return dead_ends
 
     def sparse_dead_ends(self, sparse=0, braid=0, _seed=None):
-        max_cells_to_cull = len(self.get_unmasked_and_linked_cells()) * (sparse / 100) - 2
+        max_cells_to_cull = len(self.get_linked_cells()) * (sparse / 100) - 2
         culled_cells = 0
         while culled_cells < max_cells_to_cull:
             dead_ends = self.get_dead_ends()
@@ -228,7 +225,7 @@ class Grid:
                     pass
 
     def shuffled_cells(self):
-        shuffled_cells = self.get_unmasked_cells()
+        shuffled_cells = self.all_cells()
         shuffle(shuffled_cells)
         return shuffled_cells
 
@@ -237,12 +234,6 @@ class Grid:
             for c in range(self.columns):
                 if ((center_col - c) ** 2 + (center_row - r) ** 2) ** 0.5 > radius:
                     self.mask_cell(c, r)
-
-    def get_unmasked_cells(self):
-        return [c for c in self.all_cells() if not c.is_masked]
-
-    def get_unmasked_and_linked_cells(self):
-        return [c for c in self.all_cells() if any(c.links)]
 
     def get_cell_position(self, c, cell_size=None):
         offset = self.offset
@@ -263,10 +254,7 @@ class Grid:
         return positions
 
     def get_blueprint(self):
-        return [self.get_cell_walls(c) for c in self.get_unmasked_and_linked_cells()]
-
-    def need_wall_to(self, c):
-        return not c or c.is_masked or not c.has_any_link()
+        return [self.get_cell_walls(c) for c in self.get_linked_cells()]
 
     def get_cell_walls(self, c):
         cv = CellVisual(c)
