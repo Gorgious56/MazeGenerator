@@ -12,6 +12,7 @@ class MaterialManager:
         self.cell_sep_rgb_node = None
         self.cell_value_node = None
         self.cell_math_node = None
+        self.cell_math_alpha_node = None
         self.cell_mix_distance_node = None
         self.cell_mix_longest_distance_node = None
         self.cell_mix_under_node = None
@@ -61,6 +62,11 @@ class MaterialManager:
         self.cell_math_node.inputs[1].default_value = props.show_only_longest_path
         self.cell_math_node.location = -600, 100
 
+    def init_cell_math_alpha_node(self, nodes):
+        self.cell_math_alpha_node = nodes.new(type='ShaderNodeMath')
+        self.cell_math_alpha_node.operation = 'ADD'
+        self.cell_math_alpha_node.location = -600, 300
+
     def init_cell_value_node(self, nodes):
         self.cell_value_node = nodes.new(type='ShaderNodeValue')
         self.cell_value_node.location = -800, -400
@@ -107,6 +113,7 @@ class MaterialManager:
             self.init_cell_sep_rgb_node(nodes)
             self.init_cell_mix_distance_node(nodes, props)
             self.init_cell_math_node(nodes, props)
+            self.init_cell_math_alpha_node(nodes)
             self.init_cell_value_node(nodes)
             self.init_cell_mix_under_node(nodes)
             self.init_cell_mix_longest_distance_node(nodes)
@@ -123,7 +130,11 @@ class MaterialManager:
                 links.new(self.cell_value_node.outputs[0], self.cell_mix_under_node.inputs[1])
                 links.new(self.cell_sep_rgb_node.outputs[2], self.cell_mix_under_node.inputs[2])
                 links.new(self.cell_mix_under_node.outputs[0], self.cell_hsv_node.inputs[2])
-                links.new(self.cell_math_node.outputs[0], self.cell_mix_longest_distance_node.inputs[0])
+
+                links.new(self.cell_math_node.outputs[0], self.cell_math_alpha_node.inputs[0])
+                links.new(self.cell_vertex_colors_node.outputs[1], self.cell_math_alpha_node.inputs[1])
+                links.new(self.cell_math_alpha_node.outputs[0], self.cell_mix_longest_distance_node.inputs[0])
+
                 links.new(self.cell_mix_distance_node.outputs[0], self.cell_mix_longest_distance_node.inputs[1])
                 links.new(self.cell_mix_longest_distance_node.outputs[0], self.cell_hsv_node.inputs[4])
 
