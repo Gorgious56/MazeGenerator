@@ -25,8 +25,8 @@ class GridWeave(Grid):
     Returns the resulting 'CellUnder'
     """
     def tunnel_under(self, cell_over):
-        self.cells.append(CellUnder(cell_over))
-        return self.cells[-1]
+        self._cells.append(CellUnder(cell_over))
+        return self._cells[-1]
 
     def get_cell_walls(self, c):
         cv = super().get_cell_walls(c)

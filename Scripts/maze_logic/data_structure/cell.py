@@ -5,6 +5,20 @@ from ... utils . event import Event, EventHandler
 class Cell:
     neighbors_return = [2, 3, 0, 1]
 
+    staticmethod
+
+    def get_biased_choice(c_list, bias, relative_weight=5, k=1):
+        bias = max(0.00001, bias)
+        c_list_len = len(c_list)
+        try:
+            if bias == 0:
+                shuffle(c_list)
+                return c_list[0: k + 1] if k > 1 else c_list[0]
+            ret = choices(c_list, weights=[1 + relative_weight * abs(bias) * (ind if bias >= 0 else c_list_len - 1 - ind) for ind in range(c_list_len)], k=k)
+            return ret[0] if k == 1 else ret
+        except IndexError:
+            return None
+
     def __init__(self, row, col, level=0):
         self.row = row
         self.column = col
@@ -70,17 +84,6 @@ class Cell:
     def get_wall_mask(self):
         return [not self.exists_and_is_linked(n) for n in self.neighbors] if self.has_any_link() else [False] * len(self.neighbors)
 
-    def get_biased_choice(self, cell_list, bias, relative_weight=5, k=1):
-        cell_list_len = len(cell_list)
-        try:
-            if bias == 0:
-                shuffle(cell_list)
-                return cell_list[0: k + 1] if k > 1 else cell_list[0]
-            ret = choices(cell_list, weights=[1 + relative_weight * abs(bias) * (ind if bias >= 0 else cell_list_len - 1 - ind) for ind in range(cell_list_len)], k=k)
-            return ret[0] if k == 1 else ret
-        except IndexError:
-            return None
-
     def get_shuffled_neighbors(self):
         shuffled_neighbors = self.get_neighbors()
         shuffle(shuffled_neighbors)
@@ -91,17 +94,17 @@ class Cell:
 
     def get_biased_unmasked_neighbors(self, bias, relative_weight=15):
         neighbors = self.get_neighbors()
-        return self.get_biased_choice(neighbors, bias, relative_weight, k=len(neighbors))
+        return Cell.get_biased_choice(neighbors, bias, relative_weight, k=len(neighbors))
 
     def get_biased_unmasked_linked_neighbor(self, bias, relative_weight=5):
-        return self.get_biased_choice(self.get_linked_neighbors(), bias, relative_weight)
+        return Cell.get_biased_choice(self.get_linked_neighbors(), bias, relative_weight)
 
     def get_biased_unmasked_unlinked_neighbor(self, bias, relative_weight=5):
-        return self.get_biased_choice(self.get_unlinked_neighbors(), bias, relative_weight)
+        return Cell.get_biased_choice(self.get_unlinked_neighbors(), bias, relative_weight)
 
     def get_biased_unmasked_unlinked_neighbors(self, bias, relative_weight=5):
         neighbors = self.get_unlinked_neighbors()
-        return self.get_biased_choice(neighbors, bias, relative_weight, k=len(neighbors))
+        return Cell.get_biased_choice(neighbors, bias, relative_weight, k=len(neighbors))
 
     """
     Get a random unmasked neighbor
