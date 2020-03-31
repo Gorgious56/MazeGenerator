@@ -1,5 +1,5 @@
 from random import seed, choice, choices, random, shuffle, randrange
-from math import ceil, hypot
+from math import ceil, hypot, floor
 from . data_structure . cell import CellPolar, CellTriangle, CellHex, Cell
 from .. utils . priority_queue import PriorityQueue
 from .. visual . cell_type_manager import POLAR, TRIANGLE, HEXAGON, SQUARE
@@ -128,7 +128,7 @@ class BinaryTree(MazeAlgorithm):
                 if c.row == self.grid.rows - 1 and c.neighbors[4]:
                     neighbors.append(c.neighbors[4])
 
-            link_neighbor = c.get_biased_choice(neighbors, bias, 5)
+            link_neighbor = Cell.get_biased_choice(neighbors, bias, 5)
             if not self.union_find.connected(c, link_neighbor):
                 c.link(link_neighbor)
                 self.union_find.union(c, link_neighbor)
@@ -267,7 +267,7 @@ class Eller(MazeAlgorithm):
                     sets_this_row[this_set] = [c]
             if c.row != grid.rows - 1:
                 for tree, cells in sets_this_row.items():
-                    ch_len = min(len(cells), randrange(1, ceil(self.bias * len(cells))))
+                    ch_len = min(len(cells), randrange(1, ceil(self.bias * len(cells) + 1)))
                     for c in choices(cells, k=ch_len):
                         if c.neighbors[0]:
                             c.link(c.neighbors[0])
@@ -434,10 +434,11 @@ class GrowingTree(MazeAlgorithm):
 
 class RecursiveDivision(MazeAlgorithm):
     name = 'Recursive Division'
-    settings = ['maze_room_size']
+    settings = ['maze_bias']
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, grid, props=None, *args, **kwargs):
+        super().__init__(grid=grid, props=props, *args, **kwargs)
+        self.bias = (self.bias + 1) / 2
 
         self.union_find = UnionFind(self.grid.all_cells())
 
@@ -472,8 +473,8 @@ class RecursiveDivision(MazeAlgorithm):
 
         wall = HORIZONTAL if dy > dx else (VERTICAL if dx > dy else randrange(2))
 
-        xp = randrange(mx, ax - (wall == VERTICAL))
-        yp = randrange(my, ay - (wall == HORIZONTAL))
+        xp = Cell.get_biased_choice(range(mx, ax - (wall == VERTICAL)), self.bias)
+        yp = Cell.get_biased_choice(range(my, ay - (wall == HORIZONTAL)), self.bias)
 
         if wall == HORIZONTAL:
             nx, ny = ax, yp + 1
@@ -503,14 +504,13 @@ class RecursiveDivision(MazeAlgorithm):
 
 class RecursiveVoronoiDivision(MazeAlgorithm):
     name = 'Recursive Voronoi Division'
-    settings = ['maze_room_size', 'maze_room_size_deviation', 'maze_rooms']
+    settings = ['maze_room_size', 'maze_room_size_deviation']
 
     def __init__(self, grid, props=None, *args, **kwargs):
         super().__init__(grid=grid, props=props, *args, **kwargs)
 
         self.room_size = props.maze_room_size
         self.room_size_deviation = props.maze_room_size_deviation
-        self.rooms = props.maze_rooms if props.maze_rooms > 0 else float('inf')
 
         self.expeditions = 0
 
@@ -523,7 +523,7 @@ class RecursiveVoronoiDivision(MazeAlgorithm):
     def run(self, cells):
         # Interpretation of https://rosettacode.org/wiki/Voronoi_diagram#Python with two points.
         # We could use actual sets for the data at the cost of determinism.
-        if len(cells) <= max(2, randrange(int(self.room_size * (1 - (self.room_size_deviation / 100))), self.room_size + 1)) or self.rooms <= 0:
+        if len(cells) <= max(2, randrange(int(self.room_size * (1 - (self.room_size_deviation / 100))), self.room_size + 1)):
             return
 
         # Choose two cells at random
@@ -556,8 +556,6 @@ class RecursiveVoronoiDivision(MazeAlgorithm):
         if len(frontier) > 0:
             actual_psg = frontier.pop(randrange(0, len(frontier)))
             actual_psg[0].link(actual_psg[1])
-            # frontier.append(actual_psg)
-            self.rooms -= 1
             for psg in frontier:
                 if self.is_last_step():
                     return
@@ -566,10 +564,79 @@ class RecursiveVoronoiDivision(MazeAlgorithm):
                         and len(psg[1].links) > 1\
                         and union_find_a.connected(psg[0], c_a) \
                         and union_find_b.connected(psg[1], c_b):
-                        # and len([n for n in psg[0].get_neighbors() if n in set_a]) > 0 \
-                        # and len([n for n in psg[1].get_neighbors() if n in set_b]) > 0:
                     psg[0].unlink(psg[1])
             [self.run(s_x) for s_x in (set_a, set_b)]
+
+
+class VoronoiDivision(MazeAlgorithm):
+    name = 'Voronoi Division'
+    settings = ['maze_room_size']
+
+    def __init__(self, grid, props=None, *args, **kwargs):
+        super().__init__(grid=grid, props=props, *args, **kwargs)
+
+        self.room_size = props.maze_room_size
+        self.room_size_deviation = props.maze_room_size_deviation
+        self.rooms = grid.size // self.room_size
+
+        all_cells = self.grid.all_cells().copy()
+
+        shuffle(all_cells)
+        self.union_find = UnionFind(all_cells)
+
+        self.room_centers = all_cells[0:self.rooms]
+
+        self.expeditions = 0
+
+        # Destroy all walls:
+        [[c.link(n, False) for n in c.get_neighbors() if n.level == c.level] for c in all_cells]
+        self.run(all_cells)
+
+    def run(self, cells):
+        union_find = self.union_find
+
+        frontiers = []
+        [frontiers.append({}) for room in range(self.rooms)]
+
+        for c in self.grid.all_cells():
+            dmin = 100000000
+            j = -1
+            for i, r_c in enumerate(self.room_centers):
+                d = hypot(r_c.column - c.column, r_c.row - c.row)
+                if d < dmin:
+                    dmin = d
+                    j = i
+            if j >= 0:
+                union_find.union(c, self.room_centers[j])
+                c.group = j
+
+        cell_centers_union_groups = [union_find.find(c) for c in self.room_centers]
+
+        for c in self.grid.all_cells():
+            for n in [n for n in c.get_neighbors() if not union_find.connected(c, n)]:
+                try:
+                    frontiers[cell_centers_union_groups.index(union_find.find(c))][cell_centers_union_groups.index(union_find.find(n))].append((c, n))
+                except KeyError:
+                    frontiers[cell_centers_union_groups.index(union_find.find(c))][cell_centers_union_groups.index(union_find.find(n))] = [(c, n)]
+
+        linked_cells = []
+        for frontier_dic in frontiers:
+            for ind, frontier in frontier_dic.items():
+                already_open = False
+                for lc in linked_cells:
+                    if lc in frontier:
+                        linked_cells.remove(lc)
+                        already_open = True
+                if frontier and not already_open:
+                    actual_psg = frontier[randrange(0, len(frontier))]
+                    if not union_find.connected(actual_psg[0], actual_psg[1]):
+                        frontier.remove(actual_psg)
+                        union_find.union(actual_psg[0], actual_psg[1])
+                        linked_cells.append((actual_psg[1], actual_psg[0]))
+                    for link in [link for link in frontier if len(link[0].links) > 1 and len(link[1].links) > 1]:
+                        link[0].unlink(link[1])
+                        if self.is_last_step():
+                            return
 
 
 class AldousBroder(MazeAlgorithm):
