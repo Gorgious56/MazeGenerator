@@ -26,8 +26,6 @@ class MazeGeneratorPanel(bpy.types.Panel):
         sub.prop(mg_props, 'auto_update', toggle=True, icon='FILE_REFRESH', text='')
         sub.prop(mg_props, 'auto_overwrite', toggle=True, icon='TRASH', text='')
 
-        # row.operator("object.simple_operator")
-
 
 class WallsPanel(bpy.types.Panel):
     bl_idname = "MAZE_GENERATOR_PT_WallPanel"
@@ -36,7 +34,7 @@ class WallsPanel(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = 'MG'
-    bl_options = {"DEFAULT_CLOSED"}
+    # bl_options = {"DEFAULT_CLOSED"}
 
     def draw_header(self, context):
         self.layout.label(text='Walls', icon='SNAP_EDGE')
@@ -146,6 +144,21 @@ class ParametersPanel(bpy.types.Panel):
         layout.prop_menu_enum(mg_props, 'cell_type', icon=cell_enum_icon)
         layout.prop(mg_props, 'maze_algorithm', icon='HAND', text='Solver')
 
+        space_enum_icon = 'MESH_PLANE'
+        if mg_props.maze_space_dimension == '1':
+            space_enum_icon = 'MESH_CYLINDER'
+        if mg_props.maze_space_dimension == '2':
+            space_enum_icon = 'GP_SELECT_STROKES'
+
+        layout.prop_menu_enum(mg_props, 'maze_space_dimension', icon=space_enum_icon)
+
+        if mg_props.maze_space_dimension == '2' and mg_props.maze_columns <= 3 * mg_props.maze_rows_or_radius:
+            layout.label(text='Set Columns > 3 * Rows', icon='ERROR', )
+        elif mg_props.maze_space_dimension == '3' and 2 * mg_props.maze_columns >= mg_props.maze_rows_or_radius:
+            layout.label(text='Set Columns < 2 * Rows', icon='ERROR', )
+        else:
+            layout.label()
+
         def maze_size_ui(prop_name, decrease, increase, text):
             row = layout.row(align=True)
             sub = row.row()
@@ -180,7 +193,7 @@ class InfoPanel(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = 'MG'
-    bl_options = {"DEFAULT_CLOSED"}
+    # bl_options = {"DEFAULT_CLOSED"}
 
     def draw_header(self, context):
         self.layout.label(text='', icon='INFO')

@@ -15,15 +15,16 @@ BORDER = 'BORDER'
 
 
 class Grid:
-    def __init__(self, rows=2, columns=2, levels=1, name="", coord_system='cartesian', sides=4, cell_size=1):
+    def __init__(self, rows=2, columns=2, levels=1, name="", coord_system='cartesian', sides=4, cell_size=1, space_rep=0):
         self.rows = rows
         self.columns = columns
         self.levels = levels
-        self.__cells = [None] * (rows * columns * levels)
+        self._cells = [None] * (rows * columns * levels)
         self.size = rows * columns * levels
         self.size_2D = rows * columns
         self.masked_cells = []
         self.name = name
+        self.space_rep = space_rep
 
         self.coord_system = coord_system
 
@@ -32,25 +33,35 @@ class Grid:
         self.prepare_grid()
         self.configure_cells()
 
-        self.offset = (columns / 2, rows / 2, 0)
+        self.offset = Vector((-self.columns / 2, -self.rows / 2, 0))
 
         self.cell_size = cell_size
 
     def __delitem__(self, key):
-        del self.__cells[key[0] + key[1] * self.columns]
+        del self._cells[key[0] + key[1] * self.columns]
 
     def __getitem__(self, key):
+        key = list(key)
         if len(key) == 2:
-            return self.__getitem__((key[0], key[1], 0))
-        else:
-            return self.__cells[key[0] + key[1] * self.columns + key[2] * self.size_2D] \
-                if (self.columns > key[0] >= 0 and self.rows > key[1] >= 0 and self.levels > key[2] >= 0) else None
+            key.append(0)
+        if self.space_rep > 0:
+            if key[0] == -1:
+                key[0] = self.columns - 1
+            elif key[0] == self.columns:
+                key[0] = 0
+            if self.space_rep == 3:
+                if key[1] == -1:
+                    key[1] = self.rows - 1
+                elif key[1] == self.rows:
+                    key[1] = 0
+        return self._cells[key[0] + key[1] * self.columns + key[2] * self.size_2D] \
+            if (self.columns > key[0] >= 0 and self.rows > key[1] >= 0 and self.levels > key[2] >= 0) else None
 
     def __setitem__(self, key, value):
         if len(key) == 2:
             self.__setitem__((key[0], key[1], 0), value)
         else:
-            self.__cells[key[0] + key[1] * self.columns + key[2] * self.size_2D] = value
+            self._cells[key[0] + key[1] * self.columns + key[2] * self.size_2D] = value
 
     def prepare_grid(self):
         for l in range(self.levels):
@@ -94,24 +105,21 @@ class Grid:
         cols = self.columns
         for l in range(self.levels):
             for r in range(self.rows):
-                yield [c for c in self.__cells[r * cols + l * self.size_2D: (r + 1) * cols + l * self.size_2D] if not c.is_masked]
+                yield [c for c in self._cells[r * cols + l * self.size_2D: (r + 1) * cols + l * self.size_2D] if not c.is_masked]
 
     def each_level(self):
         for l in range(self.levels):
-            yield [c for c in self.__cells[l * self.size_2D: (l + 1) * self.size_2D] if not c.is_masked]
+            yield [c for c in self._cells[l * self.size_2D: (l + 1) * self.size_2D] if not c.is_masked]
 
     def each_cell(self):
         for c in self.get_unmasked_cells():
             yield c
 
     def all_cells(self):
-        return self.__cells
+        return self._cells
 
     def get_dead_ends(self):
         return [c for c in self.get_unmasked_cells() if len(c.links) == 1]
-
-    def get_double_links(self):
-        return [c for c in self.get_unmasked_cells() if len(c.links) == 2]
 
     def braid_dead_ends(self, braid=0, _seed=None):
         dead_ends_shuffle = self.get_dead_ends()
@@ -180,19 +188,20 @@ class Grid:
         return [c for c in self.all_cells() if any(c.links)]
 
     def get_cell_position(self, c, cell_size=None):
+        offset = self.offset
         positions = {}
         delta_level = c.level * (self.columns + 1)
         cell_size = self.cell_size if cell_size is None else cell_size
         border = (1 - cell_size) / 2
-        positions[TOP] = c.row + 0.5
-        positions[BOT] = c.row - 0.5
-        positions[LEFT] = c.column - 0.5 + delta_level
-        positions[RIGHT] = c.column + 0.5 + delta_level
+        positions[TOP] = c.row + 0.5 + offset.y
+        positions[BOT] = c.row - 0.5 + offset.y
+        positions[LEFT] = c.column - 0.5 + delta_level + offset.x
+        positions[RIGHT] = c.column + 0.5 + delta_level + offset.x
         positions[TOP_BORDER] = positions[TOP] - border
         positions[BOT_BORDER] = positions[BOT] + border
         positions[LEFT_BORDER] = positions[LEFT] + border
         positions[RIGHT_BORDER] = positions[RIGHT] - border
-        positions[CENTER] = Vector((c.column + delta_level, c.row, 0))
+        positions[CENTER] = Vector((c.column + delta_level, c.row, 0)) + offset
         positions[BORDER] = cell_size * 0.05
         return positions
 
@@ -256,6 +265,5 @@ class Grid:
             cv.add_face(
                 (Vector((cx, top_b - b * 1.5, zd)), Vector((left_b + b, cy, zd)), Vector((cx, bot_b + b * 1.5, zd))),
                 vertices_levels=(1, 1, 1))
-
 
         return cv

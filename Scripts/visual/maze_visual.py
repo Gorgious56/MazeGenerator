@@ -1,7 +1,9 @@
 import bpy
 from random import seed, random
+from math import pi
 from .. utils . modifier_manager import add_modifier, add_driver_to, WALL_BEVEL_NAME, WALL_WELD_NAME, WALL_SCREW_NAME, WALL_SOLIDIFY_NAME, CELL_SOLIDIFY_NAME, \
-    CELL_WELD_NAME, CELL_DECIMATE_NAME, CELL_BEVEL_NAME, CELL_SUBSURF_NAME, CELL_DISPLACE_NAME, CELL_WELD_2_NAME
+    CELL_WELD_NAME, CELL_DECIMATE_NAME, CELL_BEVEL_NAME, CELL_SUBSURF_NAME, CELL_DISPLACE_NAME, CELL_WELD_2_NAME, CELL_CYLINDER_NAME, CELL_WELD_CYLINDER_NAME, \
+    CELL_MOEBIUS_NAME, CELL_TORUS_NAME
 from .. utils . distance_manager import Distances
 from .. utils . mesh_manager import set_mesh_layers
 from .. utils . material_manager import MaterialManager
@@ -21,12 +23,13 @@ class MazeVisual:
     mat_mgr = None
 
     def __init__(self, scene):
+        self.col_objects = None
         self.obj_walls = None
         self.mesh_walls = None
         self.obj_cells = None
         self.mesh_cells = None
-        self.obj_ladders = None
-        self.cur_ladders = None
+        self.obj_cylinder = None
+        self.obj_torus = None
         self.grid = None
 
         self.scene = scene
@@ -54,7 +57,6 @@ class MazeVisual:
         self.set_materials()
 
         self.paint_cells()
-        self.offset_objects()
         self.update_visibility()
 
         MazeVisual.Instance = self
@@ -81,74 +83,106 @@ class MazeVisual:
                     levels=1,
                     cell_size=1 - max(0.1, props.cell_inset),
                     use_kruskal=algorithm_manager.is_kruskal_random(props.maze_algorithm),
-                    weave=props.maze_weave)
+                    weave=props.maze_weave,
+                    cylindric=props.maze_space_dimension)
                 return
             else:
                 grid = Grid
-        g = grid(rows=props.maze_rows_or_radius, columns=props.maze_columns, levels=props.maze_levels, cell_size=1 - props.cell_inset)
+        g = grid(
+            rows=props.maze_rows_or_radius,
+            columns=props.maze_columns,
+            levels=props.maze_levels if int(props.maze_space_dimension) == 0 else 1,
+            cell_size=1 - props.cell_inset,
+            space_rep=int(props.maze_space_dimension))
         self.grid = g
 
     def generate_objects(self):
         scene = self.scene
-        # Get or add the Wall mesh
+        # Get or add the Wall mesh.
         try:
-            self.mesh_wall = bpy.data.meshes['Wall Mesh']
+            self.mesh_wall = bpy.data.meshes['MG_Wall Mesh']
             self.mesh_wall.clear_geometry()
         except KeyError:
-            self.mesh_wall = bpy.data.meshes.new("Wall Mesh")
+            self.mesh_wall = bpy.data.meshes.new("MG_Wall Mesh")
 
-        # Get or add the Wall object and link it to the wall mesh
+        # Get or add the Wall object and link it to the wall mesh.
         try:
-            self.obj_walls = scene.objects['Walls']
+            self.obj_walls = scene.objects['MG_Walls']
         except KeyError:
-            self.obj_walls = bpy.data.objects.new('Walls', self.mesh_wall)
+            self.obj_walls = bpy.data.objects.new('MG_Walls', self.mesh_wall)
             scene.collection.objects.link(self.obj_walls)
 
-        # Get or add the Cells mesh
+        # Get or add the Cells mesh.
         try:
-            self.mesh_cells = bpy.data.meshes['Cells Mesh']
+            self.mesh_cells = bpy.data.meshes['MG_Cells Mesh']
             self.mesh_cells.clear_geometry()
         except KeyError:
-            self.mesh_cells = bpy.data.meshes.new("Cells Mesh")
+            self.mesh_cells = bpy.data.meshes.new("MG_Cells Mesh")
 
-        # Get or add the Wall object and link it to the wall mesh
+        # Get or add the Wall object and link it to the wall mesh.
         try:
-            self.obj_cells = scene.objects['Cells']
+            self.obj_cells = scene.objects['MG_Cells']
         except KeyError:
-            self.obj_cells = bpy.data.objects.new('Cells', self.mesh_cells)
+            self.obj_cells = bpy.data.objects.new('MG_Cells', self.mesh_cells)
             scene.collection.objects.link(self.obj_cells)
 
-        # # Get or add the Ladders Curve data
-        # try:
-        #     self.cur_ladders = bpy.data.curves['Ladders Curve']
-        #     self.cur_ladders.clear_geometry()
-        # except KeyError:
-        #     self.mesh_cells = bpy.data.meshes.new('Ladders Curve')
+        # Get or add the cylinder curver object.
+        try:
+            self.obj_cylinder = scene.objects['MG_Curver_Cyl']
+        except KeyError:
+            bpy.ops.curve.primitive_bezier_circle_add(enter_editmode=False, align='WORLD', location=(0, 0, 0), rotation=(pi / 2, 0, 0))
+            self.obj_cylinder = bpy.context.active_object
+            self.obj_cylinder.name = 'MG_Curver_Cyl'
+        self.obj_cylinder.hide_viewport = True
+        self.obj_cylinder.hide_render = True
         
-        # # Get or add the Wall object and link it to the wall mesh
-        # try:
-        #     self.obj_ladders = scene.objects['Ladders']
-        # except KeyError:
-        #     self.obj_ladders = bpy.data.objects.new('Ladders', self.mesh_cells)
-        #     scene.collection.objects.link(self.obj_cells)
+        try:
+            self.obj_torus = scene.objects['MG_Curver_Tor']
+        except KeyError:
+            bpy.ops.curve.primitive_bezier_circle_add(enter_editmode=False, align='WORLD', location=(0, 0, 0))
+            self.obj_torus = bpy.context.active_object
+            self.obj_torus.name = 'MG_Curver_Tor'
+        self.obj_torus.hide_viewport = True
+        self.obj_torus.hide_render = True
+
+        # Put everything in a master collection.
+        try:
+            self.col_objects = bpy.data.collections['MG_Collection']
+        except KeyError:
+            self.col_objects = bpy.data.collections.new(name='MG_Collection')
+        try:
+            bpy.context.scene.collection.children.link(self.col_objects)
+        except RuntimeError:
+            pass
+
+        for obj in (self.obj_cells, self.obj_cylinder, self.obj_walls, self.obj_torus):
+            for col in obj.users_collection:
+                col.objects.unlink(obj)  # Unlink it from master collection.
+            self.col_objects.objects.link(obj)  # Link it with MG collection.
 
     def generate_modifiers(self):
         props = self.props
         if props.auto_overwrite:
-            # self.obj_walls.modifiers.clear()
             add_modifier(self.obj_walls, 'WELD', WALL_WELD_NAME, properties={'show_expanded': False})
             add_modifier(self.obj_walls, 'SCREW', WALL_SCREW_NAME, properties={'show_expanded': False, 'angle': 0, 'steps': 2, 'render_steps': 2, 'screw_offset': props.wall_height})
             add_modifier(self.obj_walls, 'SOLIDIFY', WALL_SOLIDIFY_NAME, properties={'show_expanded': False, 'solidify_mode': 'NON_MANIFOLD', 'thickness': props.wall_width, 'offset': 0})
             add_modifier(self.obj_walls, 'BEVEL', WALL_BEVEL_NAME, properties={'show_expanded': False, 'segments': 4, 'limit_method': 'ANGLE'})
+            add_modifier(self.obj_walls, 'DISPLACE', CELL_DISPLACE_NAME, properties={'show_expanded': False, 'direction': 'Z', 'mid_level': 0.5})
+            add_modifier(self.obj_walls, 'SIMPLE_DEFORM', CELL_MOEBIUS_NAME, properties={'show_expanded': False, 'angle': 2 * pi})
+            add_modifier(self.obj_walls, 'CURVE', CELL_CYLINDER_NAME, properties={'show_expanded': False, 'object': self.obj_cylinder})
+            add_modifier(self.obj_walls, 'CURVE', CELL_TORUS_NAME, properties={'show_expanded': False, 'object': self.obj_torus, 'deform_axis': 'POS_Y'})
 
-            # self.obj_cells.modifiers.clear()
             add_modifier(self.obj_cells, 'WELD', CELL_WELD_NAME, properties={'show_expanded': False, 'vertex_group': DISPLACE, 'invert_vertex_group': True})
             add_modifier(self.obj_cells, 'WELD', CELL_WELD_2_NAME, properties={'show_expanded': False, 'vertex_group': DISPLACE, 'invert_vertex_group': False})
             add_modifier(self.obj_cells, 'SOLIDIFY', CELL_SOLIDIFY_NAME, properties={'show_expanded': False, 'use_even_offset': True, 'vertex_group': DISPLACE, 'invert_vertex_group': True})
             # add_modifier(self.obj_cells, 'DECIMATE', CELL_DECIMATE_NAME, properties={'show_expanded': False, 'decimate_type': 'DISSOLVE'})
-            add_modifier(self.obj_cells, 'BEVEL', CELL_BEVEL_NAME, properties={'show_expanded': False, 'segments': 2, 'limit_method': 'ANGLE', 'material': 1, 'profile': 1, 'angle_limit': 1.5, 'use_clamp_overlap': False})
             add_modifier(self.obj_cells, 'SUBSURF', CELL_SUBSURF_NAME, properties={'show_expanded': False})
             add_modifier(self.obj_cells, 'DISPLACE', CELL_DISPLACE_NAME, properties={'show_expanded': False, 'direction': 'Z', 'vertex_group': DISPLACE, 'mid_level': 0})
+            add_modifier(self.obj_cells, 'SIMPLE_DEFORM', CELL_MOEBIUS_NAME, properties={'show_expanded': False, 'angle': 2 * pi})
+            add_modifier(self.obj_cells, 'CURVE', CELL_CYLINDER_NAME, properties={'show_expanded': False, 'object': self.obj_cylinder})
+            add_modifier(self.obj_cells, 'CURVE', CELL_TORUS_NAME, properties={'show_expanded': False, 'object': self.obj_torus, 'deform_axis': 'POS_Y'})
+            add_modifier(self.obj_cells, 'WELD', CELL_WELD_CYLINDER_NAME, properties={'show_expanded': False, 'merge_threshold': 0.08})
+            add_modifier(self.obj_cells, 'BEVEL', CELL_BEVEL_NAME, properties={'show_expanded': False, 'segments': 2, 'limit_method': 'ANGLE', 'material': 1, 'profile': 1, 'angle_limit': 1.5, 'use_clamp_overlap': False})
 
     def set_materials(self):
         if MazeVisual.mat_mgr:
@@ -160,14 +194,21 @@ class MazeVisual:
             add_driver_to(self.obj_walls.modifiers[WALL_SCREW_NAME], 'use_smooth_shade', 'wall_bevel', 'SCENE', self.scene, 'mg_props.wall_bevel', expression='wall_bevel > .005')
             add_driver_to(self.obj_walls.modifiers[WALL_SOLIDIFY_NAME], 'thickness', 'wall_thickness', 'SCENE', self.scene, 'mg_props.wall_width')
             add_driver_to(self.obj_walls.modifiers[WALL_BEVEL_NAME], 'width', 'wall_bevel', 'SCENE', self.scene, 'mg_props.wall_bevel')
-
+            add_driver_to(self.obj_walls.modifiers[CELL_CYLINDER_NAME], 'show_viewport', 'maze_space_dimension', 'SCENE', self.scene, 'mg_props.maze_space_dimension', expression="int(maze_space_dimension) > 0")
+            add_driver_to(self.obj_walls.modifiers[CELL_CYLINDER_NAME], 'show_render', 'maze_space_dimension', 'SCENE', self.scene, 'mg_props.maze_space_dimension', expression="int(maze_space_dimension) > 0")
+            add_driver_to(self.obj_walls.modifiers[CELL_DISPLACE_NAME], 'strength', 'wall_height', 'SCENE', self.scene, 'mg_props.wall_height', expression="-wall_height")
+            add_driver_to(self.obj_walls.modifiers[CELL_DISPLACE_NAME], 'show_viewport', 'maze_space_dimension', 'SCENE', self.scene, 'mg_props.maze_space_dimension', expression="int(maze_space_dimension) in (1, 2)")
+            add_driver_to(self.obj_walls.modifiers[CELL_DISPLACE_NAME], 'show_render', 'maze_space_dimension', 'SCENE', self.scene, 'mg_props.maze_space_dimension', expression="int(maze_space_dimension) in (1, 2)")
+            add_driver_to(self.obj_walls.modifiers[CELL_MOEBIUS_NAME], 'show_viewport', 'maze_space_dimension', 'SCENE', self.scene, 'mg_props.maze_space_dimension', expression="int(maze_space_dimension) == 2")
+            add_driver_to(self.obj_walls.modifiers[CELL_MOEBIUS_NAME], 'show_render', 'maze_space_dimension', 'SCENE', self.scene, 'mg_props.maze_space_dimension', expression="int(maze_space_dimension) == 2")
+            add_driver_to(self.obj_walls.modifiers[CELL_TORUS_NAME], 'show_viewport', 'maze_space_dimension', 'SCENE', self.scene, 'mg_props.maze_space_dimension', expression="int(maze_space_dimension) == 3")
+            add_driver_to(self.obj_walls.modifiers[CELL_TORUS_NAME], 'show_render', 'maze_space_dimension', 'SCENE', self.scene, 'mg_props.maze_space_dimension', expression="int(maze_space_dimension) == 3")
+            
             add_driver_to(self.obj_cells.modifiers[CELL_SOLIDIFY_NAME], 'thickness', 'cell_thickness', 'SCENE', self.scene, 'mg_props.cell_thickness')
             add_driver_to(self.obj_cells.modifiers[CELL_SOLIDIFY_NAME], 'thickness_vertex_group', 'cell_thickness', 'SCENE', self.scene, 'mg_props.cell_thickness', expression='max(0, 1 - abs(cell_thickness / 2))')
+            add_driver_to(self.obj_cells.modifiers[CELL_SOLIDIFY_NAME], 'offset', 'maze_space_dimension', 'SCENE', self.scene, 'mg_props.maze_space_dimension', expression='-1 if int(maze_space_dimension) == 0 else 0')
             add_driver_to(self.obj_cells.modifiers[CELL_SOLIDIFY_NAME], 'show_viewport', 'cell_thickness', 'SCENE', self.scene, 'mg_props.cell_thickness', expression='cell_thickness != 0')
             add_driver_to(self.obj_cells.modifiers[CELL_SOLIDIFY_NAME], 'show_render', 'cell_thickness', 'SCENE', self.scene, 'mg_props.cell_thickness', expression='cell_thickness != 0')
-            add_driver_to(self.obj_cells.modifiers[CELL_BEVEL_NAME], 'width', 'cell_contour', 'SCENE', self.scene, 'mg_props.cell_contour') 
-            add_driver_to(self.obj_cells.modifiers[CELL_BEVEL_NAME], 'show_viewport', 'cell_contour', 'SCENE', self.scene, 'mg_props.cell_contour', expression='cell_contour != 0')
-            add_driver_to(self.obj_cells.modifiers[CELL_BEVEL_NAME], 'show_render', 'cell_contour', 'SCENE', self.scene, 'mg_props.cell_contour', expression='cell_contour != 0')
             # add_driver_to(self.obj_cells.modifiers[CELL_DECIMATE_NAME], 'show_viewport', 'cell_inset', 'SCENE', self.scene, 'mg_props.cell_inset', expression='cell_inset > 0')
             # add_driver_to(self.obj_cells.modifiers[CELL_DECIMATE_NAME], 'show_render', 'cell_inset', 'SCENE', self.scene, 'mg_props.cell_inset', expression='cell_inset > 0')
             add_driver_to(self.obj_cells.modifiers[CELL_SUBSURF_NAME], 'levels', 'cell_subdiv', 'SCENE', self.scene, 'mg_props.cell_subdiv')
@@ -175,17 +216,40 @@ class MazeVisual:
             add_driver_to(self.obj_cells.modifiers[CELL_SUBSURF_NAME], 'show_viewport', 'cell_subdiv', 'SCENE', self.scene, 'mg_props.cell_subdiv', expression='cell_subdiv > 0')
             add_driver_to(self.obj_cells.modifiers[CELL_SUBSURF_NAME], 'show_render', 'cell_subdiv', 'SCENE', self.scene, 'mg_props.cell_subdiv', expression='cell_subdiv > 0')
             add_driver_to(self.obj_cells.modifiers[CELL_DISPLACE_NAME], 'strength', 'cell_thickness', 'SCENE', self.scene, 'mg_props.cell_thickness', expression='- (cell_thickness + (abs(cell_thickness) / cell_thickness * 0.1)) if cell_thickness != 0 else 0')
-
             add_driver_to(self.obj_cells.modifiers[CELL_DISPLACE_NAME], 'show_viewport', 'cell_thickness', 'SCENE', self.scene, 'mg_props.cell_thickness', expression='cell_thickness != 0')
             add_driver_to(self.obj_cells.modifiers[CELL_DISPLACE_NAME], 'show_render', 'cell_thickness', 'SCENE', self.scene, 'mg_props.cell_thickness', expression='cell_thickness != 0')
+            add_driver_to(self.obj_cells.modifiers[CELL_MOEBIUS_NAME], 'show_viewport', 'maze_space_dimension', 'SCENE', self.scene, 'mg_props.maze_space_dimension', expression="int(maze_space_dimension) == 2")
+            add_driver_to(self.obj_cells.modifiers[CELL_MOEBIUS_NAME], 'show_render', 'maze_space_dimension', 'SCENE', self.scene, 'mg_props.maze_space_dimension', expression="int(maze_space_dimension) == 2")
+            add_driver_to(self.obj_cells.modifiers[CELL_TORUS_NAME], 'show_viewport', 'maze_space_dimension', 'SCENE', self.scene, 'mg_props.maze_space_dimension', expression="int(maze_space_dimension) == 3")
+            add_driver_to(self.obj_cells.modifiers[CELL_TORUS_NAME], 'show_render', 'maze_space_dimension', 'SCENE', self.scene, 'mg_props.maze_space_dimension', expression="int(maze_space_dimension) == 3")
+            add_driver_to(self.obj_cells.modifiers[CELL_CYLINDER_NAME], 'show_viewport', 'maze_space_dimension', 'SCENE', self.scene, 'mg_props.maze_space_dimension', expression="int(maze_space_dimension) > 0")
+            add_driver_to(self.obj_cells.modifiers[CELL_CYLINDER_NAME], 'show_render', 'maze_space_dimension', 'SCENE', self.scene, 'mg_props.maze_space_dimension', expression="int(maze_space_dimension) > 0")
+            add_driver_to(self.obj_cells.modifiers[CELL_WELD_CYLINDER_NAME], 'show_viewport', 'maze_space_dimension', 'SCENE', self.scene, 'mg_props.maze_space_dimension', expression='int(maze_space_dimension) > 0')
+            add_driver_to(self.obj_cells.modifiers[CELL_WELD_CYLINDER_NAME], 'show_render', 'maze_space_dimension', 'SCENE', self.scene, 'mg_props.maze_space_dimension', expression='int(maze_space_dimension) > 0')
+            add_driver_to(self.obj_cells.modifiers[CELL_BEVEL_NAME], 'width', 'cell_contour', 'SCENE', self.scene, 'mg_props.cell_contour')
 
-    def offset_objects(self):
-        if self.props.cell_type == POLAR:
-            self.obj_walls.location.xyz = self.obj_cells.location.xyz = (0, 0, 0)
-        elif self.props.cell_type == TRIANGLE:
-            self.obj_walls.location.xyz = self.obj_cells.location.xyz = (-self.grid.columns / 4, -self.grid.rows / 2 + 0.5, 0)
-        else:
-            self.obj_walls.location.xyz = self.obj_cells.location.xyz = (-self.grid.columns / 2, -self.grid.rows / 2, 0)
+            add_driver_to(self.obj_cells.modifiers[CELL_BEVEL_NAME], 'show_viewport', 'cell_contour', 'SCENE', self.scene, 'mg_props.cell_contour', expression='cell_contour != 0')
+            add_driver_to(self.obj_cells.modifiers[CELL_BEVEL_NAME], 'show_render', 'cell_contour', 'SCENE', self.scene, 'mg_props.cell_contour', expression='cell_contour != 0')
+            
+            # Scale the cylinder object when scaling the size of the maze
+            for i, obj in enumerate((self.obj_cylinder, self.obj_torus)):
+                drvList = obj.driver_add('scale')
+                for fc in drvList:
+                    drv = fc.driver
+                    try:
+                        var = drv.variables[0]
+                    except IndexError:
+                        var = drv.variables.new()
+
+                    var.name = 'columns' if i == 0 else 'rows'
+                    var.type = 'SINGLE_PROP'
+
+                    target = var.targets[0]
+                    target.id_type = 'SCENE'
+                    target.id = self.scene
+                    target.data_path = 'mg_props.maze_columns' if i == 0 else 'mg_props.maze_rows_or_radius'
+
+                    drv.expression = 'columns * 0.15915' if i == 0 else 'rows * 0.15915'
 
     def build_objects(self):
         self.cells_visual = self.grid.get_blueprint()
@@ -255,7 +319,7 @@ class MazeVisual:
         for cv in self.cells_visual:
             c = cv.cell
             this_distance = distances[c]
-            new_col = (this_distance / max_distance if this_distance else 0, 0 if c in longest_path else 1, 1 if type(c) is CellUnder and self.props.cell_thickness >= 0 else 0, 1)
+            new_col = (this_distance / max_distance if this_distance is not None else 1, 0 if c in longest_path else 1, 1 if type(c) is CellUnder and self.props.cell_thickness >= 0 else 0, 0 if this_distance is not None else 1)
             cv.color_layers[DISTANCE] = new_col
 
             cv.color_layers[GROUP] = group_colors[c.group]

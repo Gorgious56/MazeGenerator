@@ -10,6 +10,10 @@ CELL_DECIMATE_NAME = 'MG_DECIMATE'
 CELL_SUBSURF_NAME = 'MG_SUBSURF'
 CELL_BEVEL_NAME = 'MG_CONTOUR'
 CELL_DISPLACE_NAME = 'MG_DISPLACE'
+CELL_CYLINDER_NAME = 'MG_CYLINDER'
+CELL_WELD_CYLINDER_NAME = 'MG_CYLINDER_WELD'
+CELL_MOEBIUS_NAME = 'MG_MOEBIUS'
+CELL_TORUS_NAME = 'MG_TORUS'
 
 
 def add_modifier(obj, mod_type, mod_name, remove_if_already_exists=False, remove_all_modifiers=False, properties=None):
@@ -37,9 +41,9 @@ def add_modifier(obj, mod_type, mod_name, remove_if_already_exists=False, remove
 def add_driver_to(obj, obj_prop, var_name, id_type, id, prop_path, expression=None):
     if obj:
         driver = obj.driver_add(obj_prop).driver
-        if len(driver.variables) > 0:
+        try:
             var = driver.variables[0]
-        else:
+        except IndexError:
             var = driver.variables.new()
         var.name = var_name
         var.type = 'SINGLE_PROP'

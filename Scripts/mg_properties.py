@@ -151,15 +151,6 @@ class MGProperties(PropertyGroup):
         update=generate_maze
     )
 
-    maze_rooms: IntProperty(
-        name='Rooms',
-        description='The algorithm will stop when this number of rooms has been created. 0 = infinite',
-        default=0,
-        min=0,
-        soft_max=500,
-        update=generate_maze
-    )
-
     maze_room_size_deviation: IntProperty(
         name='Room Size Deviation',
         description='tweak this to add randomness to the room size property. At a value of 1, the room size will vary between the minimum and the value in the room property',
@@ -358,6 +349,18 @@ class MGProperties(PropertyGroup):
         description='Toggle this value to weave the maze. Not all algorithms allow it',
         default=False,
         update=toggle_maze_weave
+    )
+
+    maze_space_dimension: EnumProperty(
+        name='Space representation',
+        description='Choose if and how to fold the maze in 3D dimensions',
+        items=[
+            ('0', 'Regular', ''),
+            ('1', 'Cylinder', ''),
+            ('2', 'Moebius', ''),
+            ('3', 'Torus', ''),
+            ],
+        default='0'
     )
 
     def register():
