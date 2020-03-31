@@ -55,14 +55,14 @@ class MGProperties(PropertyGroup):
         name='Auto Update',
         default=True,
         description='Generate a new maze each time a parameter is modified. This will hurt performance when generating big mazes',
-        update=generate_maze
+        update=lambda self, context: generate_maze(self, context) if self.auto_update else None
     )
 
     auto_overwrite: BoolProperty(
         name="Auto Overwrite",
-        description="Caution : Enabling this WILL overwrite any material and modifiers with new ones when generating",
+        description="Caution : Enabling this WILL overwrite the materials and modifiers",
         default=True,
-        update=generate_maze
+        update=lambda self, context: generate_maze(self, context) if self.auto_overwrite else None
     )
 
     maze_algorithm: EnumProperty(
@@ -95,6 +95,49 @@ class MGProperties(PropertyGroup):
         min=0,
         soft_max=3,
         max=6
+    )
+
+    cell_decimate: IntProperty(
+        name='Cell Decimate',
+        description='Set the ratio of faces to decimate.',
+        default=0,
+        min=0,
+        max=100,
+        subtype='PERCENTAGE'
+    )
+
+    cell_wireframe: FloatProperty(
+        name='Cell Wireframe',
+        description='Set the wireframe Thickness.',
+        default=0,
+        min=0,
+        soft_max=0.04
+    )
+
+    cell_inset: FloatProperty(
+        name="Cell Inset",
+        description="Tweak the cell's inset",
+        default=0,
+        soft_max=0.9,
+        min=0,
+        max=1,
+        update=generate_maze
+    )
+
+    cell_thickness: FloatProperty(
+        name="Cell Thickness",
+        description="Tweak the cell's thickness",
+        default=0,
+        soft_max=1,
+        soft_min=-1,
+    )
+
+    cell_contour: FloatProperty(
+        name='Cell Contour',
+        description='This will add a stylised contour the cells',
+        default=0,
+        min=0,
+        soft_max=0.2
     )
 
     maze_rows_or_radius: IntProperty(
@@ -284,32 +327,6 @@ class MGProperties(PropertyGroup):
         max=1,
     )
 
-    cell_inset: FloatProperty(
-        name="Cell Inset",
-        description="Tweak the cell's inset",
-        default=0,
-        soft_max=0.9,
-        min=0,
-        max=1,
-        update=generate_maze
-    )
-
-    cell_thickness: FloatProperty(
-        name="Cell Thickness",
-        description="Tweak the cell's thickness",
-        default=0,
-        soft_max=1,
-        soft_min=-1,
-    )
-
-    cell_contour: FloatProperty(
-        name='Cell Contour',
-        description='This will add a stylised contour the cells',
-        default=0,
-        min=0,
-        soft_max=0.2
-    )
-
     value_shift: FloatProperty(
         name="Color Shift",
         description="Tweak the color value shift of the cells",
@@ -342,7 +359,7 @@ class MGProperties(PropertyGroup):
         max=100,
         subtype='PERCENTAGE',
         update=tweak_maze_weave
-    )    
+    )
 
     maze_weave_toggle: BoolProperty(
         name='Weave Maze',
@@ -359,8 +376,9 @@ class MGProperties(PropertyGroup):
             ('1', 'Cylinder', ''),
             ('2', 'Moebius', ''),
             ('3', 'Torus', ''),
-            ],
-        default='0'
+            ('4', 'Box', '')],
+        default='0',
+        update=generate_maze
     )
 
     def register():

@@ -1,5 +1,5 @@
 from random import seed, choice, choices, random, shuffle, randrange
-from math import ceil, hypot, floor
+from math import ceil, hypot
 from . data_structure . cell import CellPolar, CellTriangle, CellHex, Cell
 from .. utils . priority_queue import PriorityQueue
 from .. visual . cell_type_manager import POLAR, TRIANGLE, HEXAGON, SQUARE

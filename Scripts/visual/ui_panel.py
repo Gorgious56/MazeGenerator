@@ -24,7 +24,7 @@ class MazeGeneratorPanel(bpy.types.Panel):
 
         sub = row.row(align=True)
         sub.prop(mg_props, 'auto_update', toggle=True, icon='FILE_REFRESH', text='')
-        sub.prop(mg_props, 'auto_overwrite', toggle=True, icon='TRASH', text='')
+        sub.prop(mg_props, 'auto_overwrite', toggle=True, icon='MODIFIER_ON', text='')
 
 
 class WallsPanel(bpy.types.Panel):
@@ -39,7 +39,7 @@ class WallsPanel(bpy.types.Panel):
     def draw_header(self, context):
         self.layout.label(text='Walls', icon='SNAP_EDGE')
         try:
-            wall = context.scene.objects['Walls']
+            wall = context.scene.objects['MG_Walls']
             self.layout.prop(wall, 'hide_viewport', text='')
             self.layout.prop(wall, 'hide_render', text='')
         except KeyError:
@@ -56,64 +56,6 @@ class WallsPanel(bpy.types.Panel):
         row.prop(mg_props, 'wall_width')
         layout.prop(mg_props, 'wall_color')
         layout.prop(mg_props, 'wall_hide', text='Auto-hide wall when insetting', toggle=True)
-
-
-class CellsPanel(bpy.types.Panel):
-    bl_idname = "MAZE_GENERATOR_PT_CellsPanel"
-    bl_label = " "
-    bl_parent_id = 'MAZE_GENERATOR_PT_MainPanel'
-    bl_space_type = 'VIEW_3D'
-    bl_region_type = 'UI'
-    bl_category = 'MG'
-
-    def draw_header(self, context):
-        self.layout.label(text='Cells', icon='TEXTURE_DATA')
-        try:
-            cells = context.scene.objects['Cells']
-            self.layout.prop(cells, 'hide_viewport', text='')
-            self.layout.prop(cells, 'hide_render', text='')
-        except KeyError:
-            pass
-
-    def draw(self, context):
-        layout = self.layout
-
-        scene = context.scene
-        mg_props = scene.mg_props
-
-        box = layout.box()
-        row = box.row()
-        row_2 = row.row()
-        if mg_props.maze_algorithm == KruskalRandom.name:
-            row_2.prop(mg_props, 'maze_weave', slider=True)
-        else:
-            row_2.prop(mg_props, 'maze_weave_toggle', toggle=True)
-        row_2.enabled = is_algo_weaved(mg_props)
-        row = box.row(align=True)
-        row.prop(mg_props, 'cell_inset', slider=True, text='Inset')
-        row.prop(mg_props, 'cell_contour', slider=True, text='Contour')
-
-        row = box.row(align=True)
-        sub = row.row(align=True)
-        sub.prop(mg_props, 'cell_thickness', slider=True, text='Thickness')
-
-        sub = row.row(align=True)
-        sub.prop(mg_props, 'cell_use_smooth', toggle=True, icon='SHADING_RENDERED', text='')
-
-        row.prop(mg_props, 'cell_subdiv', text='Subidivions')
-
-        box = layout.box()
-        box.prop(mg_props, 'paint_style')
-        if mg_props.paint_style != 'DISTANCE':
-            box.prop(mg_props, 'seed_color_button', text='Randomize Colors', toggle=True)
-        else:
-            box.prop(mg_props, 'show_only_longest_path', text='Show Longest Path')
-            row = box.row(align=True)
-            row.prop(mg_props, 'distance_color_start', text='Start')
-            row.prop(mg_props, 'distance_color_end', text='End')
-        box.prop(mg_props, 'hue_shift', slider=True, text='Hue Shift', )
-        box.prop(mg_props, 'saturation_shift', slider=True, text='Saturation Shift')
-        box.prop(mg_props, 'value_shift', slider=True, text='Value Shift', icon='COLORSET_10_VEC')
 
 
 class ParametersPanel(bpy.types.Panel):
@@ -149,13 +91,19 @@ class ParametersPanel(bpy.types.Panel):
             space_enum_icon = 'MESH_CYLINDER'
         if mg_props.maze_space_dimension == '2':
             space_enum_icon = 'GP_SELECT_STROKES'
+        if mg_props.maze_space_dimension == '3':
+            space_enum_icon = 'GP_SELECT_STROKES'
+        if mg_props.maze_space_dimension == '4':
+            space_enum_icon = 'MESH_CUBE'
 
         layout.prop_menu_enum(mg_props, 'maze_space_dimension', icon=space_enum_icon)
 
         if mg_props.maze_space_dimension == '2' and mg_props.maze_columns <= 3 * mg_props.maze_rows_or_radius:
             layout.label(text='Set Columns > 3 * Rows', icon='ERROR', )
-        elif mg_props.maze_space_dimension == '3' and 2 * mg_props.maze_columns >= mg_props.maze_rows_or_radius:
-            layout.label(text='Set Columns < 2 * Rows', icon='ERROR', )
+        elif mg_props.maze_space_dimension == '3' and 2 * mg_props.maze_columns > mg_props.maze_rows_or_radius:
+            layout.label(text='Set Rows > 2 * Columns', icon='ERROR', )
+        elif mg_props.maze_space_dimension == '4':
+            layout.label(text='Work In Project', icon='ERROR', )
         else:
             layout.label()
 
@@ -170,10 +118,12 @@ class ParametersPanel(bpy.types.Panel):
 
             sub = row.row()
             sub.operator('maze.tweak_maze_size', text='', icon='ADD').tweak_size = increase
+            return row
 
         maze_size_ui('maze_columns', [-1, 0, 0], [1, 0, 0], 'Columns')
         maze_size_ui('maze_rows_or_radius', [0, -1, 0], [0, 1, 0], 'Rows')
-        maze_size_ui('maze_levels', [0, 0, -1], [0, 0, 1], 'Levels')
+        row = maze_size_ui('maze_levels', [0, 0, -1], [0, 0, 1], 'Levels')
+        row.enabled = mg_props.maze_space_dimension == '0'
         row = layout.row()
         row.prop(mg_props, 'seed')
         row.prop(mg_props, 'steps', icon='MOD_DYNAMICPAINT')
@@ -184,6 +134,75 @@ class ParametersPanel(bpy.types.Panel):
         box = layout.box()
         for setting in ALGORITHM_FROM_NAME[mg_props.maze_algorithm].settings:
             box.prop(mg_props, setting)
+
+
+class CellsPanel(bpy.types.Panel):
+    bl_idname = "MAZE_GENERATOR_PT_CellsPanel"
+    bl_label = " "
+    bl_parent_id = 'MAZE_GENERATOR_PT_MainPanel'
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = 'MG'
+
+    def draw_header(self, context):
+        self.layout.label(text='Cells', icon='TEXTURE_DATA')
+        try:
+            cells = context.scene.objects['MG_Cells']
+            self.layout.prop(cells, 'hide_viewport', text='')
+            self.layout.prop(cells, 'hide_render', text='')
+        except KeyError:
+            pass
+
+    def draw(self, context):
+        layout = self.layout
+
+        scene = context.scene
+        mg_props = scene.mg_props
+
+        box = layout.box()
+        row = box.row()
+        row_2 = row.row()
+        if mg_props.maze_algorithm == KruskalRandom.name:
+            row_2.prop(mg_props, 'maze_weave', slider=True)
+        else:
+            row_2.prop(mg_props, 'maze_weave_toggle', toggle=True)
+        row_2.enabled = is_algo_weaved(mg_props)
+
+        row = box.row(align=True)
+        row.prop(mg_props, 'cell_inset', slider=True, text='Inset')
+        row.prop(mg_props, 'cell_thickness', slider=True, text='Thickness')
+
+        row = box.row(align=True)
+        row.prop(mg_props, 'cell_contour', slider=True, text='Contour')
+        row.prop(mg_props, 'cell_wireframe', slider=True, text='Wireframe', icon='MOD_DECIM')
+
+        box.prop(mg_props, 'cell_decimate', slider=True, text='Decimate', icon='MOD_DECIM')
+
+        row = box.row(align=True)
+        row.prop(mg_props, 'cell_use_smooth', toggle=True, icon='SHADING_RENDERED', text='Shade Smooth')
+        row.prop(mg_props, 'cell_subdiv', text='Subdivisions', icon='MOD_SUBSURF')
+
+        if mg_props.cell_subdiv > 0 and mg_props.cell_contour > 0:
+            box.label(text='Contour conflicts with Subdivision', icon='ERROR')
+        if mg_props.cell_wireframe > 0 and mg_props.cell_contour > 0:
+            box.label(text='Contour conflicts with Wireframe', icon='ERROR')
+
+        box = layout.box()
+        box.prop(mg_props, 'paint_style')
+        if mg_props.paint_style != 'DISTANCE':
+            box.prop(mg_props, 'seed_color_button', text='Randomize Colors', toggle=True)
+        else:
+            box.prop(mg_props, 'show_only_longest_path', text='Show Longest Path')
+            row = box.row(align=True)
+            row.prop(mg_props, 'distance_color_start', text='Start')
+            row.prop(mg_props, 'distance_color_end', text='End')
+        if not mg_props.auto_overwrite:
+            row = box.row()
+            row.label(text="Activate Auto-Overwite to Update >>", icon='ERROR')
+            row.prop(mg_props, 'auto_overwrite', toggle=True, icon='MODIFIER_ON', text='')
+        box.prop(mg_props, 'hue_shift', slider=True, text='Hue Shift', )
+        box.prop(mg_props, 'saturation_shift', slider=True, text='Saturation Shift')
+        box.prop(mg_props, 'value_shift', slider=True, text='Value Shift', icon='COLORSET_10_VEC')
 
 
 class InfoPanel(bpy.types.Panel):

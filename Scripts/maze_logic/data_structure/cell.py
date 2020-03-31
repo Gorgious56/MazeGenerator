@@ -3,7 +3,7 @@ from ... utils . event import Event, EventHandler
 
 
 class Cell:
-    neighbors_return = [2, 3, 0, 1]
+    neighbors_return = [2, 3, 0, 1, 5, 4]
 
     staticmethod
 

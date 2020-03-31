@@ -1,7 +1,6 @@
 from . grid import Grid
 from .. cell import CellUnder, CellOver, Cell
 from .... visual . cell_visual import DISPLACE
-from .... utils . event import EventHandler, Event
 
 
 class GridWeave(Grid):

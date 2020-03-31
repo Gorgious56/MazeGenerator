@@ -33,11 +33,11 @@ from .. grids . grid import Grid, CellVisual
 
 
 class GridPolar(Grid):
-    def __init__(self, rows, columns, name="", cell_size=1):
+    def __init__(self, cell_size=1, *args, **kwargs):
         self.cell_size = max(0, cell_size)
         self.rows_polar = []
         self.doubling_rows = []
-        super().__init__(rows, 1, name, 'polar', 4, cell_size=cell_size)
+        super().__init__(*args, **kwargs)
 
     def prepare_grid(self):
         rows = [None] * self.rows
@@ -116,7 +116,7 @@ class GridPolar(Grid):
             if c.row == 0:
                 sqrt_3_over_2 = (3 ** 0.5) / 2
                 cv.add_face((
-                    Vector((-1, 0, 0)), Vector((-0.5, -sqrt_3_over_2, 0)), Vector((0.5, -sqrt_3_over_2, 0)), 
+                    Vector((-1, 0, 0)), Vector((-0.5, -sqrt_3_over_2, 0)), Vector((0.5, -sqrt_3_over_2, 0)),
                     Vector((1, 0, 0)), Vector((0.5, sqrt_3_over_2, 0)), Vector((-0.5, sqrt_3_over_2, 0))))
             else:
                 if c.has_any_link():
@@ -130,8 +130,8 @@ class GridPolar(Grid):
                     if c.inward and c.inward.has_any_link():
                         cv.create_wall(self.get_position(r_in, t_ccw), self.get_position(r_in, t_cw))
                     if c.ccw and c.ccw.has_any_link():
-                        cv.create_wall(self.get_position(r_in, t_cw), self.get_position(r_out, t_ccw))           
-                
+                        cv.create_wall(self.get_position(r_in, t_cw), self.get_position(r_out, t_ccw))
+
                 if c.row in self.doubling_rows:
                     t_over = pi / row_length
                     t_cw_over = ((c.column * 2) + 1) * t_over
@@ -176,7 +176,7 @@ class GridPolar(Grid):
                     cv.add_face((self.get_position(r_out_b, t_ccw_b), self.get_position(r_out_b, t_ccw), self.get_position(r_in_b, t_ccw), self.get_position(r_in_b, t_ccw_b)))
                 if c.exists_and_is_linked(c.cw):
                     cv.add_face((self.get_position(r_in_b, t_cw_b), self.get_position(r_in_b, t_cw), self.get_position(r_out_b, t_cw), self.get_position(r_out_b, t_cw_b)))
-        
+
         return cv
 
     def get_unmasked_cells(self):

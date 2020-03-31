@@ -15,7 +15,7 @@ BORDER = 'BORDER'
 
 
 class Grid:
-    def __init__(self, rows=2, columns=2, levels=1, name="", coord_system='cartesian', sides=4, cell_size=1, space_rep=0):
+    def __init__(self, rows=2, columns=2, levels=1, name="", coord_system='cartesian', sides=4, cell_size=1, space_rep=0, mask=None):
         self.rows = rows
         self.columns = columns
         self.levels = levels
@@ -30,12 +30,14 @@ class Grid:
 
         self.sides_per_cell = sides
 
-        self.prepare_grid()
-        self.configure_cells()
+        self.mask = mask
 
         self.offset = Vector((-self.columns / 2, -self.rows / 2, 0))
 
         self.cell_size = cell_size
+
+        self.prepare_grid()
+        self.configure_cells()
 
     def __delitem__(self, key):
         del self._cells[key[0] + key[1] * self.columns]
@@ -64,26 +66,90 @@ class Grid:
             self._cells[key[0] + key[1] * self.columns + key[2] * self.size_2D] = value
 
     def prepare_grid(self):
+        if self.mask:
+            [self.mask_patch(mask_patch[0], mask_patch[1], mask_patch[2], mask_patch[3],) for mask_patch in self.mask]
+
         for l in range(self.levels):
             for c in range(self.columns):
                 for r in range(self.rows):
-                    self[c, r, l] = Cell(r, c, l)
+                    self[c, r, l] = Cell(r, c, l) if self[c, r, l] is None else None
+
+    def set_neighbor_return(self, cell_a, cell_b, number):
+        cell_a.neighbors[number] = cell_b
+        if cell_b:
+            cell_b.neighbors[cell_b.get_neighbor_return(number)] = cell_a
 
     def configure_cells(self):
-        for c in self.all_cells():
-            row, col, level = c.row, c.column, c.level
-            # North :
-            c.neighbors[0] = self[col, row + 1, level]
-            # West :
-            c.neighbors[1] = self[col - 1, row, level]
-            # South :
-            c.neighbors[2] = self[col, row - 1, level]
-            # East :
-            c.neighbors[3] = self[col + 1, row, level]
-            # Up :
-            c.neighbors[4] = self[col, row, level + 1]
-            # Up :
-            c.neighbors[5] = self[col, row, level - 1]
+        # 0>North - 1>West - 2>South - 3>East - 4>Up - 5>Down
+        if self.space_rep != 4:
+            for c in self.all_cells():
+                row, col, level = c.row, c.column, c.level
+                self.set_neighbor_return(c, self[col, row + 1, level], 0)
+                self.set_neighbor_return(c, self[col - 1, row, level], 1)
+                self.set_neighbor_return(c, self[col, row, level + 1], 4)
+        else:
+            rows = int(self.rows / 3)
+            cols = int(self.columns / 2 - rows)
+            for c in self.all_cells():
+                row, col, level = c.row, c.column, c.level
+                # North :
+                if row == 2 * rows - 1:
+                    if col < rows:
+                        c.neighbors[0] = self[rows, 3 * rows - col - 1, level]
+                        c.neighbors[0].neighbors[1] = c
+                    elif rows + cols <= col < 2 * rows + cols:
+                        c.neighbors[0] = self[rows + cols - 1, rows - cols + col, level]
+                        c.neighbors[0].neighbors[3] = c
+                    elif col >= 2 * rows + cols:
+                        c.neighbors[0] = self[3 * rows + 2 * cols - 1 - col, 3 * rows - 1, level]
+                        c.neighbors[0].neighbors[0] = c
+                    else:
+                        c.neighbors[0] = self[col, row + 1, level]
+                        c.neighbors[0].neighbors[2] = c
+                elif not c.neighbors[0]:
+                    c.neighbors[0] = self[col, row + 1, level]
+                    c.neighbors[0].neighbors[2] = c
+                # West :
+                if not c.neighbors[1]:
+                    c.neighbors[1] = self[col - 1, row, level]
+                # South :
+                if row == rows:
+                    if col < rows:
+                        c.neighbors[2] = self[rows, col, level]
+                        c.neighbors[2].neighbors[1] = c
+                    elif rows + cols <= col < 2 * rows + cols:
+                        c.neighbors[2] = self[rows + cols - 1, 2 * rows + cols - 1 - col, level]
+                        c.neighbors[2].neighbors[3] = c
+                    elif col >= 2 * rows + cols:
+                        c.neighbors[2] = self[3 * rows + 2 * cols - 1 - col, 0, level]
+                        c.neighbors[2].neighbors[2] = c
+                    else:
+                        c.neighbors[2] = self[col, row - 1, level]
+                        c.neighbors[2].neighbors[0] = c
+                # East :
+                if not c.neighbors[3]:
+                    c.neighbors[3] = self[col + 1, row, level]
+                # Up :
+                if not c.neighbors[4]:
+                    c.neighbors[4] = self[col, row, level + 1]
+                    c.neighbors[5] = c
+                # Up :
+                # if not c.neighbors[5]:
+                #     c.neighbors[5] = self[col, row, level - 1]
+
+    def mask_patch(self, first_cell_x, first_cell_y, last_cell_x, last_cell_y):
+        for c in range(first_cell_x, last_cell_x + 1):
+            for r in range(first_cell_y, last_cell_y + 1):
+                self[c, r] = 0
+
+    def mask_cell(self, column, row):
+        c = self[column, row]
+        if c is not None:
+            c.is_masked = True
+            self.masked_cells.append(c)
+            for i, n in enumerate(c.get_neighbors()):
+                n.neighbors[c.neighbors_return[i]] = None
+                c.unlink(n)
 
     def random_cell(self, _seed=None, filter_mask=True):
         if _seed:
@@ -116,7 +182,7 @@ class Grid:
             yield c
 
     def all_cells(self):
-        return self._cells
+        return [c for c in self._cells if c]
 
     def get_dead_ends(self):
         return [c for c in self.get_unmasked_cells() if len(c.links) == 1]
@@ -160,15 +226,6 @@ class Grid:
                     pass
                 except AttributeError:
                     pass
-
-    def mask_cell(self, column, row):
-        c = self[column, row]
-        if c is not None:
-            c.is_masked = True
-            self.masked_cells.append(c)
-            for i, n in enumerate(c.get_neighbors()):
-                n.neighbors[c.neighbors_return[i]] = None
-                c.unlink(n)
 
     def shuffled_cells(self):
         shuffled_cells = self.get_unmasked_cells()
@@ -238,9 +295,9 @@ class Grid:
             cv.add_face(
                 (Vector((right_b, bot_b, 0)), Vector((right, bot_b, 0)), Vector((right, top_b, 0)), Vector((right_b, top_b, 0))),
                 vertices_levels=(1, 0, 0, 1))
-        if self.need_wall_to(c.neighbors[2]):
+        if mask[2]:
             cv.create_wall(Vector((right, bot, 0)), Vector((left, bot, 0)))
-        if self.need_wall_to(c.neighbors[1]):
+        if mask[1]:
             cv.create_wall(Vector((left, top, 0)), Vector((left, bot, 0)))
 
         cv.add_face(
