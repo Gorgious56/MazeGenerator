@@ -15,7 +15,7 @@ bl_info = {
 
 auto_load.init()
 
-classes = ui_panel.MazeGeneratorPanel, ui_panel.ParametersPanel, ui_panel.CellsPanel, ui_panel.WallsPanel, ui_panel.InfoPanel
+classes = ui_panel.MazeGeneratorPanel, ui_panel.ParametersPanel, ui_panel.CellsPanel, ui_panel.WallsPanel, ui_panel.DisplayPanel, ui_panel.InfoPanel
 
 
 def register():

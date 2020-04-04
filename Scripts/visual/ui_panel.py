@@ -1,6 +1,9 @@
 import bpy
 from .. maze_logic . algorithm_manager import is_algo_weaved, ALGORITHM_FROM_NAME, KruskalRandom, is_algo_incompatible
+from . space_rep_manager import REP_REGULAR, REP_CYLINDER, REP_MEOBIUS, REP_TORUS, REP_BOX, REP_STAIRS
 from . cell_type_manager import TRIANGLE, HEXAGON, POLAR, SQUARE
+from .. utils . material_manager import MaterialManager
+from .. visual . maze_visual import MazeVisual
 
 
 class MazeGeneratorPanel(bpy.types.Panel):
@@ -24,38 +27,7 @@ class MazeGeneratorPanel(bpy.types.Panel):
 
         sub = row.row(align=True)
         sub.prop(mg_props, 'auto_update', toggle=True, icon='FILE_REFRESH', text='')
-        sub.prop(mg_props, 'auto_overwrite', toggle=True, icon='MODIFIER_ON', text='')
-
-
-class WallsPanel(bpy.types.Panel):
-    bl_idname = "MAZE_GENERATOR_PT_WallPanel"
-    bl_label = " "
-    bl_parent_id = 'MAZE_GENERATOR_PT_MainPanel'
-    bl_space_type = 'VIEW_3D'
-    bl_region_type = 'UI'
-    bl_category = 'MG'
-    # bl_options = {"DEFAULT_CLOSED"}
-
-    def draw_header(self, context):
-        self.layout.label(text='Walls', icon='SNAP_EDGE')
-        try:
-            wall = context.scene.objects['MG_Walls']
-            self.layout.prop(wall, 'hide_viewport', text='')
-            self.layout.prop(wall, 'hide_render', text='')
-        except KeyError:
-            pass
-
-    def draw(self, context):
-        layout = self.layout
-        scene = context.scene
-        mg_props = scene.mg_props
-
-        row = layout.row(align=True)
-        layout.prop(mg_props, 'wall_bevel', text='Wall Bevel', slider=True)
-        row.prop(mg_props, 'wall_height')
-        row.prop(mg_props, 'wall_width')
-        layout.prop(mg_props, 'wall_color')
-        layout.prop(mg_props, 'wall_hide', text='Auto-hide wall when insetting', toggle=True)
+        sub.prop(mg_props, 'auto_overwrite', toggle=True, icon='TRASH', text='')
 
 
 class ParametersPanel(bpy.types.Panel):
@@ -91,29 +63,40 @@ class ParametersPanel(bpy.types.Panel):
             layout.label(text=algo_incompatibility, icon='ERROR')
 
         space_enum_icon = 'MESH_PLANE'
-        if mg_props.maze_space_dimension == '1':
+        if mg_props.maze_space_dimension == REP_REGULAR:
             space_enum_icon = 'MESH_CYLINDER'
-        if mg_props.maze_space_dimension == '2':
+        if mg_props.maze_space_dimension == REP_CYLINDER:
             space_enum_icon = 'GP_SELECT_STROKES'
-        if mg_props.maze_space_dimension == '3':
+        if mg_props.maze_space_dimension == REP_MEOBIUS:
             space_enum_icon = 'GP_SELECT_STROKES'
-        if mg_props.maze_space_dimension == '4':
+        if mg_props.maze_space_dimension == REP_TORUS:
             space_enum_icon = 'MESH_CUBE'
+        if mg_props.maze_space_dimension == REP_STAIRS:
+            space_enum_icon = 'NLA_PUSHDOWN'
 
         layout.prop_menu_enum(mg_props, 'maze_space_dimension', icon=space_enum_icon)
 
-        if mg_props.cell_type == POLAR:
-            layout.label(text='Only Regular available with Polar', icon='ERROR', )
-        elif mg_props.maze_space_dimension in ('1', '2', '3') and mg_props.cell_type == TRIANGLE:
-            layout.label(text='Needs PAIR Columns (2, 4, 6, ...)', icon='ERROR', )
-        elif mg_props.maze_space_dimension == '2' and mg_props.maze_columns <= 3 * mg_props.maze_rows_or_radius:
-            layout.label(text='Set Columns > 3 * Rows', icon='ERROR', )
-        elif mg_props.maze_space_dimension == '3' and 2 * mg_props.maze_columns > mg_props.maze_rows_or_radius:
-            layout.label(text='Set Rows > 2 * Columns', icon='ERROR', )
-        elif mg_props.maze_space_dimension == '4':
+        if mg_props.cell_type == POLAR and mg_props.maze_space_dimension in (REP_CYLINDER, REP_MEOBIUS, REP_TORUS, REP_BOX):
+            layout.label(text='Only Regular and Stairs for Polar cells', icon='ERROR')
+        elif mg_props.cell_type == TRIANGLE or mg_props.cell_type == HEXAGON:
+            if mg_props.maze_space_dimension in (REP_CYLINDER, REP_MEOBIUS, REP_TORUS):
+                layout.label(text='Needs PAIR Columns (2, 4, 6, ...)', icon='ERROR')
+            if mg_props.maze_space_dimension == REP_MEOBIUS and mg_props.maze_columns <= 5 * mg_props.maze_rows_or_radius:
+                layout.label(text='Set Columns > 5 * Rows', icon='ERROR')
+            elif mg_props.maze_space_dimension == REP_TORUS and mg_props.maze_columns > mg_props.maze_rows_or_radius:
+                layout.label(text='Set Rows > Columns', icon='ERROR')
+        elif mg_props.maze_space_dimension == REP_MEOBIUS and mg_props.maze_columns <= 3 * mg_props.maze_rows_or_radius:
+            layout.label(text='Set Columns > 3 * Rows', icon='ERROR')
+        elif mg_props.maze_space_dimension == REP_TORUS and 2 * mg_props.maze_columns > mg_props.maze_rows_or_radius:
+            layout.label(text='Set Rows > 2 * Columns', icon='ERROR')
+        elif mg_props.maze_space_dimension == REP_BOX:
             layout.label(text='Dimensions are 1 face of the cube', icon='QUESTION')
+        row = layout.row(align=True)
+        if mg_props.maze_space_dimension == REP_STAIRS:
+            row.prop(mg_props, 'maze_stairs_scale', text='Scale')
         else:
-            layout.label()
+            row.label()
+        row.prop(mg_props, 'maze_stairs_weld', text='Weld')
 
         def maze_size_ui(prop_name, decrease, increase, text):
             row = layout.row(align=True)
@@ -130,13 +113,20 @@ class ParametersPanel(bpy.types.Panel):
 
         maze_size_ui('maze_columns', [-1, 0, 0], [1, 0, 0], 'Columns').enabled = mg_props.cell_type != POLAR
         row = maze_size_ui('maze_rows_or_radius', [0, -1, 0], [0, 1, 0], 'Rows').enabled = True
-        row = maze_size_ui('maze_levels', [0, 0, -1], [0, 0, 1], 'Levels').enabled = mg_props.maze_space_dimension == '0'
+        row = maze_size_ui('maze_levels', [0, 0, -1], [0, 0, 1], 'Levels').enabled = mg_props.maze_space_dimension == REP_REGULAR
         row = layout.row()
         row.prop(mg_props, 'seed')
         row.prop(mg_props, 'steps', icon='MOD_DYNAMICPAINT')
 
         layout.prop(mg_props, 'braid_dead_ends', slider=True, text='Open Dead Ends')
         layout.prop(mg_props, 'sparse_dead_ends')
+        row = layout.row()
+        row_2 = row.row()
+        if mg_props.maze_algorithm == KruskalRandom.name:
+            row_2.prop(mg_props, 'maze_weave', slider=True)
+        else:
+            row_2.prop(mg_props, 'maze_weave_toggle', toggle=True)
+        row_2.enabled = is_algo_weaved(mg_props)
 
         box = layout.box()
         for setting in ALGORITHM_FROM_NAME[mg_props.maze_algorithm].settings:
@@ -166,22 +156,16 @@ class CellsPanel(bpy.types.Panel):
         scene = context.scene
         mg_props = scene.mg_props
 
-        box = layout.box()
-        row = box.row()
-        row_2 = row.row()
-        if mg_props.maze_algorithm == KruskalRandom.name:
-            row_2.prop(mg_props, 'maze_weave', slider=True)
-        else:
-            row_2.prop(mg_props, 'maze_weave_toggle', toggle=True)
-        row_2.enabled = is_algo_weaved(mg_props)
-
+        box = layout
         row = box.row(align=True)
         row.prop(mg_props, 'cell_inset', slider=True, text='Inset')
         row.prop(mg_props, 'cell_thickness', slider=True, text='Thickness')
 
         row = box.row(align=True)
-        row.prop(mg_props, 'cell_contour', slider=True, text='Contour')
-        row.prop(mg_props, 'cell_wireframe', slider=True, text='Wireframe', icon='MOD_DECIM')
+        row.prop(mg_props, 'cell_contour', slider=True, text='Bevel')
+        row.prop(mg_props, 'cell_contour_black', toggle=True, text='Black Outline')
+
+        box.prop(mg_props, 'cell_wireframe', slider=True, text='Wireframe', icon='MOD_DECIM')
 
         box.prop(mg_props, 'cell_decimate', slider=True, text='Decimate', icon='MOD_DECIM')
 
@@ -190,26 +174,71 @@ class CellsPanel(bpy.types.Panel):
         row.prop(mg_props, 'cell_subdiv', text='Subdivisions', icon='MOD_SUBSURF')
 
         if mg_props.cell_subdiv > 0 and mg_props.cell_contour > 0:
-            box.label(text='Contour conflicts with Subdivision', icon='ERROR')
+            box.label(text='Bevel conflicts with Subdivision', icon='ERROR')
         if mg_props.cell_wireframe > 0 and mg_props.cell_contour > 0:
-            box.label(text='Contour can conflict with Wireframe', icon='QUESTION')
+            box.label(text='Bevel can conflict with Wireframe', icon='QUESTION')
 
-        box = layout.box()
-        box.prop(mg_props, 'paint_style')
+
+class WallsPanel(bpy.types.Panel):
+    bl_idname = "MAZE_GENERATOR_PT_WallPanel"
+    bl_label = " "
+    bl_parent_id = 'MAZE_GENERATOR_PT_MainPanel'
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = 'MG'
+    # bl_options = {"DEFAULT_CLOSED"}
+
+    def draw_header(self, context):
+        self.layout.label(text='Walls', icon='SNAP_EDGE')
+        try:
+            wall = context.scene.objects['MG_Walls']
+            self.layout.prop(wall, 'hide_viewport', text='')
+            self.layout.prop(wall, 'hide_render', text='')
+        except KeyError:
+            pass
+
+    def draw(self, context):
+        layout = self.layout
+        scene = context.scene
+        mg_props = scene.mg_props
+
+        row = layout.row(align=True)
+        layout.prop(mg_props, 'wall_bevel', text='Bevel', slider=True)
+        row.prop(mg_props, 'wall_height')
+        row.prop(mg_props, 'wall_width', text='Thickness', slider=True)
+        layout.prop(mg_props, 'wall_color', text='Color')
+        layout.prop(mg_props, 'wall_hide', text='Auto-hide when insetting', toggle=True)
+
+
+class DisplayPanel(bpy.types.Panel):
+    bl_idname = "MAZE_GENERATOR_PT_DisplayPanel"
+    bl_label = "Display"
+    bl_parent_id = 'MAZE_GENERATOR_PT_MainPanel'
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = 'MG'
+
+    def draw_header(self, context):
+        self.layout.label(text='', icon='BRUSH_DATA')
+
+    def draw(self, context):
+        layout = self.layout
+        mg_props = context.scene.mg_props
+
+        layout.prop(mg_props, 'paint_style')
         if mg_props.paint_style != 'DISTANCE':
-            box.prop(mg_props, 'seed_color_button', text='Randomize Colors', toggle=True)
+            layout.prop(mg_props, 'seed_color_button', text='Randomize Colors', toggle=True)
         else:
-            box.prop(mg_props, 'show_only_longest_path', text='Show Longest Path')
-            row = box.row(align=True)
-            row.prop(mg_props, 'distance_color_start', text='Start')
-            row.prop(mg_props, 'distance_color_end', text='End')
-        if not mg_props.auto_overwrite:
-            row = box.row()
-            row.label(text="Activate Auto-Overwite to Update >>", icon='ERROR')
-            row.prop(mg_props, 'auto_overwrite', toggle=True, icon='MODIFIER_ON', text='')
-        box.prop(mg_props, 'hue_shift', slider=True, text='Hue Shift', )
-        box.prop(mg_props, 'saturation_shift', slider=True, text='Saturation Shift')
-        box.prop(mg_props, 'value_shift', slider=True, text='Value Shift', icon='COLORSET_10_VEC')
+            layout.prop(mg_props, 'show_only_longest_path', text='Show Longest Path')
+            row = layout.row(align=True)
+            if MazeVisual.Instance is None:
+                row.operator("maze.generate", icon='VIEW_ORTHO', text='Update to tweak Colors')
+            else:
+                if MazeVisual.Mat_mgr and MazeVisual.Mat_mgr.cell_cr_distance_node:
+                    layout.box().template_color_ramp(MazeVisual.Mat_mgr.cell_cr_distance_node, property="color_ramp", expand=True)
+        layout.prop(mg_props, 'hue_shift', slider=True, text='Hue Shift', )
+        layout.prop(mg_props, 'saturation_shift', slider=True, text='Saturation Shift')
+        layout.prop(mg_props, 'value_shift', slider=True, text='Value Shift', icon='COLORSET_10_VEC')
 
 
 class InfoPanel(bpy.types.Panel):

@@ -15,9 +15,10 @@ CELL_CYLINDER_NAME = 'MG_CYLINDER'
 CELL_WELD_CYLINDER_NAME = 'MG_CYLINDER_WELD'
 CELL_MOEBIUS_NAME = 'MG_MOEBIUS'
 CELL_TORUS_NAME = 'MG_TORUS'
+CELL_STAIRS_NAME = 'MG_STAIRS'
 
 
-def add_modifier(obj, mod_type, mod_name, remove_if_already_exists=False, remove_all_modifiers=False, properties=None):
+def add_modifier(obj, mod_type, mod_name, remove_if_already_exists=False, remove_all_modifiers=False, properties=None, overwrite_props=True):
     mod_name = mod_name if mod_name != "" else "Fallback"
 
     if obj is not None:
@@ -33,7 +34,7 @@ def add_modifier(obj, mod_type, mod_name, remove_if_already_exists=False, remove
                 mod = obj.modifiers[mod_name]
         else:
             mod = obj.modifiers.new(mod_name, mod_type)
-        if mod and type(properties) is dict:
+        if mod and type(properties) is dict and overwrite_props:
             for prop, value in properties.items():
                 if hasattr(mod, prop):
                     setattr(mod, prop, value)
