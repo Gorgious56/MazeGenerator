@@ -50,11 +50,15 @@ class Distances:
         return breadcrumbs
 
     def max(self):
-        max_distance = 0
+        self.max_distance = 0
         max_cell = self.root
 
         for c, d in self.cells.items():
-            if d > max_distance:
+            if d > self.max_distance:
                 max_cell = c
-                max_distance = d
-        return max_cell, max_distance
+                self.max_distance = d
+        return max_cell, self.max_distance
+
+    def reverse(self):
+        for c, d in self.cells.items():
+            self[c] = self.max_distance - d
