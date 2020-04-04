@@ -1,5 +1,5 @@
 from bpy.types import PropertyGroup, Scene
-from bpy.props import IntProperty, BoolProperty, EnumProperty, FloatProperty, PointerProperty, FloatVectorProperty
+from bpy.props import IntProperty, BoolProperty, EnumProperty, FloatProperty, PointerProperty, FloatVectorProperty, IntVectorProperty
 import bpy.ops
 from . maze_logic . algorithm_manager import generate_algo_enum, DEFAULT_ALGO
 from . visual . cell_type_manager import generate_cell_type_enum, DEFAULT_CELL_TYPE
@@ -10,6 +10,8 @@ from random import random
 
 
 def generate_maze(self, context):
+    if self.maze_weave and self.cell_thickness == 0:
+        self['cell_thickness'] = -0.1
     if self.auto_update and context.mode == "OBJECT":
         bpy.ops.maze.generate()
 
@@ -31,6 +33,18 @@ def update_modifiers(self, context):
     if MazeVisual.Instance:
         MazeVisual.Instance.generate_modifiers()
         MazeVisual.Instance.generate_drivers()
+
+
+def update_cell_type(self, context):
+    reset_enum = True
+    for ind, _, _ in generate_space_rep_enum(self, context):
+        if self.maze_space_dimension == ind:
+            reset_enum = False
+            break
+    if reset_enum:
+        print('Do not worry about these warnings.')
+        self['maze_space_dimension'] = REP_REGULAR
+    generate_maze(self, context)
 
 
 def update_cell_smooth(self, context):
@@ -61,7 +75,7 @@ class MGProperties(PropertyGroup):
 
     auto_overwrite: BoolProperty(
         name="Auto Overwrite",
-        description="Caution : Enabling this WILL overwrite the materials and modifiers",
+        description="Caution : Enabling this WILL overwrite the materials, modifiers and drivers",
         default=True,
         update=lambda self, context: generate_maze(self, context) if self.auto_overwrite else None
     )
@@ -79,7 +93,7 @@ class MGProperties(PropertyGroup):
         description="The shape of the maze's cells",
         items=generate_cell_type_enum(),
         default=DEFAULT_CELL_TYPE,
-        update=generate_maze
+        update=update_cell_type
     )
 
     cell_use_smooth: BoolProperty(
@@ -134,17 +148,23 @@ class MGProperties(PropertyGroup):
     )
 
     cell_contour: FloatProperty(
-        name='Cell Contour',
-        description='This will add a stylised contour the cells',
+        name='Cell Bevel',
+        description='Add bevel to the cells',
         default=0,
         min=0,
         soft_max=0.2
     )
 
+    cell_contour_black: BoolProperty(
+        name='Cell Contour',
+        description='This will add a stylised black contour to the cells',
+        default=False
+    )
+
     maze_rows_or_radius: IntProperty(
         name="Rows | Radius",
         description="Choose the size along the Y axis or the radius if using polar coordinates",
-        default=5,
+        default=10,
         min=2,
         soft_max=100,
         update=generate_maze
@@ -153,7 +173,7 @@ class MGProperties(PropertyGroup):
     maze_columns: IntProperty(
         name="Columns",
         description="Choose the size along the X axis",
-        default=5,
+        default=10,
         min=2,
         soft_max=100,
         update=generate_maze
@@ -246,7 +266,7 @@ class MGProperties(PropertyGroup):
         description="Configure the wall default width",
         default=0.2,
         min=0,
-        soft_max=2,
+        soft_max=1,
     )
 
     wall_color: FloatVectorProperty(
@@ -262,7 +282,7 @@ class MGProperties(PropertyGroup):
     wall_hide: BoolProperty(
         name='Wall Hide',
         description="Auto-hide the wall if the cells are inset",
-        default=True,
+        default=False,
     )
 
     wall_bevel: FloatProperty(
@@ -292,48 +312,28 @@ class MGProperties(PropertyGroup):
         update=update_paint
     )
 
-    distance_color_start: FloatVectorProperty(
-        name='Path Start Color',
-        description="Change the path's start cell color. This will change the distance's displayed gradient",
-        subtype='COLOR',
-        default=(0, 1, 0),
-        min=0,
-        max=1,
-        update=update_paint
-    )
-
-    distance_color_end: FloatVectorProperty(
-        name='Path End Color',
-        description="Change the path's end cell color. This will change the distance's displayed gradient",
-        subtype='COLOR',
-        default=(1, 0, 0),
-        min=0,
-        max=1,
-        update=update_paint
-    )
-
     hue_shift: FloatProperty(
         name="Hue Shift",
         description="Tweak the color hue shift of the cells",
         default=0,
-        min=0,
-        max=1,
+        soft_min=0,
+        soft_max=1,
     )
 
     saturation_shift: FloatProperty(
         name="Saturation Shift",
         description="Tweak the color saturation shift of the cells",
         default=0,
-        min=-1,
-        max=1,
+        soft_min=-1,
+        soft_max=1,
     )
 
     value_shift: FloatProperty(
         name="Color Shift",
         description="Tweak the color value shift of the cells",
         default=0,
-        min=-1,
-        max=1,
+        soft_min=-1,
+        soft_max=1,
     )
 
     paint_style: EnumProperty(
