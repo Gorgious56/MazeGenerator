@@ -1,7 +1,8 @@
 from random import choice, seed, shuffle
 from mathutils import Vector
 from .. cell import Cell
-from .... visual . cell_visual import CellVisual
+from .... visual . space_rep_manager import REP_REGULAR, REP_STAIRS, REP_CYLINDER, REP_MEOBIUS, REP_TORUS, REP_BOX
+
 TOP = 'TOP'
 BOT = 'BOT'
 LEFT = 'LEFT'
@@ -12,6 +13,8 @@ LEFT_BORDER = 'LEFT_BORDER'
 RIGHT_BORDER = 'RIGHT_BORDER'
 CENTER = 'CENTER'
 BORDER = 'BORDER'
+
+UP, DOWN, LEFT, RIGHT = 0, 2, 1, 3
 
 
 class Grid:
@@ -27,9 +30,15 @@ class Grid:
 
         self.mask = mask
 
-        self.offset = Vector((-self.columns / 2, -self.rows / 2, 0))
+        self.offset = Vector(((1 - self.columns) / 2, (1 - self.rows) / 2, 0))
 
         self.cell_size = cell_size
+
+        self.number_of_sides = 4
+
+        self.relative_positions_inset = self.get_relative_positions(self.cell_size)
+        self.relative_positions_one = self.get_relative_positions(1)
+        self.relative_positions_out = self.get_relative_positions_out()
 
         self.prepare_grid()
         self.configure_cells()
@@ -41,12 +50,12 @@ class Grid:
         key = list(key)
         if len(key) == 2:
             key.append(0)
-        if self.space_rep > 0:
+        if self.space_rep in (int(REP_CYLINDER), int(REP_MEOBIUS), int(REP_TORUS), int):
             if key[0] == -1:
                 key[0] = self.columns - 1
             elif key[0] == self.columns:
                 key[0] = 0
-            if self.space_rep == 3:
+            if self.space_rep == int(REP_TORUS):
                 if key[1] == -1:
                     key[1] = self.rows - 1
                 elif key[1] == self.rows:
@@ -76,7 +85,7 @@ class Grid:
 
     def configure_cells(self):
         # 0>North - 1>West - 2>South - 3>East - 4>Up - 5>Down
-        if self.space_rep != 4:
+        if self.space_rep != int(REP_BOX):
             for c in self.all_cells():
                 row, col, level = c.row, c.column, c.level
                 self.set_neighbor_return(c, self[col, row + 1, level], 0)
@@ -90,47 +99,45 @@ class Grid:
                 # North :
                 if row == 2 * rows - 1:
                     if col < rows:
-                        c.neighbors[0] = self[rows, 3 * rows - col - 1, level]
-                        c.neighbors[0].neighbors[1] = c
+                        c.neighbors[UP] = self[rows, 3 * rows - col - 1, level]
+                        c.neighbors[UP].neighbors[LEFT] = c
                     elif rows + cols <= col < 2 * rows + cols:
-                        c.neighbors[0] = self[rows + cols - 1, rows - cols + col, level]
-                        c.neighbors[0].neighbors[3] = c
+                        c.neighbors[UP] = self[rows + cols - 1, rows - cols + col, level]
+                        c.neighbors[UP].neighbors[RIGHT] = c
                     elif col >= 2 * rows + cols:
-                        c.neighbors[0] = self[3 * rows + 2 * cols - 1 - col, 3 * rows - 1, level]
-                        c.neighbors[0].neighbors[0] = c
+                        c.neighbors[UP] = self[3 * rows + 2 * cols - 1 - col, 3 * rows - 1, level]
+                        c.neighbors[UP].neighbors[UP] = c
                     else:
-                        c.neighbors[0] = self[col, row + 1, level]
-                        c.neighbors[0].neighbors[2] = c
-                elif not c.neighbors[0]:
-                    c.neighbors[0] = self[col, row + 1, level]
-                    c.neighbors[0].neighbors[2] = c
+                        c.neighbors[UP] = self[col, row + 1, level]
+                        c.neighbors[UP].neighbors[DOWN] = c
+                elif not c.neighbors[UP]:
+                    c.neighbors[UP] = self[col, row + 1, level]
+                    if c.neighbors[UP]:
+                        c.neighbors[UP].neighbors[DOWN] = c
                 # West :
-                if not c.neighbors[1]:
-                    c.neighbors[1] = self[col - 1, row, level]
+                if not c.neighbors[LEFT]:
+                    c.neighbors[LEFT] = self[col - 1, row, level]
+                    if c.neighbors[LEFT]:
+                        c.neighbors[LEFT].neighbors[RIGHT] = c
                 # South :
                 if row == rows:
                     if col < rows:
-                        c.neighbors[2] = self[rows, col, level]
-                        c.neighbors[2].neighbors[1] = c
+                        c.neighbors[DOWN] = self[rows, col, level]
+                        c.neighbors[DOWN].neighbors[LEFT] = c
                     elif rows + cols <= col < 2 * rows + cols:
-                        c.neighbors[2] = self[rows + cols - 1, 2 * rows + cols - 1 - col, level]
-                        c.neighbors[2].neighbors[3] = c
+                        c.neighbors[DOWN] = self[rows + cols - 1, 2 * rows + cols - 1 - col, level]
+                        c.neighbors[DOWN].neighbors[RIGHT] = c
                     elif col >= 2 * rows + cols:
-                        c.neighbors[2] = self[3 * rows + 2 * cols - 1 - col, 0, level]
-                        c.neighbors[2].neighbors[2] = c
+                        c.neighbors[DOWN] = self[3 * rows + 2 * cols - 1 - col, 0, level]
+                        c.neighbors[DOWN].neighbors[DOWN] = c
                     else:
-                        c.neighbors[2] = self[col, row - 1, level]
-                        c.neighbors[2].neighbors[0] = c
-                # East :
-                if not c.neighbors[3]:
-                    c.neighbors[3] = self[col + 1, row, level]
+                        c.neighbors[DOWN] = self[col, row - 1, level]
+                        c.neighbors[DOWN].neighbors[UP] = c
                 # Up :
                 if not c.neighbors[4]:
                     c.neighbors[4] = self[col, row, level + 1]
-                    c.neighbors[5] = c
-                # Up :
-                # if not c.neighbors[5]:
-                #     c.neighbors[5] = self[col, row, level - 1]
+                    if c.neighbors[4]:
+                        c.neighbors[5] = c
 
     def mask_patch(self, first_cell_x, first_cell_y, last_cell_x, last_cell_y):
         for c in range(first_cell_x, last_cell_x + 1):
@@ -235,80 +242,40 @@ class Grid:
                 if ((center_col - c) ** 2 + (center_row - r) ** 2) ** 0.5 > radius:
                     self.mask_cell(c, r)
 
-    def get_cell_position(self, c, cell_size=None):
-        offset = self.offset
-        positions = {}
-        delta_level = c.level * (self.columns + 1)
-        cell_size = self.cell_size if cell_size is None else cell_size
-        border = (1 - cell_size) / 2
-        positions[TOP] = c.row + 0.5 + offset.y
-        positions[BOT] = c.row - 0.5 + offset.y
-        positions[LEFT] = c.column - 0.5 + delta_level + offset.x
-        positions[RIGHT] = c.column + 0.5 + delta_level + offset.x
-        positions[TOP_BORDER] = positions[TOP] - border
-        positions[BOT_BORDER] = positions[BOT] + border
-        positions[LEFT_BORDER] = positions[LEFT] + border
-        positions[RIGHT_BORDER] = positions[RIGHT] - border
-        positions[CENTER] = Vector((c.column + delta_level, c.row, 0)) + offset
-        positions[BORDER] = cell_size * 0.05
-        return positions
-
     def get_blueprint(self):
-        return [self.get_cell_walls(c) for c in self.get_linked_cells()]
+        return [self.set_cell_visuals(c) for c in self.get_linked_cells()]
 
-    def get_cell_walls(self, c):
-        cv = CellVisual(c)
-        p = self.get_cell_position(c)
+    def get_cell_center(self, c):
+        return Vector((c.column + c.level * (self.columns + 1), c.row, 0)) + self.offset
+
+    def get_relative_positions_out(self):
+        cs = self.cell_size
+        pos_one, pos_out = self.relative_positions_one, []
+        for i in range(self.number_of_sides):
+            pos_out.append((pos_one[i] * (1 + cs) + pos_one[(i + 1) % self.number_of_sides] * (1 - cs)) / 2)
+            pos_out.append((pos_one[i] * (1 - cs) + pos_one[(i + 1) % self.number_of_sides] * (1 + cs)) / 2)
+        return pos_out
+
+    def get_relative_positions(self, size):
+        top_right = Vector(((size / 2), (size / 2), 0))
+        top_left = Vector(((-size / 2), (size / 2), 0))
+        bot_left = Vector(((-size / 2), (-size / 2), 0))
+        bot_right = Vector(((size / 2), (-size / 2), 0))
+        return top_right, top_left, bot_left, bot_right
+
+    def set_cell_visuals(self, c):
+        cv = c.visual
         mask = c.get_wall_mask()
-        left = p[LEFT]
-        right = p[RIGHT]
-        top = p[TOP]
-        bot = p[BOT]
-        left_b = p[LEFT_BORDER]
-        right_b = p[RIGHT_BORDER]
-        bot_b = p[BOT_BORDER]
-        top_b = p[TOP_BORDER]
-        cx = (right + left) / 2
-        cy = (top + bot) / 2
-        b = p[BORDER]
-        if mask[0]:
-            cv.create_wall(Vector((left, top, 0)), Vector((right, top, 0)))
-        else:
-            cv.add_face(
-                (Vector((right_b, top_b, 0)), Vector((right_b, top, 0)), Vector((left_b, top, 0)), Vector((left_b, top_b, 0))),
-                vertices_levels=(1, 0, 0, 1))
-        if mask[3]:
-            cv.create_wall(Vector((right, bot, 0)), Vector((right, top, 0)))
-        else:
-            cv.add_face(
-                (Vector((right_b, bot_b, 0)), Vector((right, bot_b, 0)), Vector((right, top_b, 0)), Vector((right_b, top_b, 0))),
-                vertices_levels=(1, 0, 0, 1))
-        if mask[2]:
-            cv.create_wall(Vector((right, bot, 0)), Vector((left, bot, 0)))
-        if mask[1]:
-            cv.create_wall(Vector((left, top, 0)), Vector((left, bot, 0)))
-
-        cv.add_face(
-            (Vector((right_b, top_b, 0)), Vector((left_b, top_b, 0)), Vector((left_b, bot_b, 0)), Vector((right_b, bot_b, 0))),
-            vertices_levels=(1, 1, 1, 1))
-
-        if not mask[1]:
-            cv.add_face(
-                (Vector((left_b, top_b, 0)), Vector((left, top_b, 0)), Vector((left, bot_b, 0)), Vector((left_b, bot_b, 0))),
-                vertices_levels=(1, 0, 0, 1))
-        if not mask[2]:
-            cv.add_face(
-                (Vector((left_b, bot_b, 0)), Vector((left_b, bot, 0)), Vector((right_b, bot, 0)), Vector((right_b, bot_b, 0))),
-                vertices_levels=(1, 0, 0, 1))
-
-        zd = 0.1
-        if not mask[4]:
-            cv.add_face(
-                (Vector((cx, top_b - b * 1.5, zd)), Vector((cx, bot_b + b * 1.5, zd)), Vector((right_b - b * 1.5, cy, zd))),
-                vertices_levels=(1, 1, 1))
-        if not mask[5]:
-            cv.add_face(
-                (Vector((cx, top_b - b * 1.5, zd)), Vector((left_b + b, cy, zd)), Vector((cx, bot_b + b * 1.5, zd))),
-                vertices_levels=(1, 1, 1))
+        center = self.get_cell_center(c)
+        walls_face = []
+        pos_one = [center + vec for vec in self.relative_positions_one]
+        if self.cell_size != 1:
+            pos_in, pos_out = [center + vec for vec in self.relative_positions_inset], [center + vec for vec in self.relative_positions_out]
+        for i in range(self.number_of_sides):
+            if mask[i]:
+                walls_face.extend((i, (i + 1) % self.number_of_sides))
+            elif self.cell_size != 1:
+                cv.add_face((pos_in[i], pos_out[2 * i], pos_out[(i * 2) + 1], pos_in[(i + 1) % self.number_of_sides]), walls=(0, 1, 2, 3))
+        cv.add_face(([(pos_one if self.cell_size == 1 else pos_in)[i % self.number_of_sides] for i in range(self.number_of_sides)]), walls=walls_face)
 
         return cv

@@ -10,15 +10,19 @@ class GridWeave(Grid):
         super().__init__(*args, **kwargs)
 
     def prepare_grid(self):
+        if self.mask:
+            [self.mask_patch(mask_patch[0], mask_patch[1], mask_patch[2], mask_patch[3],) for mask_patch in self.mask]
+
         if self.use_kruskal:
             CellOver.get_neighbors = Cell.get_neighbors
         else:
             CellOver.get_neighbors = CellOver.get_neighbors_copy
 
-        for c in range(self.columns):
-            for r in range(self.rows):
-                self[c, r] = CellOver(row=r, col=c)
-                self[c, r].request_tunnel_under += lambda cell, neighbor: self.tunnel_under(neighbor)
+        for l in range(self.levels):
+            for c in range(self.columns):
+                for r in range(self.rows):
+                    self[c, r, l] = CellOver(r, c, l) if self[c, r, l] is None else None
+                    self[c, r, l].request_tunnel_under += lambda cell, neighbor: self.tunnel_under(neighbor)
     """
     Tunnel under the specified cell of type 'CellOver'
     Returns the resulting 'CellUnder'
@@ -27,8 +31,8 @@ class GridWeave(Grid):
         self._cells.append(CellUnder(cell_over))
         return self._cells[-1]
 
-    def get_cell_walls(self, c):
-        cv = super().get_cell_walls(c)
+    def set_cell_visuals(self, c):
+        cv = super().set_cell_visuals(c)
         if type(c) is CellUnder:
             cv.walls = []
             for f in cv.faces:

@@ -4,8 +4,13 @@ from .. cell import CellHex
 
 
 class GridHex(Grid):
-    def __init__(self, rows, columns, name="", cell_size=1):
-        super().__init__(rows, columns, name, 'cartesian', sides=6, cell_size=cell_size)
+    def __init__(self, rows, columns, levels, cell_size, space_rep, mask=None):
+        super().__init__(rows, columns, levels, cell_size, space_rep, mask)
+        self.offset = Vector((-self.columns / 3 -self.columns / 2, 1 - self.rows * (3 ** 0.5) / 2, 0))
+        self.number_of_sides = 6
+        self.relative_positions_inset = self.get_relative_positions(self.cell_size)
+        self.relative_positions_one = self.get_relative_positions(1)
+        self.relative_positions_out = self.get_relative_positions_out()
 
     def prepare_grid(self):
         for r in range(self.rows):
@@ -36,49 +41,17 @@ class GridHex(Grid):
             # Neighbor 5 : SE
             c.neighbors[5] = self[col + 1, south_diagonal]
 
-    def get_cell_walls(self, c, cell_size=1):
-        walls = []
-        cells = []
-        mask = c.get_wall_mask()
-        positions = self.get_cell_position(c, cell_size)
-        for i in range(3):
-            if mask[i]:
-                walls.append(positions[i + 1])
-                walls.append(positions[i + 2])
-            if self.need_wall_to(c.neighbors[i + 3]):
-                walls.append(positions[i + 4])
-                walls.append(positions[1 + (i + 4) % 6])
-            cells.append(positions[1 + (i * 2)])
-            cells.append(positions[2 + (i * 2)])
-
-        return walls, cells, None
-
-    def get_cell_position(self, c, size):
-        size /= 2 ** 0.5
+    def get_relative_positions(self, size):
         a_size = size / 2
         b_size = size * (3 ** 0.5) / 2
-        height = b_size * 2
 
-        center = Vector([size + 3 * c.column * a_size,
-                        - b_size * (1 + c.column % 2) + c.row * height,
-                        0])
+        east = Vector((size, 0, 0))
+        north_east = Vector((a_size, b_size, 0))
+        north_west = Vector((-a_size, b_size, 0))
+        west = Vector((- size, 0, 0))
+        south_west = Vector((-a_size, -b_size, 0))
+        south_east = Vector((a_size, -b_size, 0))
+        return east, north_east, north_west, west, south_west, south_east
 
-        cx = center.x
-        cy = center.y
-
-        x_far_west = cx - size
-        x_near_west = cx - a_size
-        x_near_east = cx + a_size
-        x_far_east = cx + size
-
-        y_north = cy + b_size
-        y_mid = cy
-        y_south = cy - b_size
-
-        east = (x_far_east, y_mid, 0)
-        north_east = (x_near_east, y_north, 0)
-        north_west = (x_near_west, y_north, 0)
-        west = (x_far_west, y_mid, 0)
-        south_west = (x_near_west, y_south, 0)
-        south_east = (x_near_east, y_south, 0)
-        return center, east, north_east, north_west, west, south_west, south_east
+    def get_cell_center(self, c):
+        return Vector([1 + 3 * c.column / 2, - (3 ** 0.5) * ((1 + c.column % 2) / 2 - c.row), 0]) + self.offset
