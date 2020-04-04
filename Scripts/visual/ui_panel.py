@@ -262,3 +262,5 @@ class InfoPanel(bpy.types.Panel):
         if gen_time > 0:
             layout.label(text='Generation time : ' + str(gen_time) + ' ms', icon='TEMP')
         layout.label(text='Dead ends : ' + str(mg_props.dead_ends), icon='CON_FOLLOWPATH')
+        layout.label(text='Disable Auto-overwrite (Trash icon) to keep modified values')
+        layout.prop(mg_props, 'info_show_help', toggle=True)

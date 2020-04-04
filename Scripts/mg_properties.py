@@ -386,7 +386,7 @@ class MGProperties(PropertyGroup):
 
     maze_stairs_weld: FloatProperty(
         name='Stairs Weld',
-        description='Weld the steps under this threshold',
+        description='Weld the vertices together. Use it with 3D folding representations.',
         default=0.04,
         soft_min=0,
         soft_max=0.5,
@@ -396,6 +396,12 @@ class MGProperties(PropertyGroup):
         name='Last Start Cell',
         description='This hidden property will keep the last start cell in memory to avoid flickering when the solving algorithm checks the longest path',
         min=0
+    )
+
+    info_show_help: BoolProperty(
+        name='Show Help',
+        description='When toggled ON, this will add more precisions to each field in the panels',
+        default=False
     )
 
     def register():

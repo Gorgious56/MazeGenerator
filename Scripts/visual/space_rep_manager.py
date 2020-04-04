@@ -9,7 +9,7 @@ REP_BOX = '5'
 
 
 def generate_space_rep_enum(self, context):
-    ret = [(REP_REGULAR, 'Regular', ''), (REP_STAIRS, 'Stairs', '')]
+    ret = [(REP_REGULAR, 'Plane', ''), (REP_STAIRS, 'Stairs', '')]
     if self.cell_type != POLAR:
         ret.extend((
             (REP_CYLINDER, 'Cylinder', ''),
