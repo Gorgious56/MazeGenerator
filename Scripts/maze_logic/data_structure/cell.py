@@ -1,5 +1,6 @@
 from random import random, choice, choices, shuffle
 from ... utils . event import Event, EventHandler
+from ... visual . cell_visual import CellVisual
 
 
 class Cell:
@@ -30,6 +31,11 @@ class Cell:
         # 0>North - 1>West - 2>South - 3>East - 4>Up - 5>Down
 
         self.links = {}
+
+        self.visual = CellVisual(self)
+
+    def generate_mesh(self, offset):
+        pass
 
     def __str__(self):
         return 'Cell(r' + str(self.row) + ';c' + str(self.column) + ')'

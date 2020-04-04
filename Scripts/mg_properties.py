@@ -5,6 +5,7 @@ from . maze_logic . algorithm_manager import generate_algo_enum, DEFAULT_ALGO
 from . visual . cell_type_manager import generate_cell_type_enum, DEFAULT_CELL_TYPE
 from . visual . cell_visual import generate_cell_visual_enum, DEFAULT_CELL_VISUAL_TYPE
 from . visual . maze_visual import MazeVisual
+from . visual . space_rep_manager import generate_space_rep_enum, REP_REGULAR, REP_CYLINDER, REP_MEOBIUS, REP_TORUS, REP_BOX, REP_STAIRS
 from random import random
 
 
@@ -371,14 +372,30 @@ class MGProperties(PropertyGroup):
     maze_space_dimension: EnumProperty(
         name='Space representation',
         description='Choose if and how to fold the maze in 3D dimensions',
-        items=[
-            ('0', 'Regular', ''),
-            ('1', 'Cylinder', ''),
-            ('2', 'Moebius', ''),
-            ('3', 'Torus', ''),
-            ('4', 'Box', '')],
-        default='0',
+        items=generate_space_rep_enum,
         update=generate_maze
+    )
+
+    maze_stairs_scale: FloatProperty(
+        name='Stairs Scale',
+        description='Modifiy the height of each step',
+        default=5,
+        soft_min=0,
+        soft_max=50
+    )
+
+    maze_stairs_weld: FloatProperty(
+        name='Stairs Weld',
+        description='Weld the steps under this threshold',
+        default=0.04,
+        soft_min=0,
+        soft_max=0.5,
+    )
+
+    maze_last_start_cell: IntVectorProperty(
+        name='Last Start Cell',
+        description='This hidden property will keep the last start cell in memory to avoid flickering when the solving algorithm checks the longest path',
+        min=0
     )
 
     def register():

@@ -438,6 +438,7 @@ class GrowingTree(MazeAlgorithm):
 
 class RecursiveDivision(MazeAlgorithm):
     name = 'Recursive Division'
+    weaved = False
     settings = ['maze_bias']
 
     def __init__(self, grid, props=None, *args, **kwargs):
@@ -811,6 +812,8 @@ WEAVED_ALGORITHMS = [algo.name for algo in ALGORITHMS if algo.weaved]
 def is_algo_incompatible(props):
     if ALGORITHM_FROM_NAME[props.maze_algorithm] == AldousBroder and props.maze_space_dimension == '4':
         return "Aldous-Broder can't solve a box representation"
+    if props.maze_space_dimension == '5' and props.maze_weave:
+        return "Can't solve weaved maze for a box"
     return False
 
 
