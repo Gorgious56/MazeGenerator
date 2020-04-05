@@ -3,6 +3,10 @@ Blender add-on for generating Mazes, with options for different types of cells a
 
 Go to https://github.com/Gorgious56/MazeGenerator/releases for the latest release.
 
+The Add-on is available in the right side panel of the 3D Viewport :
+
+<img src="Doc/img/Doc-0-Main.JPG">
+
 Current Features :
 
 Cell types : Polar, Square, Triangle, Hexagon.
