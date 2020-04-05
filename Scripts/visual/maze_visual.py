@@ -68,7 +68,7 @@ class MazeVisual:
         return MazeVisual.Mat_mgr
 
     def update_visibility(self):
-        set_hidden = self.props.wall_hide and self.props.cell_inset > 0 or self.props.maze_weave
+        set_hidden = (self.props.wall_hide and self.props.cell_inset > 0) or (self.props.maze_weave and algorithm_manager.is_algo_weaved(self.props))
         self.obj_walls.hide_viewport = bool(set_hidden)
         self.obj_walls.hide_render = bool(set_hidden)
 

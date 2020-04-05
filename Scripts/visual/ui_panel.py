@@ -167,11 +167,11 @@ class CellsPanel(bpy.types.Panel):
 
         box.prop(mg_props, 'cell_wireframe', slider=True, text='Wireframe', icon='MOD_DECIM')
 
-        box.prop(mg_props, 'cell_decimate', slider=True, text='Decimate', icon='MOD_DECIM')
-
         row = box.row(align=True)
         row.prop(mg_props, 'cell_use_smooth', toggle=True, icon='SHADING_RENDERED', text='Shade Smooth')
         row.prop(mg_props, 'cell_subdiv', text='Subdivisions', icon='MOD_SUBSURF')
+
+        box.prop(mg_props, 'cell_decimate', slider=True, text='Decimate', icon='MOD_DECIM')
 
         if mg_props.cell_subdiv > 0 and mg_props.cell_contour > 0:
             box.label(text='Bevel conflicts with Subdivision', icon='ERROR')

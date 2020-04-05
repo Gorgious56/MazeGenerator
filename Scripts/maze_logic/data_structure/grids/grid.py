@@ -275,7 +275,7 @@ class Grid:
             if mask[i]:
                 walls_face.extend((i, (i + 1) % self.number_of_sides))
             elif self.cell_size != 1:
-                cv.add_face((pos_in[i], pos_out[2 * i], pos_out[(i * 2) + 1], pos_in[(i + 1) % self.number_of_sides]), walls=(0, 1, 2, 3))
-        cv.add_face(([(pos_one if self.cell_size == 1 else pos_in)[i % self.number_of_sides] for i in range(self.number_of_sides)]), walls=walls_face)
+                cv.add_face((pos_in[i], pos_out[2 * i], pos_out[(i * 2) + 1], pos_in[(i + 1) % self.number_of_sides]), walls=(0, 1, 2, 3), vertices_levels=(1, 0, 0, 1))
+        cv.add_face(([(pos_one if self.cell_size == 1 else pos_in)[i % self.number_of_sides] for i in range(self.number_of_sides)]), walls=walls_face, vertices_levels=(1, 1, 1, 1))
 
         return cv
