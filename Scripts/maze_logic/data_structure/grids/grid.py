@@ -18,7 +18,7 @@ UP, DOWN, LEFT, RIGHT = 0, 2, 1, 3
 
 
 class Grid:
-    def __init__(self, rows=2, columns=2, levels=1, cell_size=1, space_rep=0, mask=None):
+    def __init__(self, rows=2, columns=2, levels=1, cell_size=1, space_rep=0, mask=None, sides=4):
         self.rows = rows
         self.columns = columns
         self.levels = levels
@@ -34,7 +34,7 @@ class Grid:
 
         self.cell_size = cell_size
 
-        self.number_of_sides = 4
+        self.number_of_sides = sides
 
         self.relative_positions_inset = self.get_relative_positions(self.cell_size)
         self.relative_positions_one = self.get_relative_positions(1)
@@ -276,6 +276,7 @@ class Grid:
                 walls_face.extend((i, (i + 1) % self.number_of_sides))
             elif self.cell_size != 1:
                 cv.add_face((pos_in[i], pos_out[2 * i], pos_out[(i * 2) + 1], pos_in[(i + 1) % self.number_of_sides]), walls=(0, 1, 2, 3), vertices_levels=(1, 0, 0, 1))
-        cv.add_face(([(pos_one if self.cell_size == 1 else pos_in)[i % self.number_of_sides] for i in range(self.number_of_sides)]), walls=walls_face, vertices_levels=(1, 1, 1, 1))
+
+        cv.add_face(([(pos_one if self.cell_size == 1 else pos_in)[i % self.number_of_sides] for i in range(self.number_of_sides)]), walls=None, vertices_levels=[1] * self.number_of_sides)
 
         return cv

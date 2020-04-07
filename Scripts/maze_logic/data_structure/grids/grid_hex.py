@@ -5,9 +5,9 @@ from .. cell import CellHex
 
 class GridHex(Grid):
     def __init__(self, rows, columns, levels, cell_size, space_rep, mask=None):
-        super().__init__(rows, columns, levels, cell_size, space_rep, mask)
-        self.offset = Vector((-self.columns / 3 -self.columns / 2, 1 - self.rows * (3 ** 0.5) / 2, 0))
-        self.number_of_sides = 6
+        super().__init__(rows, columns, levels, cell_size, space_rep, mask, sides=6)
+        self.offset = Vector((-self.columns / 3 - self.columns / 2, 1 - self.rows * (3 ** 0.5) / 2, 0))
+        # self.number_of_sides = 6
         self.relative_positions_inset = self.get_relative_positions(self.cell_size)
         self.relative_positions_one = self.get_relative_positions(1)
         self.relative_positions_out = self.get_relative_positions_out()
