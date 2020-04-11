@@ -10,7 +10,8 @@ bl_info = {
     "version": (0, 1, 0),
     "location": "",
     "warning": "",
-    "category": "Add Mesh"
+    "category": "Add Mesh",
+    "doc_url": "https://github.com/Gorgious56/MazeGenerator/blob/master/README.md",
 }
 
 auto_load.init()
