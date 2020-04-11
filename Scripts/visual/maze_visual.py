@@ -5,8 +5,17 @@ from Scripts.utils.mesh_manager import MeshManager
 class MazeVisual:
     Instance = None
     Mat_mgr = None
+    col_objects = None
     obj_walls = None
+    mesh_walls = None
     obj_cells = None
+    mesh_cells = None
+    obj_cylinder = None
+    obj_torus = None
+    tex_disp = None
+    grid = None
+    scene = None
+    props = None
 
         MeshManager.create_vertex_groups(MazeVisual.obj_cells, MazeVisual.obj_walls)
 
@@ -95,69 +104,37 @@ class MazeVisual:
             cell_size=1 - props.cell_inset,
             space_rep=maze_dimension)
 
-    def generate_objects(self):
+    def generate_objects():
+        self = MazeVisual
         scene = self.scene
-        # Get or add the Wall mesh.
-        try:
-            self.mesh_wall = bpy.data.meshes['MG_Wall Mesh']
-            self.mesh_wall.clear_geometry()
-        except KeyError:
-            self.mesh_wall = bpy.data.meshes.new("MG_Wall Mesh")
+        self.col_objects = bpy.data.collections.get('MG_Collection', bpy.data.collections.new(name='MG_Collection'))
+        if self.col_objects not in bpy.context.scene.collection.children[:]:
+            bpy.context.scene.collection.children.link(self.col_objects)
 
-        # Get or add the Wall object and link it to the wall mesh.
-        try:
-            self.obj_walls = scene.objects['MG_Walls']
-        except KeyError:
-            self.obj_walls = bpy.data.objects.new('MG_Walls', self.mesh_wall)
-            scene.collection.objects.link(self.obj_walls)
+        self.mesh_wall = bpy.data.meshes.get('MG_Wall Mesh', bpy.data.meshes.new("MG_Wall Mesh"))
+        self.obj_walls = scene.objects.get('MG_Walls', bpy.data.objects.new('MG_Walls', self.mesh_wall))
 
-        # Get or add the Cells mesh.
-        try:
-            self.mesh_cells = bpy.data.meshes['MG_Cells Mesh']
-            self.mesh_cells.clear_geometry()
-        except KeyError:
-            self.mesh_cells = bpy.data.meshes.new("MG_Cells Mesh")
+        self.mesh_cells = bpy.data.meshes.get('MG_Cells Mesh', bpy.data.meshes.new("MG_Cells Mesh"))
+        self.obj_cells = scene.objects.get('MG_Cells', bpy.data.objects.new('MG_Cells', self.mesh_cells))
 
-        # Get or add the Wall object and link it to the wall mesh.
-        try:
-            self.obj_cells = scene.objects['MG_Cells']
-        except KeyError:
-            self.obj_cells = bpy.data.objects.new('MG_Cells', self.mesh_cells)
-            scene.collection.objects.link(self.obj_cells)
-
-        # Get or add the cylinder curver object.
-        try:
-            self.obj_cylinder = scene.objects['MG_Curver_Cyl']
-        except KeyError:
-            bpy.ops.curve.primitive_bezier_circle_add(enter_editmode=False, align='WORLD', location=(0, 0, 0), rotation=(pi / 2, 0, 0))
+        self.obj_cylinder = scene.objects.get('MG_Curver_Cyl')
+        if not self.obj_cylinder:
+            bpy.ops.curve.primitive_bezier_circle_add(enter_editmode=False, align='WORLD', location=(0, 0, 0), rotation=(math.pi / 2, 0, 0))            
             self.obj_cylinder = bpy.context.active_object
             self.obj_cylinder.name = 'MG_Curver_Cyl'
-        self.obj_cylinder.hide_viewport = True
-        self.obj_cylinder.hide_render = True
+        self.obj_cylinder.hide_viewport = self.obj_cylinder.hide_render = True
 
-        try:
-            self.obj_torus = scene.objects['MG_Curver_Tor']
-        except KeyError:
+        self.obj_torus = scene.objects.get('MG_Curver_Tor')
+        if not self.obj_torus:
             bpy.ops.curve.primitive_bezier_circle_add(enter_editmode=False, align='WORLD', location=(0, 0, 0))
             self.obj_torus = bpy.context.active_object
             self.obj_torus.name = 'MG_Curver_Tor'
-        self.obj_torus.hide_viewport = True
-        self.obj_torus.hide_render = True
-
-        # Put everything in a master collection.
-        try:
-            self.col_objects = bpy.data.collections['MG_Collection']
-        except KeyError:
-            self.col_objects = bpy.data.collections.new(name='MG_Collection')
-        try:
-            bpy.context.scene.collection.children.link(self.col_objects)
-        except RuntimeError:
-            pass
+        self.obj_torus.hide_viewport = self.obj_torus.hide_render = True
 
         for obj in (self.obj_cells, self.obj_cylinder, self.obj_walls, self.obj_torus):
             for col in obj.users_collection:
-                col.objects.unlink(obj)  # Unlink it from master collection.
-            self.col_objects.objects.link(obj)  # Link it with MG collection.
+                col.objects.unlink(obj)
+            self.col_objects.objects.link(obj)
 
     def generate_modifiers(self):
         props = self.props
