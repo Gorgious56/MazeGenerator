@@ -1,9 +1,11 @@
 from random import seed, choice, choices, random, shuffle, randrange
 from math import ceil, hypot
-from . data_structure . cell import CellPolar, CellTriangle, CellHex, Cell
+from . data_structure . cells import CellPolar, CellTriangle, CellHex, Cell
 from .. utils . priority_queue import PriorityQueue
 from .. visual . cell_type_manager import POLAR, TRIANGLE, HEXAGON, SQUARE
 from .. utils . union_find import UnionFind
+from Scripts.utils import methods
+from Scripts.maze_logic.data_structure import constants as cst
 
 
 def work(grid, props):
@@ -113,7 +115,7 @@ class BinaryTree(MazeAlgorithm):
             c_type = type(c)
             if c_type is CellTriangle:
                 if c.is_upright():
-                    neighbors = [c.neighbors[0]] if c.row == grid.rows - 1 and c.neighbors[0] else [n for n in c.neighbors[0:2] if n]
+                    neighbors = [c.neighbor(0)] if c.row == grid.rows - 1 and c.neighbor(0) else [n for n in c.neighbors[0:2] if n]
                 else:
                     neighbors = [c.neighbors[1]] if c.row == grid.rows - 1 and c.neighbors[1] else [n for n in [c.neighbors[2]] if n]
             elif c_type is CellHex:
@@ -123,11 +125,14 @@ class BinaryTree(MazeAlgorithm):
                 if c.ccw and c.column != len(grid.rows_polar[c.row]) - 1:
                     neighbors.append(c.ccw)
             else:  # Square Cell
-                neighbors = [n for n in c.neighbors[0:2] if n]
-                if c.row == self.grid.rows - 1 and c.neighbors[4]:
-                    neighbors.append(c.neighbors[4])
+                neighbors = []
+                for d in (cst.FWD, cst.RIGHT):
+                    if c.neighbor(d):
+                        neighbors.append(c.neighbor(d))
+                if c.row == self.grid.rows - 1 and c.neighbor(cst.UP):
+                    neighbors.append(c.neighbor_by_index(4))
 
-            link_neighbor = Cell.get_biased_choice(neighbors, bias, 5)
+            link_neighbor = methods.get_biased_choice(neighbors, bias, 5)
             if not self.union_find.connected(c, link_neighbor):
                 c.link(link_neighbor)
                 self.union_find.union(c, link_neighbor)
@@ -209,7 +214,7 @@ class Sidewinder(MazeAlgorithm):
                     else:
                         link = c, c.ccw
                 else:  # Cell is Square
-                    if (c.neighbors[3] is None) or (c.neighbors[0] and self.must_close_run()):
+                    if (c.neighbor(cst.RIGHT) is None) or (c.neighbor(cst.FWD) and self.must_close_run()):
                         member = choice(run)
                         if member.neighbors[0]:
                             link = member, 0
@@ -218,7 +223,7 @@ class Sidewinder(MazeAlgorithm):
                         link = c, 3
 
                 if link:
-                    self.link(link[0], link[1] if isinstance(link[1], Cell) else link[0].neighbors[link[1]])
+                    self.link(link[0], link[1] if isinstance(link[1], Cell) else link[0].neighbor(link[1]))
 
                 if self.is_last_step():
                     return
@@ -478,8 +483,8 @@ class RecursiveDivision(MazeAlgorithm):
 
         wall = HORIZONTAL if dy > dx else (VERTICAL if dx > dy else randrange(2))
 
-        xp = Cell.get_biased_choice(range(mx, ax - (wall == VERTICAL)), self.bias)
-        yp = Cell.get_biased_choice(range(my, ay - (wall == HORIZONTAL)), self.bias)
+        xp = methods.get_biased_choice(range(mx, ax - (wall == VERTICAL)), self.bias)
+        yp = methods.get_biased_choice(range(my, ay - (wall == HORIZONTAL)), self.bias)
 
         if wall == HORIZONTAL:
             nx, ny = ax, yp + 1
@@ -689,7 +694,7 @@ class Wilson(MazeAlgorithm):
             path = [cell]
 
             while cell in unvisited:
-                cell = choice([c for c in cell.get_neighbors() if c != path[-1]])
+                cell = choice([c for c in cell.neighbors if c != path[-1]])
                 try:
                     path = path[0:path.index(cell) + 1]
                 except ValueError:
