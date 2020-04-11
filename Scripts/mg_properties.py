@@ -5,7 +5,7 @@ from . maze_logic . algorithm_manager import generate_algo_enum, DEFAULT_ALGO
 from . visual . cell_type_manager import generate_cell_type_enum, DEFAULT_CELL_TYPE
 from . visual . cell_visual import generate_cell_visual_enum, DEFAULT_CELL_VISUAL_TYPE
 from . visual . maze_visual import MazeVisual
-from . visual . space_rep_manager import generate_space_rep_enum, REP_REGULAR, REP_CYLINDER, REP_MEOBIUS, REP_TORUS, REP_BOX, REP_STAIRS
+from . visual . space_rep_manager import generate_space_rep_enum, REP_REGULAR
 from random import random
 
 
@@ -119,14 +119,6 @@ class MGProperties(PropertyGroup):
         min=0,
         max=100,
         subtype='PERCENTAGE'
-    )
-
-    cell_wireframe: FloatProperty(
-        name='Cell Wireframe',
-        description='Set the wireframe Thickness.',
-        default=0,
-        min=0,
-        soft_max=0.08
     )
 
     cell_inset: FloatProperty(
@@ -374,22 +366,6 @@ class MGProperties(PropertyGroup):
         description='Choose if and how to fold the maze in 3D dimensions',
         items=generate_space_rep_enum,
         update=generate_maze
-    )
-
-    maze_stairs_scale: FloatProperty(
-        name='Stairs Scale',
-        description='Modifiy the height of each step',
-        default=5,
-        soft_min=0,
-        soft_max=50
-    )
-
-    maze_stairs_weld: FloatProperty(
-        name='Stairs Weld',
-        description='Weld the vertices together. Use it with 3D folding representations.',
-        default=0.04,
-        soft_min=0,
-        soft_max=0.5,
     )
 
     maze_last_start_cell: IntVectorProperty(
