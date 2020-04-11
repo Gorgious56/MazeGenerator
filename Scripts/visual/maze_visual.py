@@ -1,5 +1,15 @@
 import bpy
+import random
+import math
+from Scripts.utils import modifier_manager as mod_mgr
+from Scripts.utils.distance_manager import Distances
 from Scripts.utils.mesh_manager import MeshManager
+from Scripts.maze_logic.data_structure import grids
+from Scripts.maze_logic.data_structure import cells
+from Scripts.maze_logic import algorithm_manager
+from Scripts.visual.cell_type_manager import POLAR, SQUARE, TRIANGLE, HEXAGON
+from Scripts.visual.cell_visual import DISTANCE, GROUP, NEIGHBORS, DISPLACE, STAIRS, UNIFORM
+from Scripts.visual.space_rep_manager import REP_REGULAR, REP_CYLINDER, REP_MEOBIUS, REP_TORUS, REP_BOX, REP_STAIRS
 
 
 class MazeVisual:
@@ -17,15 +27,20 @@ class MazeVisual:
     scene = None
     props = None
 
+    def refresh_maze(scene):
+        MazeVisual.scene = scene
+        MazeVisual.props = scene.mg_props
+        MazeVisual.generate_objects()
+        MazeVisual.generate_textures()
+        MaterialManager.set_materials()
         MeshManager.create_vertex_groups(MazeVisual.obj_cells, MazeVisual.obj_walls)
+        mod_mgr.setup_modifiers_and_drivers(MazeVisual)
 
+    def generate_maze(scene):
+        self = MazeVisual
         self.scene = scene
         self.props = scene.mg_props
         props = self.props
-
-        self.cell_vertices = get_cell_vertices(self.props.cell_type)
-        self.cells_vertices = []
-        self.cells_visual = []
 
         self.generate_grid()
         if not algorithm_manager.is_algo_incompatible(props):
@@ -34,44 +49,35 @@ class MazeVisual:
             props.dead_ends = self.grid.braid_dead_ends(props.braid_dead_ends, props.seed)
 
             self.generate_objects()
+            self.generate_textures()
             self.build_objects()
             MeshManager.create_vertex_groups(MazeVisual.obj_cells, MazeVisual.obj_walls)
-            self.generate_modifiers()
-            self.generate_drivers()
+            mod_mgr.setup_modifiers_and_drivers(MazeVisual)
 
-            self.set_materials()
+            MaterialManager.set_materials()
 
-            self.paint_cells()
-            self.update_visibility()
+            self.update_wall_visibility()
 
-        MazeVisual.Instance = self
+    def update_wall_visibility():
+        MazeVisual.obj_walls.hide_viewport = MazeVisual.obj_walls.hide_render = \
+            (MazeVisual.props.wall_hide and MazeVisual.props.cell_inset > 0) \
+            or (MazeVisual.props.maze_weave and algorithm_manager.is_algo_weaved(MazeVisual.props))
 
-    def get_material_manager(self):
-        if MazeVisual.Mat_mgr is None:
-            MazeVisual.Mat_mgr = MaterialManager(self)
-        else:
-            MazeVisual.Mat_mgr.update(self)
-        return MazeVisual.Mat_mgr
-
-    def update_visibility(self):
-        set_hidden = (self.props.wall_hide and self.props.cell_inset > 0) or (self.props.maze_weave and algorithm_manager.is_algo_weaved(self.props))
-        self.obj_walls.hide_viewport = bool(set_hidden)
-        self.obj_walls.hide_render = bool(set_hidden)
-
-    def generate_grid(self):
+    def generate_grid():
+        self = MazeVisual
         props = self.props
 
         grid = None
         maze_dimension = int(props.maze_space_dimension)
         if props.cell_type == POLAR:
-            grid = GridPolar
+            grid = grids.GridPolar
         elif props.cell_type == HEXAGON:
-            grid = GridHex
+            grid = grids.GridHex
         elif props.cell_type == TRIANGLE:
-            grid = GridTriangle
+            grid = grids.GridTriangle
         else:
             if props.maze_weave:
-                self.grid = GridWeave(
+                self.grid = grids.GridWeave(
                     rows=props.maze_rows_or_radius,
                     columns=props.maze_columns,
                     levels=1,
@@ -83,7 +89,7 @@ class MazeVisual:
             elif maze_dimension == int(REP_BOX):
                 rows = props.maze_rows_or_radius
                 cols = props.maze_columns
-                self.grid = Grid(
+                self.grid = grids.Grid(
                     rows=3 * rows,
                     columns=2 * cols + 2 * rows,
                     levels=props.maze_levels if maze_dimension == int(REP_REGULAR) else 1,
@@ -96,7 +102,7 @@ class MazeVisual:
                         (rows + cols, 2 * rows, 2 * rows + 2 * cols - 1, 3 * rows - 1)])
                 return
             else:
-                grid = Grid
+                grid = grids.Grid
         self.grid = grid(
             rows=props.maze_rows_or_radius,
             columns=props.maze_columns,
@@ -136,200 +142,25 @@ class MazeVisual:
                 col.objects.unlink(obj)
             self.col_objects.objects.link(obj)
 
-    def generate_modifiers(self):
-        props = self.props
-        ow = props.auto_overwrite or CELL_STAIRS_NAME not in self.obj_walls.modifiers
+    def generate_textures():
+        self = MazeVisual
+        tex_disp_name = 'MG_Tex_Disp'
 
-        add_modifier(self.obj_walls, 'DISPLACE', CELL_STAIRS_NAME, properties={'show_expanded': False, 'direction': 'Z', 'vertex_group': STAIRS, 'mid_level': 0}, overwrite_props=ow)
-        add_modifier(self.obj_walls, 'WELD', WALL_WELD_NAME, properties={'show_expanded': False}, overwrite_props=ow)
-        add_modifier(self.obj_walls, 'SCREW', WALL_SCREW_NAME, properties={'show_expanded': False, 'angle': 0, 'steps': 1, 'render_steps': 1, 'screw_offset': props.wall_height}, overwrite_props=ow)
-        add_modifier(self.obj_walls, 'SOLIDIFY', WALL_SOLIDIFY_NAME, properties={'show_expanded': False, 'solidify_mode': 'NON_MANIFOLD', 'thickness': props.wall_width, 'offset': 0}, overwrite_props=ow)
-        add_modifier(self.obj_walls, 'BEVEL', WALL_BEVEL_NAME, properties={'show_expanded': False, 'segments': 4, 'limit_method': 'ANGLE', 'use_clamp_overlap': False}, overwrite_props=ow)
-        add_modifier(self.obj_walls, 'DISPLACE', CELL_DISPLACE_NAME, properties={'show_expanded': False, 'direction': 'Z', 'mid_level': 0.5}, overwrite_props=ow)
-        add_modifier(self.obj_walls, 'SIMPLE_DEFORM', CELL_MOEBIUS_NAME, properties={'show_expanded': False, 'angle': 2 * pi + (1 / 16 if props.cell_type == TRIANGLE else 0)}, overwrite_props=ow)
-        add_modifier(self.obj_walls, 'CURVE', CELL_CYLINDER_NAME, properties={'show_expanded': False, 'object': self.obj_cylinder}, overwrite_props=ow)
-        add_modifier(self.obj_walls, 'CURVE', CELL_TORUS_NAME, properties={'show_expanded': False, 'object': self.obj_torus, 'deform_axis': 'POS_Y'}, overwrite_props=ow)
-        add_modifier(self.obj_walls, 'WELD', CELL_WELD_CYLINDER_NAME, properties={'show_expanded': False, 'merge_threshold': 0.1}, overwrite_props=ow)
-        
-        add_modifier(self.obj_cells, 'DISPLACE', CELL_STAIRS_NAME, properties={'show_expanded': False, 'direction': 'Z', 'vertex_group': STAIRS, 'mid_level': 0}, overwrite_props=ow)
-        add_modifier(self.obj_cells, 'WELD', CELL_WELD_NAME, properties={'show_expanded': False, 'vertex_group': DISPLACE, 'invert_vertex_group': True, 'merge_threshold': 0.04}, overwrite_props=ow)
-        add_modifier(self.obj_cells, 'WELD', CELL_WELD_2_NAME, properties={'show_expanded': False, 'vertex_group': DISPLACE, 'invert_vertex_group': False}, overwrite_props=ow)
-        add_modifier(self.obj_cells, 'SOLIDIFY', CELL_SOLIDIFY_NAME, properties={'show_expanded': False, 'use_even_offset': True, 'vertex_group': DISPLACE, 'invert_vertex_group': True}, overwrite_props=ow)
+        try:
+            self.tex_disp = bpy.data.textures[tex_disp_name]
+        except KeyError:
+            self.tex_disp = bpy.data.textures.new(name=tex_disp_name, type='CLOUDS')
+            self.tex_disp.noise_scale = 50
+        self.tex_disp.cloud_type = 'COLOR'
 
-        add_modifier(self.obj_cells, 'DISPLACE', CELL_DISPLACE_NAME, properties={'show_expanded': False, 'direction': 'Z', 'vertex_group': DISPLACE, 'mid_level': 0}, overwrite_props=ow)
-        add_modifier(self.obj_cells, 'SIMPLE_DEFORM', CELL_MOEBIUS_NAME, properties={'show_expanded': False, 'angle': 2 * pi + (1 / 18 if props.cell_type == TRIANGLE else 0)}, overwrite_props=ow)
-        add_modifier(self.obj_cells, 'CURVE', CELL_CYLINDER_NAME, properties={'show_expanded': False, 'object': self.obj_cylinder}, overwrite_props=ow)
-        add_modifier(self.obj_cells, 'CURVE', CELL_TORUS_NAME, properties={'show_expanded': False, 'object': self.obj_torus, 'deform_axis': 'POS_Y'}, overwrite_props=ow)
-        add_modifier(self.obj_cells, 'WELD', CELL_WELD_CYLINDER_NAME, properties={'show_expanded': False, 'merge_threshold': 0.05}, overwrite_props=ow)
-        add_modifier(self.obj_cells, 'DECIMATE', CELL_DECIMATE_NAME, properties={'show_expanded': False}, overwrite_props=ow)
-        add_modifier(self.obj_cells, 'SUBSURF', CELL_SUBSURF_NAME, properties={'show_expanded': False}, overwrite_props=ow)
-        add_modifier(self.obj_cells, 'BEVEL', CELL_BEVEL_NAME, properties={'show_expanded': False, 'segments': 2, 'limit_method': 'ANGLE', 'material': 1, 'profile': 1, 'angle_limit': 0.75, 'use_clamp_overlap': False}, overwrite_props=ow)
-        add_modifier(self.obj_cells, 'WIREFRAME', CELL_WIREFRAME_NAME, properties={'show_expanded': False, 'use_replace': False, 'material_offset': 1}, overwrite_props=ow)
-
-        self.generate_drivers(ow)
-
-    def generate_drivers(self, force=False):
-        if self.props.auto_overwrite or force:
-            drivers_dic = \
-                {
-                    self.obj_walls: {
-                        CELL_STAIRS_NAME: (
-                            ('strength', 'maze_stairs_scale', 'var'),
-                            ('show_viewport', 'maze_space_dimension', 'int(var) == ' + REP_STAIRS),
-                            ('show_render', 'maze_space_dimension', 'int(var) == ' + REP_STAIRS),
-                        ),
-                        WALL_WELD_NAME: (
-                            ('merge_threshold', 'maze_stairs_weld', None),
-                        ),
-                        WALL_SCREW_NAME: (
-                            ('screw_offset', 'wall_height', None),
-                            ('use_smooth_shade', 'wall_bevel', 'var > 0.005'),
-                        ),
-                        WALL_SOLIDIFY_NAME: (
-                            ('thickness', 'wall_width', None),
-                            ('show_viewport', 'wall_width', 'var != 0'),
-                            ('show_render', 'wall_width', 'var != 0')
-                        ),
-                        WALL_BEVEL_NAME: (
-                            ('width', 'wall_bevel', None),
-                            ('show_viewport', 'wall_bevel', 'var != 0'),
-                            ('show_render', 'wall_bevel', 'var != 0')
-                        ),
-                        CELL_CYLINDER_NAME: (
-                            ('show_viewport', 'maze_space_dimension', REP_BOX + ' > int(var) > ' + REP_STAIRS),
-                            ('show_render', 'maze_space_dimension', REP_BOX + ' > int(var) > ' + REP_STAIRS)
-                        ),
-                        CELL_DISPLACE_NAME: (
-                            ('strength', 'wall_height', '-var'),
-                            ('show_viewport', 'maze_space_dimension', 'int(var) == ' + REP_CYLINDER + ' or int(var) == ' + REP_MEOBIUS),
-                            ('show_render', 'maze_space_dimension', 'int(var) == ' + REP_CYLINDER + ' or int(var) == ' + REP_MEOBIUS)
-                        ),
-                        CELL_MOEBIUS_NAME: (
-                            ('show_viewport', 'maze_space_dimension', 'int(var) == ' + REP_MEOBIUS),
-                            ('show_render', 'maze_space_dimension', 'int(var) == ' + REP_MEOBIUS)
-                        ),
-                        CELL_TORUS_NAME: (
-                            ('show_viewport', 'maze_space_dimension', 'int(var) == ' + REP_TORUS),
-                            ('show_render', 'maze_space_dimension', 'int(var) == ' + REP_TORUS)
-                        ),
-                        CELL_WELD_CYLINDER_NAME: (
-                            ('show_viewport', 'maze_space_dimension', REP_BOX + " > int(var) > " + REP_STAIRS),
-                            ('show_render', 'maze_space_dimension', REP_BOX + " > int(var) > " + REP_STAIRS)
-                        )
-                    },
-                    self.obj_cells: {
-                        CELL_STAIRS_NAME: (
-                            ('strength', 'maze_stairs_scale', 'var'),
-                            ('show_viewport', 'maze_space_dimension', 'int(var) ==' + REP_STAIRS),
-                            ('show_render', 'maze_space_dimension', 'int(var) ==' + REP_STAIRS),
-                        ),
-                        CELL_WELD_NAME: (
-                            ('merge_threshold', 'maze_stairs_weld', None),
-                        ),
-                        CELL_WELD_2_NAME: (
-                            ('show_viewport', 'maze_weave', 'var != 0'),
-                            ('show_render', 'maze_weave', 'var != 0')
-                        ),
-                        CELL_SOLIDIFY_NAME: (
-                            ('offset', 'maze_space_dimension', '-1 if int(var) == ' + REP_REGULAR + ' or int(var) == ' + REP_STAIRS + ' else 0'),
-                            ('thickness', 'cell_thickness', None),
-                            ('thickness_vertex_group', 'cell_thickness', 'max(0, 1 - abs(var / 2))'),
-                            ('show_viewport', 'cell_thickness', 'var != 0'),
-                            ('show_render', 'cell_thickness', 'var != 0')
-                        ),
-                        CELL_DECIMATE_NAME: (
-                            ('ratio', 'cell_decimate', '1 - var / 100'),
-                            ('show_viewport', 'cell_decimate', 'var > 0'),
-                            ('show_render', 'cell_decimate', 'var > 0')
-                        ),
-                        CELL_SUBSURF_NAME: (
-                            ('levels', 'cell_subdiv', None),
-                            ('render_levels', 'cell_subdiv', None),
-                            ('show_viewport', 'cell_subdiv', 'var > 0'),
-                            ('show_render', 'cell_subdiv', 'var > 0')
-                        ),
-                        CELL_DISPLACE_NAME: (
-                            ('strength', 'cell_thickness', '- (var + (abs(var) / var * 0.1)) if var != 0 else 0'),
-                            ('show_viewport', 'cell_thickness', 'var != 0'),
-                            ('show_render', 'cell_thickness', 'var != 0')
-                        ),
-                        CELL_MOEBIUS_NAME: (
-                            ('show_viewport', 'maze_space_dimension', "int(var) == " + REP_MEOBIUS),
-                            ('show_render', 'maze_space_dimension', "int(var) == " + REP_MEOBIUS)
-                        ),
-                        CELL_TORUS_NAME: (
-                            ('show_viewport', 'maze_space_dimension', "int(var) == " + REP_TORUS),
-                            ('show_render', 'maze_space_dimension', "int(var) == " + REP_TORUS)
-                        ),
-                        CELL_CYLINDER_NAME: (
-                            ('show_viewport', 'maze_space_dimension', REP_BOX + " > int(var) > " + REP_STAIRS),
-                            ('show_render', 'maze_space_dimension', REP_BOX + " > int(var) > " + REP_STAIRS)
-                        ),
-                        CELL_WELD_CYLINDER_NAME: (
-                            ('show_viewport', 'maze_space_dimension', REP_BOX + " > int(var) > " + REP_STAIRS),
-                            ('show_render', 'maze_space_dimension', REP_BOX + " > int(var) > " + REP_STAIRS)
-                        ),
-                        CELL_WIREFRAME_NAME: (
-                            ('show_viewport', 'cell_wireframe', 'var != 0'),
-                            ('show_render', 'cell_wireframe', 'var != 0'),
-                            ('thickness', 'cell_wireframe', None)),
-                        CELL_BEVEL_NAME: (
-                            ('show_render', 'cell_contour', 'var != 0'),
-                            ('show_viewport', 'cell_contour', 'var != 0'),
-                            ('width', 'cell_contour', None),
-                            ('segments', 'cell_contour_black', '2 if var else 4'),
-                            ('profile', 'cell_contour_black', '1 if var else 0.5'),
-                            ('material', 'cell_contour_black', '1 if var else 0'),
-                        )
-                    }
-                }
-
-            for obj, dic in drivers_dic.items():
-                for mod_name, drivers in dic.items():
-                    for driver in drivers:
-                        add_driver_to(obj.modifiers[mod_name], driver[0], 'var', 'SCENE', self.scene, 'mg_props.' + driver[1], expression=driver[2])
-
-            # Scale the cylinder object when scaling the size of the maze
-            for i, obj in enumerate((self.obj_cylinder, self.obj_torus)):
-                drvList = obj.driver_add('scale')
-                for fc in drvList:
-                    drv = fc.driver
-                    try:
-                        var = drv.variables[0]
-                    except IndexError:
-                        var = drv.variables.new()
-
-                    var.name = 'var'
-                    var.type = 'SINGLE_PROP'
-
-                    target = var.targets[0]
-                    target.id_type = 'SCENE'
-                    target.id = self.scene
-                    target.data_path = 'mg_props.maze_columns' if i == 0 else 'mg_props.maze_rows_or_radius'
-
-                    exp = 'var * 0.314'
-                    if self.props.cell_type == SQUARE:
-                        exp = 'var * 0.15915'
-                    elif self.props.cell_type == TRIANGLE:
-                        if i == 0:
-                            exp = 'var * 0.07963'
-                        else:
-                            exp = 'var * 0.13791'
-                    elif self.props.cell_type == HEXAGON:
-                        if i == 0:
-                            exp = 'var * 0.2388'
-                        else:
-                            exp = 'var * 0.2758'
-
-                    drv.expression = exp
-
-    def build_objects(self):
-        self.cells_visual = self.grid.get_blueprint()
+    def build_objects():
+        self = MazeVisual
+        cells_visual = self.grid.get_blueprint()
 
         walls_corners = []
         walls_edges = []
         vertices = 0
-        for cv in self.cells_visual:
+        for cv in cells_visual:
             for f in cv.faces:
                 wall_corners = f.wall_corners()
                 if wall_corners:
@@ -339,26 +170,26 @@ class MazeVisual:
                         vertices += 2
                     f.translate_walls_indices(vertices - len(wall_corners))
 
+        self.mesh_wall.clear_geometry()
         self.mesh_wall.from_pydata(
             walls_corners,
             walls_edges,
             [])
 
         cells_corners = []
-        cells_edges = []
         cells_faces = []
         vertices = 0
-        for cv in self.cells_visual:
+        for cv in cells_visual:
             for f in cv.faces:
                 f.translate_indices(vertices)
                 cells_corners.extend(f.vertices)
-                cells_edges.extend(f.edges)
                 cells_faces.append(f.face)
                 vertices += f.corners()
 
+        self.mesh_cells.clear_geometry()
         self.mesh_cells.from_pydata(
             cells_corners,
-            cells_edges,
+            [],
             cells_faces
         )
 
@@ -368,15 +199,16 @@ class MazeVisual:
             mesh.use_auto_smooth = True
             mesh.auto_smooth_angle = 0.5
 
-    def update_cell_smooth(self):
+        MazeVisual.paint_cells(cells_visual)
+
+    def update_cell_smooth():
+        self = MazeVisual
         smooth = self.props.cell_use_smooth
         for p in self.mesh_cells.polygons:
             p.use_smooth = smooth
 
-    def set_materials(self):
-        self.get_material_manager().set_materials()
-
-    def paint_cells(self):
+    def paint_cells(cells_visual):
+        self = MazeVisual
         linked_cells = self.grid.get_linked_cells()
 
         distances = Distances(self.grid.get_random_linked_cell(_seed=self.props.seed))
@@ -402,24 +234,25 @@ class MazeVisual:
                 self.props.maze_last_start_cell = start
         # End.
 
-        seed(self.props.seed_color)
+        random.seed(self.props.seed_color)
 
+        rand = random.random
         groups = set()
         group_colors = {}
         for c in linked_cells:
             groups.add(c.group)
         for g in groups:
-            group_colors[g] = random(), random(), random(), 1
+            group_colors[g] = rand(), rand(), rand(), 1
 
         neighbors_colors = {}
-        for n in [i for i in range(self.cell_vertices + 5)]:
-            neighbors_colors[n] = (random(), random(), random(), 1)
+        for n in [i for i in range(10)]:
+            neighbors_colors[n] = (rand(), rand(), rand(), 1)
 
-        for cv in self.cells_visual:
+        for cv in cells_visual:
             c = cv.cell
             this_distance = distances[c]
             relative_distance = 0 if this_distance is None else this_distance / max_distance
-            new_col = (relative_distance, 0 if c in longest_path else 1, 1 if type(c) is CellUnder and self.props.cell_thickness >= 0 else 0, 0 if this_distance is not None else 1)
+            new_col = (relative_distance, 0 if c in longest_path else 1, 1 if type(c) is cells.CellUnder and self.props.cell_thickness >= 0 else 0, 0 if this_distance is not None else 1)
             cv.color_layers[DISTANCE] = new_col
 
             cv.color_layers[GROUP] = group_colors[c.group]
