@@ -1,38 +1,14 @@
 import bpy
-from random import seed, random
-from math import pi
-from mathutils import Vector
-from .. utils . modifier_manager import add_modifier, add_driver_to, WALL_BEVEL_NAME, WALL_WELD_NAME, WALL_SCREW_NAME, WALL_SOLIDIFY_NAME, CELL_SOLIDIFY_NAME, \
-    CELL_WELD_NAME, CELL_BEVEL_NAME, CELL_SUBSURF_NAME, CELL_DISPLACE_NAME, CELL_WELD_2_NAME, CELL_CYLINDER_NAME, CELL_WELD_CYLINDER_NAME, \
-    CELL_MOEBIUS_NAME, CELL_TORUS_NAME, CELL_WIREFRAME_NAME, CELL_DECIMATE_NAME, CELL_STAIRS_NAME
-from .. utils . distance_manager import Distances
-from .. utils . mesh_manager import set_mesh_layers
-from .. utils . material_manager import MaterialManager
-from .. maze_logic . data_structure . grids . grid import Grid
-from .. maze_logic . data_structure . grids . grid_polar import GridPolar
-from .. maze_logic . data_structure . grids . grid_hex import GridHex
-from .. maze_logic . data_structure . grids . grid_triangle import GridTriangle
-from .. maze_logic . data_structure . grids . grid_weave import GridWeave
-from .. maze_logic . data_structure . cell import CellUnder
-from .. maze_logic import algorithm_manager
-from .. visual . cell_type_manager import POLAR, SQUARE, TRIANGLE, HEXAGON, get_cell_vertices
-from .. visual . cell_visual import DISTANCE, GROUP, NEIGHBORS, DISPLACE, STAIRS
-from . space_rep_manager import REP_REGULAR, REP_CYLINDER, REP_MEOBIUS, REP_TORUS, REP_BOX, REP_STAIRS
+from Scripts.utils.mesh_manager import MeshManager
 
 
 class MazeVisual:
     Instance = None
     Mat_mgr = None
+    obj_walls = None
+    obj_cells = None
 
-    def __init__(self, scene):
-        self.col_objects = None
-        self.obj_walls = None
-        self.mesh_walls = None
-        self.obj_cells = None
-        self.mesh_cells = None
-        self.obj_cylinder = None
-        self.obj_torus = None
-        self.grid = None
+        MeshManager.create_vertex_groups(MazeVisual.obj_cells, MazeVisual.obj_walls)
 
         self.scene = scene
         self.props = scene.mg_props
@@ -50,6 +26,7 @@ class MazeVisual:
 
             self.generate_objects()
             self.build_objects()
+            MeshManager.create_vertex_groups(MazeVisual.obj_cells, MazeVisual.obj_walls)
             self.generate_modifiers()
             self.generate_drivers()
 
@@ -476,4 +453,4 @@ class MazeVisual:
                 f.set_vertex_group(STAIRS, [relative_distance] * f.corners())
                 f.set_wall_vertex_groups(STAIRS, [relative_distance] * f.wall_vertices())
 
-        set_mesh_layers(self.obj_cells, self.obj_walls, self.cells_visual)
+        MeshManager.set_mesh_layers(self.obj_cells, self.obj_walls, cells_visual)
