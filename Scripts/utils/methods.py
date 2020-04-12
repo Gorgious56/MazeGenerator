@@ -9,7 +9,6 @@ def get_biased_choice(c_list, bias, relative_weight=5, k=1):
     relative_weight: This weight is added to the bias when applied to indices
     k: sample size
     """
-    bias = max(0.00001, bias)
     c_list_len = len(c_list)
     try:
         if bias == 0:

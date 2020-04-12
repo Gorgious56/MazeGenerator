@@ -8,7 +8,10 @@ from Scripts.maze_logic.data_structure import constants as cst
 
 
 class Grid:
-    def __init__(self, rows=2, columns=2, levels=1, cell_size=1, space_rep=0, mask=None, sides=4):
+    CELL_SIDES = 4
+    CELL_TYPE = Cell
+
+    def __init__(self, rows=2, columns=2, levels=1, cell_size=1, space_rep=0, mask=None):
         self.rows = rows
         self.columns = columns
         self.levels = levels
@@ -20,11 +23,11 @@ class Grid:
 
         self.mask = mask
 
-        self.offset = Vector(((1 - self.columns) / 2, (1 - self.rows) / 2, 0))
+        self.offset = self.get_offset()
 
         self.cell_size = cell_size
 
-        self.number_of_sides = sides
+        self.number_of_sides = self.CELL_SIDES
 
         self.relative_positions_inset = self.get_relative_positions(self.cell_size)
         self.relative_positions_one = self.get_relative_positions(1)
@@ -32,6 +35,9 @@ class Grid:
 
         self.prepare_grid()
         self.configure_cells()
+
+    def get_offset(self):
+        return Vector(((1 - self.columns) / 2, (1 - self.rows) / 2, 0))
 
     def __delitem__(self, key):
         del self._cells[key[0] + key[1] * self.columns]
@@ -66,7 +72,7 @@ class Grid:
         for l in range(self.levels):
             for c in range(self.columns):
                 for r in range(self.rows):
-                    self[c, r, l] = Cell(r, c, l) if self[c, r, l] is None else None
+                    self[c, r, l] = self.CELL_TYPE(r, c, l) if self[c, r, l] is None else None
 
     def next_row(self, cell, reverse=False):
         return self[cell.column, cell.row + (-1 if reverse else 1), cell.level]
@@ -92,44 +98,44 @@ class Grid:
                 if row == 2 * rows - 1:
                     if col < rows:
                         c.set_neighbor(cst.FWD, self[rows, 3 * rows - col - 1, level])
-                        c.neighbors[cst.FWD].neighbors[cst.LEFT] = c
+                        c.neighbor(cst.FWD).set_neighbor(cst.LEFT, c)
                     elif rows + cols <= col < 2 * rows + cols:
-                        c.neighbors[cst.FWD] = self[rows + cols - 1, rows - cols + col, level]
-                        c.neighbors[cst.FWD].neighbors[cst.RIGHT] = c
+                        c.set_neighbor(cst.FWD, self[rows + cols - 1, rows - cols + col, level])
+                        c.neighbor(cst.FWD).set_neighbor(cst.RIGHT, c)
                     elif col >= 2 * rows + cols:
-                        c.neighbors[cst.FWD] = self[3 * rows + 2 * cols - 1 - col, 3 * rows - 1, level]
-                        c.neighbors[cst.FWD].neighbors[cst.FWD] = c
+                        c.set_neighbor(cst.FWD, self[3 * rows + 2 * cols - 1 - col, 3 * rows - 1, level])
+                        c.neighbor(cst.FWD).set_neighbor(cst.FWD, c)
                     else:
-                        c.neighbors[cst.FWD] = self[col, row + 1, level]
-                        c.neighbors[cst.FWD].neighbors[cst.BCK] = c
-                elif not c.neighbors[cst.FWD]:
-                    c.neighbors[cst.FWD] = self[col, row + 1, level]
-                    if c.neighbors[cst.FWD]:
-                        c.neighbors[cst.FWD].neighbors[cst.BCK] = c
+                        c.set_neighbor(cst.FWD, self[col, row + 1, level])
+                        c.neighbor(cst.FWD).set_neighbor(cst.BCK, c)
+                elif not c.neighbor(cst.FWD):
+                    c.set_neighbor(cst.FWD, self[col, row + 1, level])
+                    if c.neighbor(cst.FWD):
+                        c.neighbor(cst.FWD).set_neighbor(cst.BCK, c)
                 # West :
-                if not c.neighbors[cst.LEFT]:
-                    c.neighbors[cst.LEFT] = self[col - 1, row, level]
-                    if c.neighbors[cst.LEFT]:
-                        c.neighbors[cst.LEFT].neighbors[cst.RIGHT] = c
+                if not c.neighbor(cst.LEFT):
+                    c.set_neighbor(cst.LEFT, self[col - 1, row, level])
+                    if c.neighbor(cst.LEFT):
+                        c.neighbor(cst.LEFT).set_neighbor(cst.RIGHT, c)
                 # South :
                 if row == rows:
                     if col < rows:
-                        c.neighbors[cst.BCK] = self[rows, col, level]
-                        c.neighbors[cst.BCK].neighbors[cst.LEFT] = c
+                        c.set_neighbor(cst.BCK, self[rows, col, level])
+                        c.neighbor(cst.BCK).set_neighbor(cst.LEFT, c)
                     elif rows + cols <= col < 2 * rows + cols:
-                        c.neighbors[cst.BCK] = self[rows + cols - 1, 2 * rows + cols - 1 - col, level]
-                        c.neighbors[cst.BCK].neighbors[cst.RIGHT] = c
+                        c.set_neighbor(cst.BCK, self[rows + cols - 1, 2 * rows + cols - 1 - col, level])
+                        c.neighbor(cst.BCK).set_neighbor(cst.RIGHT, c)
                     elif col >= 2 * rows + cols:
-                        c.neighbors[cst.BCK] = self[3 * rows + 2 * cols - 1 - col, 0, level]
-                        c.neighbors[cst.BCK].neighbors[cst.BCK] = c
+                        c.set_neighbor(cst.BCK, self[3 * rows + 2 * cols - 1 - col, 0, level])
+                        c.neighbor(cst.BCK).set_neighbor(cst.BCK, c)
                     else:
-                        c.neighbors[cst.BCK] = self[col, row - 1, level]
-                        c.neighbors[cst.BCK].neighbors[cst.FWD] = c
-                # Up :
-                if not c.neighbors[4]:
-                    c.neighbors[4] = self[col, row, level + 1]
-                    if c.neighbors[4]:
-                        c.neighbors[5] = c
+                        c.set_neighbor(cst.BCK, self[col, row - 1, level])
+                        c.neighbor(cst.BCK).set_neighbor(cst.FWD, c)
+                # # Up :
+                # if not c.neighbor(cst.UP):
+                #     c.set_neighbor(cst.UP, self[col, row, level + 1])
+                #     if c.neighbor(cst.UP):
+                #         c.neighbors[5] = c
 
     def mask_patch(self, first_cell_x, first_cell_y, last_cell_x, last_cell_y):
         for c in range(first_cell_x, last_cell_x + 1):
@@ -194,7 +200,7 @@ class Grid:
             stop_index = int(len(dead_ends_shuffle) * min(max(0, braid), 1))
             for c in dead_ends_shuffle[0:stop_index]:
                 if len(c.links) == 1:
-                    unconnected_neighbors = [n for n in c.get_neighbors() if n not in c.links and n.has_any_link()]
+                    unconnected_neighbors = [n for n in c.neighbors if n not in c.links and n.has_any_link()]
                     if len(unconnected_neighbors) > 0:
                         best = [n for n in unconnected_neighbors if len(n.links) < 2]
                         if best:
@@ -255,38 +261,53 @@ class Grid:
         bot_right = Vector(((size / 2), (-size / 2), 0))
         return top_right, top_left, bot_left, bot_right
 
+    def get_cell_pos_offset(self, cell, center):
+        if self.cell_size == 1:
+            return ([center + vec for vec in self.relative_positions_one], (), ())
+        else:
+            return (
+                [center + vec for vec in self.relative_positions_one],
+                [center + vec for vec in self.relative_positions_inset],
+                [center + vec for vec in self.relative_positions_out])
+
     def set_cell_visuals(self, c):
         cv = c.visual
         mask = c.get_wall_mask()
         center = self.get_cell_center(c)
         walls_face = []
-        pos_one = [center + vec for vec in self.relative_positions_one]
-        if self.cell_size != 1:
-            pos_in, pos_out = [center + vec for vec in self.relative_positions_inset], [center + vec for vec in self.relative_positions_out]
+        pos_one, pos_in, pos_out = self.get_cell_pos_offset(c, center)
         for i in range(self.number_of_sides):
             if mask[i]:
                 walls_face.extend((i, (i + 1) % self.number_of_sides))
             elif self.cell_size != 1:
                 cv.add_face((pos_in[i], pos_out[2 * i], pos_out[(i * 2) + 1], pos_in[(i + 1) % self.number_of_sides]), walls=(0, 1, 2, 3), vertices_levels=(1, 0, 0, 1))
 
-        cv.add_face(([(pos_one if self.cell_size == 1 else pos_in)[i % self.number_of_sides] for i in range(self.number_of_sides)]), walls=walls_face, vertices_levels=[1] * self.number_of_sides)
+        cv.add_face(
+            ([(pos_one if self.cell_size == 1 else pos_in)[i % self.number_of_sides] for i in range(self.number_of_sides)]), 
+            walls=walls_face, 
+            vertices_levels=[1] * self.number_of_sides)
 
+        dz = 0.1
+        dd = self.cell_size / 4
+        if type(c) is Cell:
+            if c.neighbor_index_exists_and_is_linked(cst.UP):
+                cv.add_face((center + Vector((dd * 3 / 2, 0, dz)), center + Vector((dd / 2, dd, dz)), center + Vector((dd / 2, -dd, dz))))
+            if c.neighbor_index_exists_and_is_linked(cst.DOWN):
+                cv.add_face((center + Vector((- dd * 3 / 2, 0, dz)), center + Vector((- dd / 2, -dd, dz)), center + Vector((- dd / 2, dd, dz))))
         return cv
 
 
 class GridHex(Grid):
-    def __init__(self, rows, columns, levels, cell_size, space_rep, mask=None):
-        super().__init__(rows, columns, levels, cell_size, space_rep, mask, sides=6)
-        self.offset = Vector((-self.columns / 3 - self.columns / 2, 1 - self.rows * (3 ** 0.5) / 2, 0))
-        # self.number_of_sides = 6
-        self.relative_positions_inset = self.get_relative_positions(self.cell_size)
-        self.relative_positions_one = self.get_relative_positions(1)
-        self.relative_positions_out = self.get_relative_positions_out()
+    CELL_SIDES = 6
+    CELL_TYPE = CellHex
 
-    def prepare_grid(self):
-        for r in range(self.rows):
-            for c in range(self.columns):
-                self[c, r] = CellHex(r, c)
+    def get_offset(self):
+        return Vector((-self.columns / 3 - self.columns / 2, 1 - self.rows * (3 ** 0.5) / 2, 0))
+
+    # def prepare_grid(self):
+    #     for r in range(self.rows):
+    #         for c in range(self.columns):
+    #             self[c, r] = CellHex(r, c)
 
     def configure_cells(self):
         for c in self.each_cell():
@@ -300,17 +321,17 @@ class GridHex(Grid):
                 south_diagonal = row - 1
 
             # Neighbor 0 : NE
-            c.neighbors[0] = self[col + 1, north_diagonal]
+            c.set_neighbor(0, self[col + 1, north_diagonal])
             # Neighbor 1 : N
-            c.neighbors[1] = self[col, row + 1]
+            c.set_neighbor(1, self[col, row + 1])
             # Neighbor 2 : NW
-            c.neighbors[2] = self[col - 1, north_diagonal]
-            # Neighbor 3 : SW
-            c.neighbors[3] = self[col - 1, south_diagonal]
-            # Neighbor 4 : S
-            c.neighbors[4] = self[col, row - 1]
-            # Neighbor 5 : SE
-            c.neighbors[5] = self[col + 1, south_diagonal]
+            c.set_neighbor(2, self[col - 1, north_diagonal])
+            # # Neighbor 3 : SW
+            # c.set_neighbor(3, self[col - 1, south_diagonal])
+            # # Neighbor 4 : S
+            # c.set_neighbor(4, self[col, row - 1])
+            # # Neighbor 5 : SE
+            # c.set_neighbor(5, self[col + 1, south_diagonal])
 
     def get_relative_positions(self, size):
         a_size = size / 2
@@ -329,6 +350,8 @@ class GridHex(Grid):
 
 
 class GridPolar(Grid):
+    CELL_TYPE = CellPolar
+
     def __init__(self, rows, columns, levels, cell_size=1, space_rep=0, *args, **kwargs):
         self.rows_polar = []
         self.doubling_rows = []
@@ -349,6 +372,15 @@ class GridPolar(Grid):
             self.rows_polar[key[0]][key[1]] = value
         except IndexError:
             pass
+
+    def next_column(self, cell, reverse=False):
+        return self.rows_polar[cell.row][cell.column + 1] if 0 <= cell.column < self.row_length(cell.row) - 1 else None
+
+    def next_row(self, cell, reverse=False):
+        return random.choice(cell.outward) if cell.outward else None
+
+    def next_level(self, cell, reverse=False):
+        return None
 
     def prepare_grid(self):
         rows = [None] * self.rows
@@ -374,10 +406,11 @@ class GridPolar(Grid):
         for c in self.each_cell():
             row, col = c.row, c.column
             if row > 0:
-                c.ccw = self[row, (col + 1) % len(self.rows_polar[row])]
+                row_length = self.row_length(c.row)
+                c.ccw = self[row, (col + 1) % row_length]
                 c.cw = self[row, col - 1]
 
-                ratio = len(self.rows_polar[row]) / len(self.rows_polar[row - 1])
+                ratio = row_length / self.row_length(c.row - 1)
                 parent = self[row - 1, floor(col // ratio)]
                 parent.outward.append(c)
 
@@ -410,7 +443,7 @@ class GridPolar(Grid):
         # The faces are all reversed but inverting all of the calculations is a big hassle.
         # Hacky but works.
         cv = c.visual
-        row_length = len(self.rows_polar[c.row])
+        row_length = self.row_length(c.row)
         cs = self.cell_size
         t = 2 * pi / row_length
         r_in = c.row
@@ -574,139 +607,69 @@ class GridPolar(Grid):
     def get_position(self, radius, angle):
         return Vector((radius * cos(angle), radius * sin(angle), 0))
 
+    def row_length(self, row):
+        return len(self.rows_polar[row])
+
 
 class GridTriangle(Grid):
+    CELL_SIDES = 3
+    CELL_TYPE = CellTriangle
+
     def __init__(self, rows, columns, levels, cell_size, space_rep, mask=None):
         super().__init__(rows, columns, levels, cell_size, space_rep, mask)
-        self.offset = Vector((-self.columns / 4, -self.rows / 3, 0))
-
-    def prepare_grid(self):
-        for r in range(self.rows):
-            for c in range(self.columns):
-                self[c, r] = CellTriangle(r, c)
+        self.relative_positions_inset_down = self.get_relative_positions(self.cell_size, upright=False)
+        self.relative_positions_one_down = self.get_relative_positions(1, upright=False)
+        self.relative_positions_out_down = self.get_relative_positions_out_down()
 
     def configure_cells(self):
         for c in self.each_cell():
-            row, col = c.row, c.column
-
             if c.is_upright():
                 c.set_neighbor(0, self.next_column(c))
                 c.set_neighbor(1, self.next_column(c, reverse=True))
                 c.set_neighbor(2, self.next_row(c, reverse=True))
-                # # NE
-                # c.neighbors[0] = self[col + 1, row]
-                # # NW
-                # c.neighbors[1] = self[col - 1, row]
-                # # S
-                # c.neighbors[2] = self[col, row - 1]
-            # else:
-            #     # SW
-            #     c.neighbors[0] = self[col - 1, row]
-            #     # SE
-            #     c.neighbors[1] = self[col + 1, row]
-            #     # N
-            #     c.neighbors[2] = self[col, row + 1]
 
-    def set_cell_visuals(self, c):
-        cv = c.visual
-        center, north_or_south, west, east = self.get_cell_position(c)
+    def get_relative_positions_out_down(self):
         cs = self.cell_size
+        pos_one, pos_out = self.relative_positions_one_down, []
+        for i in range(self.number_of_sides):
+            pos_out.append((pos_one[i] * (1 + cs) + pos_one[(i + 1) % self.number_of_sides] * (1 - cs)) / 2)
+            pos_out.append((pos_one[i] * (1 - cs) + pos_one[(i + 1) % self.number_of_sides] * (1 + cs)) / 2)
+        return pos_out
 
-        face_walls = []
-        if self.cell_size == 1:
-            if c.is_upright():
-                if not c.neighbor_index_exists_and_is_linked(0):
-                    face_walls.extend((0, 1))
-                if not c.neighbor_index_exists_and_is_linked(1):
-                    face_walls.extend((1, 2))
-                if not c.neighbor_index_exists_and_is_linked(2):
-                    face_walls.extend((0, 2))
-            else:
-                if not c.neighbor_index_exists_and_is_linked(0):
-                    face_walls.extend((1, 2))
-                if not c.neighbor_index_exists_and_is_linked(1):
-                    face_walls.extend((0, 2))
-                if not c.neighbor_index_exists_and_is_linked(2):
-                    face_walls.extend((0, 1))
-            if c.is_upright():
-                cv.add_face((east, north_or_south, west), walls=face_walls)
-            else:
-                cv.add_face((east, west, north_or_south), walls=face_walls)
-        else:
-            horiz_left = west + (east - west) * (0.5 - (cs / 2))
-            horiz_right = west + (east - west) * (0.5 + (cs / 2))
+    def get_cell_center(self, c):
+        return Vector((c.column * 0.5, c.row * (3 ** 0.5) / 2, 0)) + self.offset
 
-            _, north_or_south_b, west_b, east_b = self.get_cell_position(c, size=cs)
+    def get_offset(self):
+        return Vector((-self.columns / 4, -self.rows / 3, 0))
 
-            if c.is_upright():
-                nw_bot = west + (north_or_south - west) * (0.5 - (cs / 2))
-                nw_top = west + (north_or_south - west) * (0.5 + (cs / 2))
-                ne_bot = east + (north_or_south - east) * (0.5 - (cs / 2))
-                ne_top = east + (north_or_south - east) * (0.5 + (cs / 2))
-                if c.neighbor_index_exists_and_is_linked(0):
-                    cv.add_face((north_or_south_b, east_b, ne_bot, ne_top), walls=(1, 2, 3, 0))
-                else:
-                    face_walls.extend((0, 1))
-                if c.neighbor_index_exists_and_is_linked(1):
-                    cv.add_face((north_or_south_b, nw_top, nw_bot, west_b), walls=(0, 1, 2, 3))
-                else:
-                    face_walls.extend((1, 2))
-                if c.neighbor_index_exists_and_is_linked(2):
-                    cv.add_face((west_b, horiz_left, horiz_right, east_b), walls=(0, 1, 2, 3))
-                else:
-                    face_walls.extend((0, 2))
-                cv.add_face((east_b, north_or_south_b, west_b), walls=face_walls)
-            else:  # If Cell is pointing down.
-                nw_bot = north_or_south + (west - north_or_south) * (0.5 - (cs / 2))
-                nw_top = north_or_south + (west - north_or_south) * (0.5 + (cs / 2))
-                ne_bot = north_or_south + (east - north_or_south) * (0.5 - (cs / 2))
-                ne_top = north_or_south + (east - north_or_south) * (0.5 + (cs / 2))
-
-                if c.neighbor_index_exists_and_is_linked(0):
-                    cv.add_face((west_b, nw_top, nw_bot, north_or_south_b), walls=(0, 1, 2, 3))
-                else:
-                    face_walls.extend((0, 1))
-                if c.neighbor_index_exists_and_is_linked(1):
-                    cv.add_face((north_or_south_b, ne_bot, ne_top, east_b), walls=(0, 1, 2, 3))
-                else:
-                    face_walls.extend((1, 2))
-                if c.neighbor_index_exists_and_is_linked(2):
-                    cv.add_face((east_b, horiz_right, horiz_left, west_b), walls=(0, 1, 2, 3))
-                else:
-                    face_walls.extend((0, 2))
-                cv.add_face((west_b, north_or_south_b, east_b), walls=face_walls)
-
-        return cv
-
-    def get_cell_position(self, c, size=1):
-        width = size
-        half_width = width / 2
+    def get_relative_positions(self, size, upright=True):
+        half_width = size / 2
 
         height = size * (3 ** 0.5) / 2
         half_height = height / 2
 
-        center = Vector((c.column * 0.5, c.row * (3 ** 0.5) / 2, 0)) + self.offset
-
-        cx = center.x
-        cy = center.y
-
-        west_x = cx - half_width
-        mid_x = cx
-        east_x = cx + half_width
-
-        if c.is_upright():
-            base_y = cy - half_height
-            apex_y = cy + half_height
-
+        if upright:
+            base_y = - half_height
+            apex_y = half_height
         else:
-            base_y = cy + half_height
-            apex_y = cy - half_height
+            base_y = half_height
+            apex_y = - half_height
 
-        north_or_south = Vector((mid_x, apex_y, 0))
-        west = Vector((west_x, base_y, 0))
-        east = Vector((east_x, base_y, 0))
+        north_or_south = Vector((0, apex_y, 0))
+        west = Vector((-half_width, base_y, 0))
+        east = Vector((half_width, base_y, 0))
+        return (east, north_or_south, west) if upright else (west, north_or_south, east)
 
-        return center, north_or_south, west, east
+    def get_cell_pos_offset(self, cell, center):
+        if cell.is_upright():
+            return super().get_cell_pos_offset(cell, center)
+        else:
+            if self.cell_size == 1:
+                return [center + vec for vec in self.relative_positions_one_down], (), ()
+            else:
+                return [center + vec for vec in self.relative_positions_one_down],
+                [center + vec for vec in self.relative_positions_inset_down],
+                [center + vec for vec in self.relative_positions_out_down]
 
 
 class GridWeave(Grid):

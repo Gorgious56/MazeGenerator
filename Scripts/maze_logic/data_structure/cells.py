@@ -83,7 +83,7 @@ class Cell(object):
         try:
             self._neighbors[index] = cell
             if cell:
-                cell._neighbors[self.NEIGHBORS_RETURN[index]] = self
+                cell._neighbors[self.get_neighbor_return(index)] = self
         except IndexError:
             print(f"{self} neighbor n° {index} can't be set")
 
@@ -111,12 +111,12 @@ class Cell(object):
     def get_biased_linked_neighbor(self, bias, relative_weight=5):
         return methods.get_biased_choice(self.get_linked_neighbors(), bias, relative_weight)
 
-    """
-    Get a random neighbor
-    A bias of 0 will prefer selecting a cell on the same level
-    A bias of 1 will prefer selecting a cell on a different level
-    """
     def get_neighbor_level_biased(self, bias=0):
+        """
+        Get a random neighbor
+        A bias of 0 will prefer selecting a cell on the same level
+        A bias of 1 will prefer selecting a cell on a different level
+        """
         pass
 
     def get_biased_unlinked_directional_neighbor(self, bias, direction):
@@ -176,8 +176,8 @@ class Cell(object):
 class CellHex(Cell):
     NEIGHBORS_RETURN = [3, 4, 5, 0, 1, 2]
 
-    def __init__(self, row, col):
-        super().__init__(row, col)
+    def __init__(self, row, col, lvl):
+        super().__init__(row, col, lvl)
         self._neighbors = [None] * 6
 
 
@@ -230,13 +230,14 @@ class CellOver(Cell):
 
 class CellPolar(Cell):
 
-    def __init__(self, row, column):
-        super().__init__(row, column)
+    def __init__(self, row, col, lvl=0):
+        super().__init__(row, col, lvl)
         self.cw = None
         self.ccw = None
         self.inward = None
         self.outward = []
 
+    @property
     def neighbors(self):
         _neighbors = []
         for n in [self.cw, self.ccw, self.inward]:
@@ -259,10 +260,10 @@ class CellPolar(Cell):
 
 
 class CellTriangle(Cell):
-    NEIGHBORS_RETURN = [0, 2, 1]
+    NEIGHBORS_RETURN = (0, 1, 2)
 
-    def __init__(self, row, col):
-        super().__init__(row, col)
+    def __init__(self, row, col, lvl):
+        super().__init__(row, col, lvl)
         # If Upright : NE, NW, S else : SW, SE, N
         self._neighbors = [None] * 3
 

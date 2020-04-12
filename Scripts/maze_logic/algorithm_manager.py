@@ -67,7 +67,6 @@ class MazeAlgorithm(object):
             south = cell.neighbors[2]
             east = cell.neighbors[3]
             if random() > 0.5:  # Vertical underway
-                pass
                 cell.link(west)
                 self.union_find.union(cell, east)
                 cell.link(east)
@@ -96,52 +95,49 @@ class MazeAlgorithm(object):
 
 
 class BinaryTree(MazeAlgorithm):
+    """
+    One of the most simple algorithms
+
+    A strong diagonal texture.
+    Mandatory corridors along the Top and Right of the maze
+    """
     name = 'Binary Tree'
     weaved = False
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
         self.union_find = UnionFind(self.grid.all_cells())
-
         self.run()
-
         self.color_cells_by_tree_root()
 
     def run(self):
         grid = self.grid
         bias = self.bias
         for c in grid.each_cell():
-            c_type = type(c)
-            if c_type is CellTriangle:
-                if c.is_upright():
-                    neighbors = [c.neighbor(0)] if c.row == grid.rows - 1 and c.neighbor(0) else [n for n in c.neighbors[0:2] if n]
-                else:
-                    neighbors = [c.neighbors[1]] if c.row == grid.rows - 1 and c.neighbors[1] else [n for n in [c.neighbors[2]] if n]
-            elif c_type is CellHex:
-                neighbors = [n for n in [c.neighbors[5 if c.column % 2 == 0 else 0]] if n] if c.row == grid.rows - 1 else [n for n in c.neighbors[0:3] if n]
-            elif c_type is CellPolar:
-                neighbors = c.outward
-                if c.ccw and c.column != len(grid.rows_polar[c.row]) - 1:
-                    neighbors.append(c.ccw)
-            else:  # Square Cell
-                neighbors = []
-                for d in (cst.FWD, cst.RIGHT):
-                    if c.neighbor(d):
-                        neighbors.append(c.neighbor(d))
-                if c.row == self.grid.rows - 1 and c.neighbor(cst.UP):
-                    neighbors.append(c.neighbor_by_index(4))
+            neighbors = []
+            next_col = grid.next_column(c)
+            neighbors.append(next_col)
+            if not next_col or c.row < grid.rows - 1:
+                neighbors.append(grid.next_row(c))
+            if c.row == self.grid.rows - 1:
+                neighbors.append(grid.next_level(c))
 
+            neighbors = [n for n in neighbors if n]
             link_neighbor = methods.get_biased_choice(neighbors, bias, 5)
             if not self.union_find.connected(c, link_neighbor):
                 c.link(link_neighbor)
                 self.union_find.union(c, link_neighbor)
-
             if self.is_last_step():
                 return
 
 
 class Sidewinder(MazeAlgorithm):
+    """
+    Simple algorithm
+
+    A strong vertical texture.
+    Mandatory corridor along the Top of the maze
+    """
     name = 'Sidewinder'
     weaved = False
 
@@ -165,46 +161,41 @@ class Sidewinder(MazeAlgorithm):
                 c_type = type(c)
                 if c_type is CellTriangle:
                     if c.is_upright():
-                        if c.neighbors[0]:
-                            link = c, 0
-                            # self.link(c, c.neighbors[0])
+                        if (c.row == grid.rows - 1 or c.column == grid.columns - 1) and c.neighbor(cst.TRI_UP_LEFT):
+                            self.link(c, c.neighbor(cst.TRI_UP_LEFT))
+                        if c.neighbor(cst.TRI_UP_RIGHT):
+                            link = c, cst.TRI_UP_RIGHT
                         else:
-                            if len(run) == 1:
-                                link = c, 0
-                                # c.link(c.neighbors[0])
-                            else:
-                                member = choice([c for c in run if not c.is_upright()])
-                                if member.neighbors[2]:
-                                    link = member, 1
-                                    # self.link(member, member.neighbors[2])
+                            down_cells_in_run = [c for c in run if not c.is_upright()]
+                            shuffle(down_cells_in_run)
+                            while down_cells_in_run:
+                                member = down_cells_in_run.pop(0)
+                                if member.neighbor(cst.TRI_DN_UP):
+                                    link = member, cst.TRI_DN_UP
+                                    break
                             run = []
-                        if c.row == grid.rows - 1 and c.neighbors[1]:
-                            link = c, 1
-                            # self.link(c, c.neighbors[1])
                     else:
-                        if (c.neighbors[1] is None) or (c.neighbors[1] is not None and self.must_close_run()):
+                        if c.row == grid.rows - 1 and c.neighbor(cst.TRI_DN_LEFT):
+                            link = c, cst.TRI_DN_LEFT
+                        elif (c.neighbor(cst.TRI_DN_RIGHT) is None) or (c.neighbor(cst.TRI_DN_RIGHT) is not None and self.must_close_run()):
                             member = choice([c for c in run if not c.is_upright()])
-                            if member.neighbors[2]:
-                                link = member, 2
-                                # self.link(member, member.neighbors[2])
+                            if member.neighbor(cst.TRI_DN_UP):
+                                link = member, cst.TRI_DN_UP
                             run = []
                         else:
-                            self.link(c, c.neighbors[1])
+                            link = c, cst.TRI_DN_RIGHT
                 elif c_type is CellHex:
                     other = 5 if c.column % 2 == 0 else 0
-                    if (c.neighbors[other] is None) or (c.neighbors[other] and self.must_close_run()):
+                    if (c.neighbor(other) is None) or (c.neighbor(other) and self.must_close_run()):
                         member = choice(run)
                         north_neighbors = [n for n in c.neighbors[0:3] if n and not n.has_any_link()]
                         if north_neighbors:
                             link = member, choice(north_neighbors)
-                            # self.link(member, choice(north_neighbors))
-                        elif c.neighbors[5]:
+                        elif c.neighbor(5):
                             link = c, other
-                            # self.link(c, c.neighbors[other])
                         run = []
                     else:
                         link = c, other
-                        # self.link(c, c.neighbors[other])
                 elif c_type is CellPolar:
                     if (c.ccw and c.ccw.column == 0) or (c.has_outward_neighbor() and self.must_close_run()) or (c.row == 0):
                         member = choice(run)
@@ -237,6 +228,12 @@ class Sidewinder(MazeAlgorithm):
 
 
 class Eller(MazeAlgorithm):
+    """
+    Simple algorithm
+
+    No particular texture.
+    Generates a lot of dead-ends.
+    """
     name = 'Eller'
     weaved = False
 
@@ -256,36 +253,36 @@ class Eller(MazeAlgorithm):
         for row in grid.each_row():
             sets_this_row = {}
             for c in row:
-                if type(c) is CellPolar:
-                    if c.inward and (c.row == grid.rows - 1 or (self.bias < random() and not uf.connected(c, c.inward))):
-                        c.link(c.inward)
-                        uf.union(c, c.inward)
-                        if self.is_last_step():
-                            return
-                else:
-                    if c.neighbors[3] and (c.row == grid.rows - 1 or (self.bias < random() and not uf.connected(c, c.neighbors[3]))):
-                        c.link(c.neighbors[3])
-                        uf.union(c, c.neighbors[3])
-                        if self.is_last_step():
-                            return
+                cell_nxt_col = grid.next_column(c)
+                if cell_nxt_col and ((c.row == grid.rows - 1 or self.bias < random()) and not uf.connected(c, cell_nxt_col)):
+                    c.link(cell_nxt_col)
+                    uf.union(c, cell_nxt_col)
+                    if self.is_last_step():
+                        return
             for c in row:
                 this_set = uf.find(c)
-                try:
+                if this_set in sets_this_row:
                     sets_this_row[this_set].append(c)
-                except KeyError:
+                else:
                     sets_this_row[this_set] = [c]
-            if c.row != grid.rows - 1:
-                for tree, cells in sets_this_row.items():
-                    ch_len = min(len(cells), randrange(1, ceil(self.bias * len(cells) + 1)))
-                    for c in choices(cells, k=ch_len):
-                        if c.neighbors[0]:
-                            c.link(c.neighbors[0])
-                            uf.union(c, c.neighbors[0])
-                            if self.is_last_step():
-                                return
+
+            for tree, cells in sets_this_row.items():
+                ch_len = min(len(cells), randrange(1, ceil(self.bias * len(cells) + 2)))
+                for c in choices(cells, k=ch_len):
+                    neigh = grid.next_row(c)
+                    if neigh:
+                        c.link(neigh)
+                        uf.union(c, neigh)
+                        if self.is_last_step():
+                            return
 
 
-class CrossStitch(MazeAlgorithm):
+class CrossStitch(MazeAlgorithm):    
+    """
+    Variation to the Sidewinder
+
+    Strong diagonal texture from the central point.
+    """
     name = 'Cross-Stitch'
 
     def __init__(self, *args, **kwargs):
@@ -503,8 +500,7 @@ class RecursiveDivision(MazeAlgorithm):
 
     def link(self, cell, neighbor_number):
         if cell:
-            n = cell.neighbors[neighbor_number]
-            # if n:
+            n = cell.neighbor(neighbor_number)
             if n and not self.union_find.connected(cell, n):
                 cell.link(n)
                 self.union_find.union(cell, n)
@@ -527,7 +523,7 @@ class RecursiveVoronoiDivision(MazeAlgorithm):
         all_cells = self.grid.all_cells().copy()
 
         # Destroy all walls:
-        [[c.link(n, False) for n in c.get_neighbors() if n.level == c.level] for c in all_cells]
+        [[c.link(n, False) for n in c.neighbors if n.level == c.level] for c in all_cells]
         self.run(all_cells)
 
     def run(self, cells):
@@ -546,19 +542,18 @@ class RecursiveVoronoiDivision(MazeAlgorithm):
         [(set_a if hypot(c.column - c_a.column, c.row - c_a.row) < hypot(c.column - c_b.column, c.row - c_b.row) else set_b).append(c) for c in cells]
 
         # Add the frontier walls to a container
-        [[frontier.append((c_set_a, c_set_b)) for c_set_b in [_n for _n in c_set_a.get_neighbors() if _n in set_b]] for c_set_a in set_a]
-        # [[frontier.append((n, c)) for n in [_n for _n in c.get_neighbors() if _n in set_a]] for c in set_b]
+        [[frontier.append((c_set_a, c_set_b)) for c_set_b in [_n for _n in c_set_a.neighbors if _n in set_b]] for c_set_a in set_a]
 
         union_find_a = UnionFind(set_a)
         union_find_b = UnionFind(set_a)
 
         for c in set_a:
             c.group = self.expeditions
-            for n in [n for n in c.get_neighbors() if n in set_a]:
+            for n in [n for n in c.neighbors if n in set_a]:
                 union_find_a.union(c, n)
         for c in set_b:
             c.group = self.expeditions
-            for n in [n for n in c.get_neighbors() if n in set_b]:
+            for n in [n for n in c.neighbors if n in set_b]:
                 union_find_b.union(c, n)
         self.expeditions += 1
 
@@ -599,7 +594,7 @@ class VoronoiDivision(MazeAlgorithm):
         self.expeditions = 0
 
         # Destroy all walls:
-        [[c.link(n, False) for n in c.get_neighbors() if n.level == c.level] for c in all_cells]
+        [[c.link(n, False) for n in c.neighbors if n.level == c.level] for c in all_cells]
         self.run(all_cells)
 
     def run(self, cells):
@@ -623,7 +618,7 @@ class VoronoiDivision(MazeAlgorithm):
         cell_centers_union_groups = [union_find.find(c) for c in self.room_centers]
 
         for c in self.grid.all_cells():
-            for n in [n for n in c.get_neighbors() if not union_find.connected(c, n)]:
+            for n in [n for n in c.neighbors if not union_find.connected(c, n)]:
                 try:
                     frontiers[cell_centers_union_groups.index(union_find.find(c))][cell_centers_union_groups.index(union_find.find(n))].append((c, n))
                 except KeyError:
@@ -664,7 +659,7 @@ class AldousBroder(MazeAlgorithm):
         unvisited = grid.size - 1 - len(grid.masked_cells)
         while unvisited > 0:
 
-            neighbor = choice(current.get_neighbors())
+            neighbor = choice(current.neighbors)
 
             if len(neighbor.links) <= 0:
                 current.link(neighbor)
@@ -743,7 +738,7 @@ class HuntAndKill(MazeAlgorithm):
                 if self.is_last_step():
                     return
 
-                self.direction = neighbor.get_direction(self.current)
+                self.direction = neighbor.get_neighbor_direction(self.current)
 
                 self.add_to_unvisited_legit_cells(self.current.get_unlinked_neighbors())
             except IndexError:  # Neighbors is empty
