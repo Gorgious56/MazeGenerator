@@ -8,8 +8,8 @@ from Scripts.maze_logic.data_structure import grids
 from Scripts.maze_logic.data_structure import cells
 from Scripts.maze_logic import algorithm_manager
 from Scripts.visual.cell_type_manager import POLAR, SQUARE, TRIANGLE, HEXAGON
+from Scripts.visual import space_rep_manager as sp_rep
 from Scripts.visual.cell_visual import DISTANCE, GROUP, NEIGHBORS, DISPLACE, STAIRS, UNIFORM
-from Scripts.visual.space_rep_manager import REP_REGULAR, REP_CYLINDER, REP_MEOBIUS, REP_TORUS, REP_BOX, REP_STAIRS
 
 
 class MazeVisual:
@@ -86,13 +86,13 @@ class MazeVisual:
                     weave=props.maze_weave,
                     space_rep=maze_dimension)
                 return
-            elif maze_dimension == int(REP_BOX):
+            elif maze_dimension == int(sp_rep.REP_BOX):
                 rows = props.maze_rows_or_radius
                 cols = props.maze_columns
                 self.grid = grids.Grid(
                     rows=3 * rows,
                     columns=2 * cols + 2 * rows,
-                    levels=props.maze_levels if maze_dimension == int(REP_REGULAR) else 1,
+                    levels=props.maze_levels if maze_dimension == int(sp_rep.REP_REGULAR) else 1,
                     cell_size=1 - props.cell_inset,
                     space_rep=maze_dimension,
                     mask=[
@@ -106,7 +106,7 @@ class MazeVisual:
         self.grid = grid(
             rows=props.maze_rows_or_radius,
             columns=props.maze_columns,
-            levels=props.maze_levels if maze_dimension == int(REP_REGULAR) else 1,
+            levels=props.maze_levels if maze_dimension == int(sp_rep.REP_REGULAR) else 1,
             cell_size=1 - props.cell_inset,
             space_rep=maze_dimension)
 
@@ -201,10 +201,10 @@ class MazeVisual:
 
         MazeVisual.paint_cells(cells_visual)
 
+    @staticmethod
     def update_cell_smooth():
-        self = MazeVisual
-        smooth = self.props.cell_use_smooth
-        for p in self.mesh_cells.polygons:
+        smooth = MazeVisual.props.cell_use_smooth
+        for p in MazeVisual.mesh_cells.polygons:
             p.use_smooth = smooth
 
     def paint_cells(cells_visual):
@@ -309,10 +309,6 @@ class MaterialManager:
             self.cell_hsv_node.name = 'cell_hsv_node'
         finally:
             self.cell_hsv_node.location = -200, 0
-            if scene:
-                mod_mgr.add_driver_to(self.cell_hsv_node.inputs['Hue'], 'default_value', 'hue_shift', 'SCENE', scene, 'mg_props.hue_shift', '0.5 + hue_shift')
-                mod_mgr.add_driver_to(self.cell_hsv_node.inputs['Saturation'], 'default_value', 'sat_shift', 'SCENE', scene, 'mg_props.saturation_shift', '1 + sat_shift')
-                mod_mgr.add_driver_to(self.cell_hsv_node.inputs['Value'], 'default_value', 'val_shift', 'SCENE', scene, 'mg_props.value_shift', '1 + val_shift')
 
     def init_cell_bsdf_node(self, nodes):
         try:
@@ -401,6 +397,7 @@ class MaterialManager:
         finally:
             self.cell_output_node.location = 300, 0
 
+    @staticmethod
     def set_materials():
         MaterialManager.set_cell_material()
         MaterialManager.set_cell_contour_material()
@@ -503,8 +500,8 @@ class MaterialManager:
 
         vertex_colors = nodes.new(type='ShaderNodeRGB')
         vertex_colors.location = -400, 0
-        color = props.wall_color
-        vertex_colors.outputs['Color'].default_value = [color[0], color[1], color[2], 1]
+        if MazeVisual.props.auto_overwrite:
+            vertex_colors.outputs['Color'].default_value = [0, 0, 0, 1]
 
         principled = nodes.new(type='ShaderNodeBsdfPrincipled')
 

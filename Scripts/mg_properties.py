@@ -4,7 +4,7 @@ import bpy.ops
 from . maze_logic . algorithm_manager import generate_algo_enum, DEFAULT_ALGO
 from . visual . cell_type_manager import generate_cell_type_enum, DEFAULT_CELL_TYPE
 from . visual . cell_visual import generate_cell_visual_enum, DEFAULT_CELL_VISUAL_TYPE
-from . visual . maze_visual import MazeVisual
+from Scripts.visual.maze_visual import MazeVisual, MaterialManager
 from . visual . space_rep_manager import generate_space_rep_enum, REP_REGULAR
 from random import random
 
@@ -17,22 +17,17 @@ def generate_maze(self, context):
 
 
 def update_paint(self, context):
-    if MazeVisual.Instance:
-        MazeVisual.Instance.set_materials()
-        MazeVisual.Instance.update_visibility()
+    MaterialManager.set_materials()
 
 
 def click_randomize_color_button(self, value):
     self.seed_color = random() * 100000
-    if MazeVisual.Instance:
-        MazeVisual.Instance.set_materials()
-        MazeVisual.Instance.paint_cells()
+    MaterialManager.set_materials()
 
 
 def update_modifiers(self, context):
-    if MazeVisual.Instance:
-        MazeVisual.Instance.generate_modifiers()
-        MazeVisual.Instance.generate_drivers()
+    MazeVisual.generate_modifiers()
+    MazeVisual.generate_drivers()
 
 
 def update_cell_type(self, context):
@@ -45,11 +40,6 @@ def update_cell_type(self, context):
         print('Do not worry about these warnings.')
         self['maze_space_dimension'] = REP_REGULAR
     generate_maze(self, context)
-
-
-def update_cell_smooth(self, context):
-    if MazeVisual.Instance:
-        MazeVisual.Instance.update_cell_smooth()
 
 
 def toggle_maze_weave(self, context):
@@ -76,7 +66,7 @@ class MGProperties(PropertyGroup):
     auto_overwrite: BoolProperty(
         name="Auto Overwrite",
         description="Caution : Enabling this WILL overwrite the materials, modifiers and drivers",
-        default=True,
+        default=False,
         update=lambda self, context: generate_maze(self, context) if self.auto_overwrite else None
     )
 
@@ -100,16 +90,7 @@ class MGProperties(PropertyGroup):
         name='Smooth Shade Cells',
         description='Enforce smooth shading everytime the maze is generated',
         default=False,
-        update=update_cell_smooth
-    )
-
-    cell_subdiv: IntProperty(
-        name='Cell Subidivison',
-        description='Subidivide the cells. WARNING : Will take a long time to compute on larger mazes.',
-        default=0,
-        min=0,
-        soft_max=3,
-        max=6
+        update=lambda self, context: MazeVisual.update_cell_smooth()
     )
 
     cell_decimate: IntProperty(
@@ -129,14 +110,6 @@ class MGProperties(PropertyGroup):
         min=0,
         max=1,
         update=generate_maze
-    )
-
-    cell_thickness: FloatProperty(
-        name="Cell Thickness",
-        description="Tweak the cell's thickness",
-        default=0,
-        soft_max=1,
-        soft_min=-1,
     )
 
     cell_contour: FloatProperty(
@@ -246,43 +219,10 @@ class MGProperties(PropertyGroup):
         update=generate_maze
     )
 
-    wall_height: FloatProperty(
-        name="Height",
-        description="Configure the wall default height",
-        default=0.5,
-        soft_min=0,
-    )
-
-    wall_width: FloatProperty(
-        name="Width",
-        description="Configure the wall default width",
-        default=0.2,
-        min=0,
-        soft_max=1,
-    )
-
-    wall_color: FloatVectorProperty(
-        name='Wall Color',
-        description="Change the wall's displayed color",
-        subtype='COLOR',
-        default=(0, 0, 0),
-        min=0,
-        max=1,
-        update=update_paint
-    )
-
     wall_hide: BoolProperty(
         name='Wall Hide',
         description="Auto-hide the wall if the cells are inset",
         default=False,
-    )
-
-    wall_bevel: FloatProperty(
-        name='Wall Bevel',
-        description="Add a bevel to the wall. Caution : This will increase generation time",
-        default=0,
-        min=0,
-        soft_max=0.1,
     )
 
     seed_color: IntProperty(
@@ -302,22 +242,6 @@ class MGProperties(PropertyGroup):
         description="Toggle this property to show only the longest path",
         default=False,
         update=update_paint
-    )
-
-    hue_shift: FloatProperty(
-        name="Hue Shift",
-        description="Tweak the color hue shift of the cells",
-        default=0,
-        soft_min=0,
-        soft_max=1,
-    )
-
-    saturation_shift: FloatProperty(
-        name="Saturation Shift",
-        description="Tweak the color saturation shift of the cells",
-        default=0,
-        soft_min=-1,
-        soft_max=1,
     )
 
     value_shift: FloatProperty(
