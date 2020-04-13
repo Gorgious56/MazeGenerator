@@ -7,7 +7,7 @@ bl_info = {
     "author": "Nathan Hild",
     "description": "Add-on for generating mazes with a bunch of settings",
     "blender": (2, 83, 0),
-    "version": (0, 1, 0),
+    "version": (0, 2, 0),
     "location": "",
     "warning": "",
     "category": "Add Mesh",
