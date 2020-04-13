@@ -86,8 +86,8 @@ class Grid:
     def configure_cells(self):
         if self.space_rep != int(sp_mgr.REP_BOX):
             for c in self.all_cells():
-                c.set_neighbor(cst.FWD, self.next_row(c))
-                c.set_neighbor(cst.RIGHT, self.next_column(c))
+                c.set_neighbor(cst.NORTH, self.next_row(c))
+                c.set_neighbor(cst.EAST, self.next_column(c))
                 c.set_neighbor(cst.UP, self.next_level(c))
         else:
             rows = int(self.rows / 3)
@@ -97,45 +97,40 @@ class Grid:
                 # North :
                 if row == 2 * rows - 1:
                     if col < rows:
-                        c.set_neighbor(cst.FWD, self[rows, 3 * rows - col - 1, level])
-                        c.neighbor(cst.FWD).set_neighbor(cst.LEFT, c)
+                        c.set_neighbor(cst.NORTH, self[rows, 3 * rows - col - 1, level])
+                        c.neighbor(cst.NORTH).set_neighbor(cst.WEST, c)
                     elif rows + cols <= col < 2 * rows + cols:
-                        c.set_neighbor(cst.FWD, self[rows + cols - 1, rows - cols + col, level])
-                        c.neighbor(cst.FWD).set_neighbor(cst.RIGHT, c)
+                        c.set_neighbor(cst.NORTH, self[rows + cols - 1, rows - cols + col, level])
+                        c.neighbor(cst.NORTH).set_neighbor(cst.EAST, c)
                     elif col >= 2 * rows + cols:
-                        c.set_neighbor(cst.FWD, self[3 * rows + 2 * cols - 1 - col, 3 * rows - 1, level])
-                        c.neighbor(cst.FWD).set_neighbor(cst.FWD, c)
+                        c.set_neighbor(cst.NORTH, self[3 * rows + 2 * cols - 1 - col, 3 * rows - 1, level])
+                        c.neighbor(cst.NORTH).set_neighbor(cst.NORTH, c)
                     else:
-                        c.set_neighbor(cst.FWD, self[col, row + 1, level])
-                        c.neighbor(cst.FWD).set_neighbor(cst.BCK, c)
-                elif not c.neighbor(cst.FWD):
-                    c.set_neighbor(cst.FWD, self[col, row + 1, level])
-                    if c.neighbor(cst.FWD):
-                        c.neighbor(cst.FWD).set_neighbor(cst.BCK, c)
+                        c.set_neighbor(cst.NORTH, self[col, row + 1, level])
+                        c.neighbor(cst.NORTH).set_neighbor(cst.SOUTH, c)
+                elif not c.neighbor(cst.NORTH):
+                    c.set_neighbor(cst.NORTH, self[col, row + 1, level])
+                    if c.neighbor(cst.NORTH):
+                        c.neighbor(cst.NORTH).set_neighbor(cst.SOUTH, c)
                 # West :
-                if not c.neighbor(cst.LEFT):
-                    c.set_neighbor(cst.LEFT, self[col - 1, row, level])
-                    if c.neighbor(cst.LEFT):
-                        c.neighbor(cst.LEFT).set_neighbor(cst.RIGHT, c)
+                if not c.neighbor(cst.WEST):
+                    c.set_neighbor(cst.WEST, self[col - 1, row, level])
+                    if c.neighbor(cst.WEST):
+                        c.neighbor(cst.WEST).set_neighbor(cst.EAST, c)
                 # South :
                 if row == rows:
                     if col < rows:
-                        c.set_neighbor(cst.BCK, self[rows, col, level])
-                        c.neighbor(cst.BCK).set_neighbor(cst.LEFT, c)
+                        c.set_neighbor(cst.SOUTH, self[rows, col, level])
+                        c.neighbor(cst.SOUTH).set_neighbor(cst.WEST, c)
                     elif rows + cols <= col < 2 * rows + cols:
-                        c.set_neighbor(cst.BCK, self[rows + cols - 1, 2 * rows + cols - 1 - col, level])
-                        c.neighbor(cst.BCK).set_neighbor(cst.RIGHT, c)
+                        c.set_neighbor(cst.SOUTH, self[rows + cols - 1, 2 * rows + cols - 1 - col, level])
+                        c.neighbor(cst.SOUTH).set_neighbor(cst.EAST, c)
                     elif col >= 2 * rows + cols:
-                        c.set_neighbor(cst.BCK, self[3 * rows + 2 * cols - 1 - col, 0, level])
-                        c.neighbor(cst.BCK).set_neighbor(cst.BCK, c)
+                        c.set_neighbor(cst.SOUTH, self[3 * rows + 2 * cols - 1 - col, 0, level])
+                        c.neighbor(cst.SOUTH).set_neighbor(cst.SOUTH, c)
                     else:
-                        c.set_neighbor(cst.BCK, self[col, row - 1, level])
-                        c.neighbor(cst.BCK).set_neighbor(cst.FWD, c)
-                # # Up :
-                # if not c.neighbor(cst.UP):
-                #     c.set_neighbor(cst.UP, self[col, row, level + 1])
-                #     if c.neighbor(cst.UP):
-                #         c.neighbors[5] = c
+                        c.set_neighbor(cst.SOUTH, self[col, row - 1, level])
+                        c.neighbor(cst.SOUTH).set_neighbor(cst.NORTH, c)
 
     def mask_patch(self, first_cell_x, first_cell_y, last_cell_x, last_cell_y):
         for c in range(first_cell_x, last_cell_x + 1):
@@ -263,33 +258,31 @@ class Grid:
 
     def get_cell_pos_offset(self, cell, center):
         if self.cell_size == 1:
-            return ([center + vec for vec in self.relative_positions_one], (), ())
+            return [center + vec for vec in self.relative_positions_one], (), ()
         else:
-            return (
-                [center + vec for vec in self.relative_positions_one],
-                [center + vec for vec in self.relative_positions_inset],
-                [center + vec for vec in self.relative_positions_out])
+            return [center + vec for vec in self.relative_positions_one], \
+                [center + vec for vec in self.relative_positions_inset], \
+                [center + vec for vec in self.relative_positions_out]
 
     def set_cell_visuals(self, c):
         cv = c.visual
-        mask = c.get_wall_mask()
         center = self.get_cell_center(c)
         walls_face = []
         pos_one, pos_in, pos_out = self.get_cell_pos_offset(c, center)
         for i in range(self.number_of_sides):
-            if mask[i]:
+            if c.get_wall_mask()[i]:
                 walls_face.extend((i, (i + 1) % self.number_of_sides))
             elif self.cell_size != 1:
                 cv.add_face((pos_in[i], pos_out[2 * i], pos_out[(i * 2) + 1], pos_in[(i + 1) % self.number_of_sides]), walls=(0, 1, 2, 3), vertices_levels=(1, 0, 0, 1))
 
         cv.add_face(
-            ([(pos_one if self.cell_size == 1 else pos_in)[i % self.number_of_sides] for i in range(self.number_of_sides)]), 
-            walls=walls_face, 
+            ([(pos_one if self.cell_size == 1 else pos_in)[i % self.number_of_sides] for i in range(self.number_of_sides)]),
+            walls=walls_face,
             vertices_levels=[1] * self.number_of_sides)
 
-        dz = 0.1
-        dd = self.cell_size / 4
-        if type(c) is Cell:
+        if self.levels > 0:
+            dz = 0.1
+            dd = self.cell_size / 4
             if c.neighbor_index_exists_and_is_linked(cst.UP):
                 cv.add_face((center + Vector((dd * 3 / 2, 0, dz)), center + Vector((dd / 2, dd, dz)), center + Vector((dd / 2, -dd, dz))))
             if c.neighbor_index_exists_and_is_linked(cst.DOWN):
@@ -667,9 +660,9 @@ class GridTriangle(Grid):
             if self.cell_size == 1:
                 return [center + vec for vec in self.relative_positions_one_down], (), ()
             else:
-                return [center + vec for vec in self.relative_positions_one_down],
-                [center + vec for vec in self.relative_positions_inset_down],
-                [center + vec for vec in self.relative_positions_out_down]
+                return [center + vec for vec in self.relative_positions_one_down], \
+                    [center + vec for vec in self.relative_positions_inset_down], \
+                    [center + vec for vec in self.relative_positions_out_down]
 
 
 class GridWeave(Grid):
@@ -683,27 +676,33 @@ class GridWeave(Grid):
             [self.mask_patch(mask_patch[0], mask_patch[1], mask_patch[2], mask_patch[3],) for mask_patch in self.mask]
 
         if self.use_kruskal:
-            CellOver.get_neighbors = Cell.get_neighbors
+            CellOver.get_neighbors = lambda: Cell.neighbors
         else:
-            CellOver.get_neighbors = CellOver.get_neighbors_copy
+            CellOver.get_neighbors = lambda: CellOver.neighbors_copy
 
         for l in range(self.levels):
             for c in range(self.columns):
                 for r in range(self.rows):
                     self[c, r, l] = CellOver(r, c, l) if self[c, r, l] is None else None
                     self[c, r, l].request_tunnel_under += lambda cell, neighbor: self.tunnel_under(neighbor)
-    """
-    Tunnel under the specified cell of type 'CellOver'
-    Returns the resulting 'CellUnder'
-    """
+
     def tunnel_under(self, cell_over):
+        """
+        Tunnel under the specified cell of type 'CellOver'
+
+        Returns the resulting 'CellUnder'
+        """
         self._cells.append(CellUnder(cell_over))
         return self._cells[-1]
 
     def set_cell_visuals(self, c):
         cv = super().set_cell_visuals(c)
         if type(c) is CellUnder:
-            cv.walls = []
             for f in cv.faces:
                 f.set_vertex_group(DISPLACE, [v_level for v_level in f.vertices_levels])
+                f.walls = None
+        elif c.has_cell_under:
+            for f in cv.faces:
+                f.walls = None
+
         return cv

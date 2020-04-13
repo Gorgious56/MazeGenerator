@@ -17,7 +17,7 @@ CELL_DECIMATE_PLANAR_NAME = 'MG_DECIMATE_PLANAR'
 CELL_SUBSURF_NAME = 'MG_SUBSURF'
 CELL_BEVEL_NAME = 'MG_CONTOUR'
 CELL_WIREFRAME_NAME = 'MG_WIREFRAME'
-CELL_DISPLACE_NAME = 'MG_DISPLACE'
+CELL_DISPLACE_NAME = 'MG_WEAVE_DISPLACE'
 CELL_CYLINDER_NAME = 'MG_CYLINDER'
 CELL_WELD_CYLINDER_NAME = 'MG_CYLINDER_WELD'
 CELL_MOEBIUS_NAME = 'MG_MOEBIUS'
@@ -30,12 +30,15 @@ VISIBILIY = 'VISIBILITY'
 
 def generate_drivers(MV, force=False):
     if force:
-        def add_mod_driver(obj_from, obj_to, prop_from, prop_to, mod_name, expression):
+        def add_mods_driver(obj_from, obj_to, prop_from, prop_to, mod_from, mod_to, expression):
             if prop_to == VISIBILIY:
-                add_driver_to(obj_to.modifiers[mod_name], 'show_render', 'var', 'OBJECT', obj_from, 'modifiers["' + mod_name + '"].' + prop_from, expression)
-                add_driver_to(obj_to.modifiers[mod_name], 'show_viewport', 'var', 'OBJECT', obj_from, 'modifiers["' + mod_name + '"].' + prop_from, expression)
+                add_driver_to(obj_to.modifiers[mod_to], 'show_render', 'var', 'OBJECT', obj_from, 'modifiers["' + mod_from + '"].' + prop_from, expression)
+                add_driver_to(obj_to.modifiers[mod_to], 'show_viewport', 'var', 'OBJECT', obj_from, 'modifiers["' + mod_from + '"].' + prop_from, expression)
             else:
-                add_driver_to(obj_to.modifiers[mod_name], prop_to, 'var', 'OBJECT', obj_from, 'modifiers["' + mod_name + '"].' + prop_from, expression)
+                add_driver_to(obj_to.modifiers[mod_to], prop_to, 'var', 'OBJECT', obj_from, 'modifiers["' + mod_from + '"].' + prop_from, expression)
+
+        def add_mod_driver(obj_from, obj_to, prop_from, prop_to, mod_name, expression):
+            add_mods_driver(obj_from, obj_to, prop_from, prop_to, mod_name, mod_name, expression)
 
         for drv in (
             (MV.obj_walls, 'strength', 'strength', CELL_TEX_DISP, 'var'),
@@ -57,6 +60,9 @@ def generate_drivers(MV, force=False):
         add_mod_driver(MV.obj_walls, MV.obj_walls, 'width', VISIBILIY, WALL_BEVEL_NAME, 'var > 0')
         add_mod_driver(MV.obj_walls, MV.obj_walls, 'thickness', VISIBILIY, WALL_SOLIDIFY_NAME, 'var != 0')
 
+        add_mods_driver(MV.obj_cells, MV.obj_cells, 'thickness', VISIBILIY, CELL_SOLIDIFY_NAME, CELL_DISPLACE_NAME, 'var != 0')
+        add_mods_driver(MV.obj_cells, MV.obj_cells, 'thickness', 'strength', CELL_SOLIDIFY_NAME, CELL_DISPLACE_NAME, '- (var + (abs(var) / var * 0.1)) if var != 0 else -0.1')
+
         # We need 2 variables for this driver :
         for prop in ('show_viewport', 'show_render'):
             add_driver_to_vars(
@@ -67,6 +73,17 @@ def generate_drivers(MV, force=False):
                     ('cell_inset', 'SCENE', MV.scene, 'mg_props.cell_inset'),
                 ),
                 expression='subdiv == 0 and cell_inset > 0'
+            )
+
+        for prop in ('show_viewport', 'show_render'):
+            add_driver_to_vars(
+                MV.obj_cells.modifiers[CELL_DECIMATE_NAME],
+                prop,
+                (
+                    ('cell_deci', 'SCENE', MV.scene, 'mg_props.cell_decimate'),
+                    ('cell_inset', 'SCENE', MV.scene, 'mg_props.cell_inset'),
+                ),
+                expression='cell_deci > 0 and cell_inset > 0'
             )
 
         # Scale the cylinder and torus objects when scaling the size of the maze
@@ -198,9 +215,6 @@ def setup_modifiers_and_drivers(MV):
                 'invert_vertex_group': True,
             }),
             ('DISPLACE', CELL_DISPLACE_NAME, {
-                'show_viewport': ('cell_thickness', 'var != 0'),
-                'show_render': ('cell_thickness', 'var != 0'),
-                'strength': ('cell_thickness', '- (var + (abs(var) / var * 0.1)) if var != 0 else 0'),
                 'direction': 'Z',
                 'vertex_group': DISPLACE,
                 'mid_level': 0,
@@ -227,8 +241,6 @@ def setup_modifiers_and_drivers(MV):
                 'merge_threshold': 0.05,
             }),
             ('DECIMATE', CELL_DECIMATE_NAME, {
-                'show_viewport': ('cell_decimate', 'var > 0'),
-                'show_render': ('cell_decimate', 'var > 0'),
                 'ratio': ('cell_decimate', '1 - var / 100'),
             }),
             ('SUBSURF', CELL_SUBSURF_NAME, {

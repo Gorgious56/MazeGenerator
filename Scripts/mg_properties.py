@@ -1,17 +1,15 @@
-from bpy.types import PropertyGroup, Scene
-from bpy.props import IntProperty, BoolProperty, EnumProperty, FloatProperty, PointerProperty, FloatVectorProperty, IntVectorProperty
 import bpy.ops
-from . maze_logic . algorithm_manager import generate_algo_enum, DEFAULT_ALGO
-from . visual . cell_type_manager import generate_cell_type_enum, DEFAULT_CELL_TYPE
-from . visual . cell_visual import generate_cell_visual_enum, DEFAULT_CELL_VISUAL_TYPE
-from Scripts.visual.maze_visual import MazeVisual, MaterialManager
-from . visual . space_rep_manager import generate_space_rep_enum, REP_REGULAR
 from random import random
+from bpy.types import PropertyGroup, Scene
+from bpy.props import IntProperty, BoolProperty, EnumProperty, FloatProperty, PointerProperty, IntVectorProperty
+from Scripts.maze_logic.algorithm_manager import generate_algo_enum, DEFAULT_ALGO
+from Scripts.visual.cell_type_manager import generate_cell_type_enum, DEFAULT_CELL_TYPE
+from Scripts.visual.cell_visual import generate_cell_visual_enum, DEFAULT_CELL_VISUAL_TYPE
+from Scripts.visual.maze_visual import MazeVisual, MaterialManager
+from Scripts.visual.space_rep_manager import generate_space_rep_enum, REP_REGULAR
 
 
 def generate_maze(self, context):
-    if self.maze_weave and self.cell_thickness == 0:
-        self['cell_thickness'] = -0.1
     if self.auto_update and context.mode == "OBJECT":
         bpy.ops.maze.generate()
 
@@ -66,7 +64,7 @@ class MGProperties(PropertyGroup):
     auto_overwrite: BoolProperty(
         name="Auto Overwrite",
         description="Caution : Enabling this WILL overwrite the materials, modifiers and drivers",
-        default=False,
+        default=True,
         update=lambda self, context: generate_maze(self, context) if self.auto_overwrite else None
     )
 

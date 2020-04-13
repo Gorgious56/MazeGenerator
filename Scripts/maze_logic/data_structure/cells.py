@@ -11,7 +11,7 @@ class Cell(object):
     column : Horizontal axis position in the grid
     row: Vertical axis position in the grid
     """
-    NEIGHBORS_RETURN = [cst.BCK, cst.RIGHT, cst.FWD, cst.LEFT, cst.DOWN, cst.UP]
+    NEIGHBORS_RETURN = [cst.SOUTH, cst.EAST, cst.NORTH, cst.WEST, cst.DOWN, cst.UP]
 
     def __init__(self, row, col, level=0):
         self.row = row
@@ -43,7 +43,9 @@ class Cell(object):
         if other_cell:
             self.links[other_cell] = True
             if bidirectional:
-                other_cell.link(self, False)
+                return other_cell.link(self, False)
+            else:
+                return self, other_cell
 
     def unlink(self, other_cell, bidirectional=True):
         if other_cell:
@@ -64,7 +66,7 @@ class Cell(object):
         return other_cell is not None and self.is_linked(other_cell)
 
     def neighbor_index_exists_and_is_linked(self, neighbor_index):
-        return self.exists_and_is_linked(self._neighbors[neighbor_index])
+        return self.exists_and_is_linked(self.neighbor(neighbor_index))
 
     @property
     def neighbors(self):
@@ -181,53 +183,6 @@ class CellHex(Cell):
         self._neighbors = [None] * 6
 
 
-class CellOver(Cell):
-    def __init__(self, *args, **kwards):
-        super().__init__(*args, **kwards)
-        self.neighbors_over = None
-        self.request_tunnel_under = event.EventHandler(event.Event('Tunnel Under'), self)
-
-    def neighbors(self):
-        if self.neighbors_over is None:
-            self.neighbors_over = [None] * len(self.NEIGHBORS_RETURN)
-            for i, neighbor in enumerate(self._neighbors):
-                self.neighbors_over[i] = neighbor._neighbors[i] if self.can_tunnel_towards(i) else None
-        ns = super().neighbors
-        ns.extend([n for n in self.neighbors_over if n])
-        return ns
-
-    def get_neighbors_copy(self):  # Keep this for method patching using Kruskal's algorithm and weave maze until I know how to do it cleanly.
-        if self.neighbors_over is None:
-            self.neighbors_over = [None] * len(self.NEIGHBORS_RETURN)
-            for i, neighbor in enumerate(self._neighbors):
-                self.neighbors_over[i] = neighbor._neighbors[i] if self.can_tunnel_towards(i) else None
-        ns = super().neighbors
-        ns.extend([n for n in self.neighbors_over if n])
-        return ns
-
-    def can_tunnel_towards(self, direction):
-        potential_host = self._neighbors[direction]
-        return potential_host and potential_host._neighbors[direction] and potential_host.can_host_psg_towards(direction)
-
-    def can_host_psg_towards(self, direction):
-        return self.can_host_under_vertical_psg() if direction % 2 == 0 else self.can_host_under_horiz_psg()
-
-    def can_host_under_vertical_psg(self):
-        return self.is_linked(self._neighbors[1]) and self.is_linked(self._neighbors[3]) and not self.is_linked(self._neighbors[0]) and not self.is_linked(self._neighbors[2])
-
-    def can_host_under_horiz_psg(self):
-        return not self.is_linked(self._neighbors[1]) and not self.is_linked(self._neighbors[3]) and self.is_linked(self._neighbors[0]) and self.is_linked(self._neighbors[2])
-
-    def link(self, other_cell, bidirectional=True):
-        if other_cell:
-            for i, neighbor in enumerate(self._neighbors):
-                if neighbor and neighbor == other_cell._neighbors[self.get_neighbor_return(i)]:
-                    self.request_tunnel_under(neighbor)
-                    return
-            else:
-                super().link(other_cell, bidirectional=bidirectional)
-
-
 class CellPolar(Cell):
 
     def __init__(self, row, col, lvl=0):
@@ -271,23 +226,89 @@ class CellTriangle(Cell):
         return (self.row + self.column) % 2 == 1
 
 
+class CellOver(Cell):
+    def __init__(self, *args, **kwards):
+        super().__init__(*args, **kwards)
+        self.neighbors_over = None
+        self.request_tunnel_under = event.EventHandler(event.Event('Tunnel Under'), self)
+        self.has_cell_under = False
+
+    @property
+    def neighbors(self):
+        if self.neighbors_over is None:
+            self.neighbors_over = [None] * len(self.NEIGHBORS_RETURN)
+            for i, neighbor in enumerate(self._neighbors):
+                self.neighbors_over[i] = neighbor._neighbors[i] if self.can_tunnel_towards(i) else None
+        ns = super().neighbors
+        ns.extend([n for n in self.neighbors_over if n])
+        return ns
+    
+    @property
+    def neighbors_copy(self):  # Keep this for method patching using Kruskal's algorithm and weave maze until I know how to do it cleanly.
+        if self.neighbors_over is None:
+            self.neighbors_over = [None] * len(self.NEIGHBORS_RETURN)
+            for i, neighbor in enumerate(self._neighbors):
+                self.neighbors_over[i] = neighbor._neighbors[i] if self.can_tunnel_towards(i) else None
+        ns = super().neighbors
+        ns.extend([n for n in self.neighbors_over if n])
+        return ns
+
+    def can_tunnel_towards(self, direction):
+        potential_host = self._neighbors[direction]
+        return potential_host and potential_host._neighbors[direction] and potential_host.can_host_psg_towards(direction)
+
+    def can_host_psg_towards(self, direction):
+        return self.can_host_under_vertical_psg() if direction % 2 == 0 else self.can_host_under_horiz_psg()
+
+    def can_host_under_vertical_psg(self):
+        return self.is_linked_and_cell_over(1) and \
+            self.is_linked_and_cell_over(3) and not \
+            self.is_linked_and_cell_over(0) and not \
+            self.is_linked_and_cell_over(2)
+
+    def can_host_under_horiz_psg(self):
+        return not self.is_linked_and_cell_over(1) and \
+            not self.is_linked_and_cell_over(3) and \
+            self.is_linked_and_cell_over(0) and \
+            self.is_linked_and_cell_over(2)
+
+    def is_linked_and_cell_over(self, index):
+        """
+        Check if the cell is not between two Under Cells
+
+        params : 
+        index : Neighbor Index
+        """
+        neighbor = self.neighbor(index)
+        return type(neighbor) is not CellUnder and self.is_linked(neighbor)
+
+    def link(self, other_cell, bidirectional=True):
+        if other_cell:
+            for i, neighbor in enumerate(self._neighbors):
+                if neighbor and neighbor == other_cell.neighbor(self.get_neighbor_return(i)):
+                    return self, self.request_tunnel_under(neighbor)
+            else:
+                return super().link(other_cell, bidirectional=bidirectional)
+
+
 class CellUnder(Cell):
     def __init__(self, cell_over):
         super().__init__(cell_over.row, cell_over.column)
-        _neighbors = (0, 2) if cell_over.can_host_under_vertical_psg() else (1, 3)
-        for n in _neighbors:
-            try:
-                self._neighbors[n] = cell_over._neighbors[n]
-                cell_over._neighbors[n]._neighbors[self.get_neighbor_return(n)] = self
-                self.link(self._neighbors[n])
-            except AttributeError:
-                break
+        neigh_idx = (cst.NORTH, cst.SOUTH) if cell_over.can_host_under_vertical_psg() else (cst.WEST, cst.EAST)
+        for n_idx in neigh_idx:
+            self.set_neighbor(n_idx, cell_over.neighbor(n_idx))
+            cell_over.set_neighbor(n_idx, None)
+            self.link(self.neighbor(n_idx))
+        cell_over.has_cell_under = True
+
 
     def can_host_under_vertical_psg(self):
-        return self._neighbors[1] or self._neighbors[3]
+        return (self.neighbor(cst.WEST) and type(self.neighbor(cst.WEST)) is not CellUnder) \
+            or (self.neighbor(cst.EAST) and type(self.neighbor(cst.EAST)) is not CellUnder)
 
     def can_host_under_horiz_psg(self):
-        return self._neighbors[0] or self._neighbors[2]
+        return (self.neighbor(cst.NORTH) and type(self.neighbor(cst.NORTH)) is not CellUnder) \
+            or (self.neighbor(cst.SOUTH) and type(self.neighbor(cst.SOUTH)) is not CellUnder)
 
     def can_host_psg_towards(self, direction):
         return self.can_host_under_horiz_psg() if direction % 2 == 0 else self.can_host_under_vertical_psg()

@@ -6,6 +6,7 @@ from .. visual . cell_type_manager import POLAR, TRIANGLE, HEXAGON, SQUARE
 from .. utils . union_find import UnionFind
 from Scripts.utils import methods
 from Scripts.maze_logic.data_structure import constants as cst
+from Scripts.visual import space_rep_manager as sp_mgr
 
 
 def work(grid, props):
@@ -42,7 +43,9 @@ class MazeAlgorithm(object):
             shuffle(potential_passages)
 
             for pp in potential_passages[0: round(grid.weave * len(potential_passages))]:
-                self.add_crossing(pp)
+                if self.add_crossing(pp):
+                    if self.is_last_step():
+                        return
 
     def color_cells_by_tree_root(self):
         try:
@@ -62,23 +65,23 @@ class MazeAlgorithm(object):
     def add_crossing(self, cell):
         can_cross = not cell.has_any_link()
         if can_cross:
-            north = cell.neighbors[0]
-            west = cell.neighbors[1]
-            south = cell.neighbors[2]
-            east = cell.neighbors[3]
+            north = cell.neighbor(cst.NORTH)
+            west = cell.neighbor(cst.WEST)
+            south = cell.neighbor(cst.SOUTH)
+            east = cell.neighbor(cst.EAST)
             if random() > 0.5:  # Vertical underway
                 cell.link(west)
-                self.union_find.union(cell, east)
+                self.union_find.union(cell, west)
                 cell.link(east)
                 self.union_find.union(cell, east)
 
                 new_cell_under = self.grid.tunnel_under(cell)
                 self.union_find.data[new_cell_under] = new_cell_under
 
-                north.link(north.neighbors[cell.neighbors_return[0]])
-                self.union_find.union(north, north.neighbors[cell.neighbors_return[0]])
-                south.link(south.neighbors[cell.neighbors_return[2]])
-                self.union_find.union(south, south.neighbors[cell.neighbors_return[2]])
+                north.link(north.neighbor(cell.get_neighbor_return(cst.NORTH)))
+                self.union_find.union(north, north.neighbor(cell.get_neighbor_return(cst.NORTH)))
+                south.link(south.neighbor(cell.get_neighbor_return(cst.SOUTH)))
+                self.union_find.union(south, south.neighbor(cell.get_neighbor_return(cst.SOUTH)))
             else:
                 cell.link(north)
                 self.union_find.union(cell, north)
@@ -88,10 +91,12 @@ class MazeAlgorithm(object):
                 new_cell_under = self.grid.tunnel_under(cell)
                 self.union_find.data[new_cell_under] = new_cell_under
 
-                west.link(west.neighbors[cell.neighbors_return[1]])
-                self.union_find.union(west, west.neighbors[cell.neighbors_return[1]])
-                east.link(east.neighbors[cell.neighbors_return[3]])
-                self.union_find.union(east, east.neighbors[cell.neighbors_return[3]])
+                west.link(west.neighbor(cell.get_neighbor_return(cst.WEST)))
+                self.union_find.union(west, west.neighbor(cell.get_neighbor_return(cst.WEST)))
+                east.link(east.neighbor(cell.get_neighbor_return(cst.EAST)))
+                self.union_find.union(east, east.neighbor(cell.get_neighbor_return(cst.EAST)))
+            return True
+        return False
 
 
 class BinaryTree(MazeAlgorithm):
@@ -205,7 +210,7 @@ class Sidewinder(MazeAlgorithm):
                     else:
                         link = c, c.ccw
                 else:  # Cell is Square
-                    if (c.neighbor(cst.RIGHT) is None) or (c.neighbor(cst.FWD) and self.must_close_run()):
+                    if (c.neighbor(cst.EAST) is None) or (c.neighbor(cst.NORTH) and self.must_close_run()):
                         member = choice(run)
                         if member.neighbors[0]:
                             link = member, 0
@@ -277,7 +282,7 @@ class Eller(MazeAlgorithm):
                             return
 
 
-class CrossStitch(MazeAlgorithm):    
+class CrossStitch(MazeAlgorithm):
     """
     Variation to the Sidewinder
 
@@ -350,6 +355,7 @@ class CrossStitch(MazeAlgorithm):
 
 class KruskalRandom(MazeAlgorithm):
     name = 'Kruskal Randomized'
+    settings = ['maze_bias', 'maze_weave']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -367,8 +373,8 @@ class KruskalRandom(MazeAlgorithm):
         for c in unvisited_cells:
             for n in c.get_biased_neighbors(self.bias):
                 if not self.union_find.connected(c, n):
-                    c.link(n)
-                    self.union_find.union(c, n)
+                    link_a, link_b = c.link(n)
+                    self.union_find.union(link_a, link_b)
                     if self.is_last_step():
                         return
 
@@ -810,10 +816,12 @@ WEAVED_ALGORITHMS = [algo.name for algo in ALGORITHMS if algo.weaved]
 
 
 def is_algo_incompatible(props):
-    if ALGORITHM_FROM_NAME[props.maze_algorithm] == AldousBroder and props.maze_space_dimension == '4':
+    if ALGORITHM_FROM_NAME[props.maze_algorithm] == AldousBroder and props.maze_space_dimension == sp_mgr.REP_BOX:
         return "Aldous-Broder can't solve a box representation"
-    if props.maze_space_dimension == '5' and props.maze_weave:
+    if props.maze_space_dimension == sp_mgr.REP_BOX and props.maze_weave:
         return "Can't solve weaved maze for a box"
+    if ALGORITHM_FROM_NAME[props.maze_algorithm] in (RecursiveDivision, VoronoiDivision) and props.cell_type == POLAR:
+        return "Can't solve this algorithm with Polar grid (yet)"
     return False
 
 

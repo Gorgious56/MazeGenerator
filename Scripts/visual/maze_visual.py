@@ -53,6 +53,8 @@ class MazeVisual:
             self.build_objects()
             MeshManager.create_vertex_groups(MazeVisual.obj_cells, MazeVisual.obj_walls)
             mod_mgr.setup_modifiers_and_drivers(MazeVisual)
+            if props.maze_weave and self.obj_cells.modifiers[mod_mgr.CELL_SOLIDIFY_NAME].thickness == 0:
+                self.obj_cells.modifiers[mod_mgr.CELL_SOLIDIFY_NAME].thickness = -0.1
 
             MaterialManager.set_materials()
 
@@ -252,7 +254,7 @@ class MazeVisual:
             c = cv.cell
             this_distance = distances[c]
             relative_distance = 0 if this_distance is None else this_distance / max_distance
-            new_col = (relative_distance, 0 if c in longest_path else 1, 1 if type(c) is cells.CellUnder and self.props.cell_thickness >= 0 else 0, 0 if this_distance is not None else 1)
+            new_col = (relative_distance, 0 if c in longest_path else 1, 0, 0 if this_distance is not None else 1)
             cv.color_layers[DISTANCE] = new_col
 
             cv.color_layers[GROUP] = group_colors[c.group]
