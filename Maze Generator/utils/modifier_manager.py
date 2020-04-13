@@ -1,8 +1,8 @@
 
 import math
-from Scripts.visual import space_rep_manager as sp_rep
-from Scripts.visual.cell_visual import DISPLACE, STAIRS
-from Scripts.visual.cell_type_manager import POLAR, SQUARE, TRIANGLE, HEXAGON
+from ..visual import space_rep_manager as sp_rep
+from ..visual.cell_visual import DISPLACE, STAIRS
+from ..visual.cell_type_manager import POLAR, SQUARE, TRIANGLE, HEXAGON
 
 WALL_WELD_NAME = 'MG_WELD'
 WALL_SCREW_NAME = 'MG_SCREW'

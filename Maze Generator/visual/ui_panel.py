@@ -1,9 +1,9 @@
 import bpy
-from Scripts.utils import modifier_manager as mod_mgr
-from Scripts.maze_logic.algorithm_manager import is_algo_weaved, ALGORITHM_FROM_NAME, KruskalRandom, is_algo_incompatible
-from Scripts.visual import space_rep_manager as sp_rep
-from Scripts.visual import cell_type_manager as cell_mgr
-from Scripts.visual.maze_visual import MazeVisual, MaterialManager
+from ..utils import modifier_manager as mod_mgr
+from ..maze_logic.algorithm_manager import is_algo_weaved, ALGORITHM_FROM_NAME, KruskalRandom, is_algo_incompatible
+from . import space_rep_manager as sp_rep
+from . import cell_type_manager as cell_mgr
+from .maze_visual import MazeVisual, MaterialManager
 
 
 class MazeGeneratorPanel(bpy.types.Panel):

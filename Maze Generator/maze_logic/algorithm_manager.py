@@ -1,12 +1,12 @@
 from random import seed, choice, choices, random, shuffle, randrange
 from math import ceil, hypot
 from . data_structure . cells import CellPolar, CellTriangle, CellHex, Cell
-from .. utils . priority_queue import PriorityQueue
-from .. visual . cell_type_manager import POLAR, TRIANGLE, HEXAGON, SQUARE
-from .. utils . union_find import UnionFind
-from Scripts.utils import methods
-from Scripts.maze_logic.data_structure import constants as cst
-from Scripts.visual import space_rep_manager as sp_mgr
+from ..utils . priority_queue import PriorityQueue
+from ..visual . cell_type_manager import POLAR, TRIANGLE, HEXAGON, SQUARE
+from ..utils . union_find import UnionFind
+from ..utils import methods
+from ..maze_logic.data_structure import constants as cst
+from ..visual import space_rep_manager as sp_mgr
 
 
 def work(grid, props):

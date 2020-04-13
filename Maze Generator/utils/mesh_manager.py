@@ -1,5 +1,5 @@
 import bmesh
-from Scripts.visual.cell_visual import VERTEX_GROUPS
+from ..visual.cell_visual import VERTEX_GROUPS
 
 
 class MeshManager(object):

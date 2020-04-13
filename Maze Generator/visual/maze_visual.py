@@ -1,15 +1,15 @@
 import bpy
 import random
 import math
-from Scripts.utils import modifier_manager as mod_mgr
-from Scripts.utils.distance_manager import Distances
-from Scripts.utils.mesh_manager import MeshManager
-from Scripts.maze_logic.data_structure import grids
-from Scripts.maze_logic.data_structure import cells
-from Scripts.maze_logic import algorithm_manager
-from Scripts.visual.cell_type_manager import POLAR, SQUARE, TRIANGLE, HEXAGON
-from Scripts.visual import space_rep_manager as sp_rep
-from Scripts.visual.cell_visual import DISTANCE, GROUP, NEIGHBORS, DISPLACE, STAIRS, UNIFORM
+from ..utils import modifier_manager as mod_mgr
+from ..utils.distance_manager import Distances
+from ..utils.mesh_manager import MeshManager
+from ..maze_logic.data_structure import grids
+from ..maze_logic.data_structure import cells
+from ..maze_logic import algorithm_manager
+from ..visual.cell_type_manager import POLAR, SQUARE, TRIANGLE, HEXAGON
+from ..visual import space_rep_manager as sp_rep
+from ..visual.cell_visual import DISTANCE, GROUP, NEIGHBORS, DISPLACE, STAIRS, UNIFORM
 
 
 class MazeVisual:

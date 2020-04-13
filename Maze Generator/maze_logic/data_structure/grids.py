@@ -1,10 +1,10 @@
 import random
 from mathutils import Vector
 from math import pi, floor, cos, sin
-from Scripts.maze_logic.data_structure.cells import Cell, CellHex, CellOver, CellPolar, CellTriangle, CellUnder
-from Scripts.visual import space_rep_manager as sp_mgr
-from Scripts.visual.cell_visual import DISPLACE
-from Scripts.maze_logic.data_structure import constants as cst
+from .cells import Cell, CellHex, CellOver, CellPolar, CellTriangle, CellUnder
+from ...visual import space_rep_manager as sp_mgr
+from ...visual.cell_visual import DISPLACE
+from . import constants as cst
 
 
 class Grid:
