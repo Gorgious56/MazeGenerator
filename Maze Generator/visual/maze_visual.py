@@ -5,7 +5,6 @@ from ..utils import modifier_manager as mod_mgr
 from ..utils.distance_manager import Distances
 from ..utils.mesh_manager import MeshManager
 from ..maze_logic.data_structure import grids
-from ..maze_logic.data_structure import cells
 from ..maze_logic import algorithm_manager
 from ..visual.cell_type_manager import POLAR, SQUARE, TRIANGLE, HEXAGON
 from ..visual import space_rep_manager as sp_rep
