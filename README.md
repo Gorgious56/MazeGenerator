@@ -17,9 +17,13 @@ Algorithms :
 
 <img src="Doc/img/Doc-2-Algorithms.JPG" height="400">
 
-Space representations : Plane, Stairs, Cylinder, Moebius (double), Torus
+Space representations : Plane, Cylinder, Moebius (double), Torus
 
-<img src="Doc/img/Doc-3-1-Plane-Rep.JPG" height="150"><img src="Doc/img/Doc-3-2-Stairs-Rep.JPG" height="150"><img src="Doc/img/Doc-3-3-Cylinder-Rep.JPG" height="150"><img src="Doc/img/Doc-3-4-Moebius-Rep.JPG" height="150"><img src="Doc/img/Doc-3-5-Torus-Rep.JPG" height="150">
+<img src="Doc/img/Doc-3-1-Plane-Rep.JPG" height="150"><img src="Doc/img/Doc-3-3-Cylinder-Rep.JPG" height="150"><img src="Doc/img/Doc-3-4-Moebius-Rep.JPG" height="150"><img src="Doc/img/Doc-3-5-Torus-Rep.JPG" height="150">
+
+3D visualization : Stairs, Inflate
+
+<img src="Doc/img/Doc-3-2-Stairs-Rep.JPG" height="150"><img src="Doc/img/Doc-3-6-Inflate-Rep-2.JPG" height="150"><img src="Doc/img/Doc-3-6-Inflate-Rep.JPG" height="150">
 
 Seed:
 
