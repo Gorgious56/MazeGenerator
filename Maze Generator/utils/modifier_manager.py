@@ -148,7 +148,7 @@ def setup_modifiers_and_drivers(MV):
                 'mid_level': 0, 'strength': 0,
             }),
             ('WELD', M_WELD, {
-                VISIBILIY: ('cell_inset', 'var == 1'),
+                VISIBILIY: ('cell_inset', 'var == 0'),
                 'vertex_group': cv.VG_DISPLACE,
                 'invert_vertex_group': True,
                 'merge_threshold': 0.04,
