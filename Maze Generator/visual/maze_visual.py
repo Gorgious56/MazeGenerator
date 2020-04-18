@@ -52,8 +52,6 @@ class MazeVisual:
             self.build_objects()
             MeshManager.create_vertex_groups(MazeVisual.obj_cells, MazeVisual.obj_walls)
             mod_mgr.setup_modifiers_and_drivers(MazeVisual)
-            if props.maze_weave and self.obj_cells.modifiers[mod_mgr.CELL_SOLIDIFY_NAME].thickness == 0:
-                self.obj_cells.modifiers[mod_mgr.CELL_SOLIDIFY_NAME].thickness = -0.1
 
             MaterialManager.set_materials()
 
@@ -278,125 +276,66 @@ class MaterialManager:
     cell_mix_longest_distance_node = None
     cell_mix_under_node = None
     cell_hsv_node = None
+    cell_sep_rgb_node = None
     cell_bsdf_node = None
     cell_output_node = None
 
-    def init_cell_rgb_node(self, nodes, props):
-        try:
-            self.cell_rgb_node = nodes['cell_rgb_node']
-        except KeyError:
-            self.cell_rgb_node = nodes.new(type='ShaderNodeRGB')
-            self.cell_rgb_node.name = 'cell_rgb_node'
-        finally:
-            random.seed(props.seed_color)
-            self.cell_rgb_node.outputs['Color'].default_value = (random.random(), random.random(), random.random(), 1)
-            self.cell_rgb_node.location = -400, -300
+    def get_or_create_node(nodes, name, type, pos=None):
+        node = nodes.get(name, nodes.new(type=type))
+        node.name = name
+        if pos:
+            node.location = pos
+        return node
 
-    def init_cell_vertex_colors_node(self, nodes, props):
-        try:
-            self.cell_vertex_colors_node = nodes['cell_vertex_colors_node']
-        except KeyError:
-            self.cell_vertex_colors_node = nodes.new(type='ShaderNodeVertexColor')
-            self.cell_vertex_colors_node.name = 'cell_vertex_colors_node'
-        finally:
-            self.cell_vertex_colors_node.layer_name = props.paint_style
-            self.cell_vertex_colors_node.location = -1200, 0
+    def init_cell_rgb_node(nodes, props):
+        MaterialManager.cell_rgb_node = MaterialManager.get_or_create_node(nodes, 'rgb', 'ShaderNodeRGB', (-400, -300))
+        random.seed(props.seed_color)
+        MaterialManager.cell_rgb_node.outputs['Color'].default_value = (random.random(), random.random(), random.random(), 1)
 
-    def init_cell_hsv_node(self, nodes, scene):
-        try:
-            self.cell_hsv_node = nodes['cell_hsv_node']
-        except KeyError:
-            self.cell_hsv_node = nodes.new(type='ShaderNodeHueSaturation')
-            self.cell_hsv_node.name = 'cell_hsv_node'
-        finally:
-            self.cell_hsv_node.location = -200, 0
+    def init_cell_vertex_colors_node(nodes, props):
+        MaterialManager.cell_vertex_colors_node = MaterialManager.get_or_create_node(nodes, 'vertex_colors', 'ShaderNodeVertexColor', (-1200, 0))
+        MaterialManager.cell_vertex_colors_node.layer_name = props.paint_style
 
-    def init_cell_bsdf_node(self, nodes):
-        try:
-            self.cell_bsdf_node = nodes['cell_bsdf_node']
-        except KeyError:
-            self.cell_bsdf_node = nodes.new(type='ShaderNodeBsdfPrincipled')
-            self.cell_bsdf_node.name = 'cell_bsdf_node'
+    def init_cell_hsv_node(nodes, scene):
+        MaterialManager.cell_hsv_node = MaterialManager.get_or_create_node(nodes, 'hsv', 'ShaderNodeHueSaturation', (-200, 0))
 
-    def init_cell_sep_rgb_node(self, nodes):
-        try:
-            self.cell_sep_rgb_node = nodes['cell_sep_rgb_node']
-        except KeyError:
-            self.cell_sep_rgb_node = nodes.new(type='ShaderNodeSeparateRGB')
-            self.cell_sep_rgb_node.name = 'cell_sep_rgb_node'
-        finally:
-            self.cell_sep_rgb_node.location = -1000, 0
+    def init_cell_bsdf_node(nodes):
+        MaterialManager.cell_bsdf_node = MaterialManager.get_or_create_node(nodes, 'bsdf', 'ShaderNodeBsdfPrincipled')
 
-    def init_cell_mix_distance_node(self, nodes, props):
-        try:
-            self.cell_cr_distance_node = nodes['cell_cr_distance_node']
-        except KeyError:
-            self.cell_cr_distance_node = nodes.new(type='ShaderNodeValToRGB')
-            self.cell_cr_distance_node.name = 'cell_cr_distance_node'
-            self.cell_cr_distance_node.color_ramp.elements[0].color = (0, 1, 0, 1)
-            self.cell_cr_distance_node.color_ramp.elements[1].color = [1, 0, 0, 1]
-        finally:
-            self.cell_cr_distance_node.location = -800, -100
+    def init_cell_sep_rgb_node(nodes):
+        MaterialManager.cell_sep_rgb_node = MaterialManager.get_or_create_node(nodes, 'sep_rgb', 'ShaderNodeSeparateRGB', (-1000, 0))
 
-    def init_cell_math_node(self, nodes, props):
-        try:
-            self.cell_math_node = nodes['cell_math_node']
-        except KeyError:
-            self.cell_math_node = nodes.new(type='ShaderNodeMath')
-            self.cell_math_node.name = 'cell_math_node'
-        finally:
-            self.cell_math_node.operation = 'MULTIPLY'
-            self.cell_math_node.inputs[1].default_value = props.show_only_longest_path
-            self.cell_math_node.location = -800, 100
+    def init_cell_mix_distance_node(nodes, props):
+        MaterialManager.cell_cr_distance_node = nodes.get('cr_distance', nodes.new(type='ShaderNodeValToRGB'))
+        if MaterialManager.cell_cr_distance_node.name != 'cr_distance':
+            MaterialManager.cell_cr_distance_node.name = 'cr_distance'
+            MaterialManager.cell_cr_distance_node.color_ramp.elements[0].color = (0, 1, 0, 1)
+            MaterialManager.cell_cr_distance_node.color_ramp.elements[1].color = [1, 0, 0, 1]
+        MaterialManager.cell_cr_distance_node.location = -800, -100
 
-    def init_cell_math_alpha_node(self, nodes):
-        try:
-            self.cell_math_alpha_node = nodes['cell_math_alpha_node']
-        except KeyError:
-            self.cell_math_alpha_node = nodes.new(type='ShaderNodeMath')
-            self.cell_math_alpha_node.name = 'cell_math_alpha_node'
-        finally:
-            self.cell_math_alpha_node.operation = 'ADD'
-            self.cell_math_alpha_node.location = -800, 300
+    def init_cell_math_node(nodes, props):
+        MaterialManager.cell_math_node = MaterialManager.get_or_create_node(nodes, 'math_node', 'ShaderNodeMath', (-800, 100))
+        MaterialManager.cell_math_node.operation = 'MULTIPLY'
+        MaterialManager.cell_math_node.inputs[1].default_value = props.show_only_longest_path
 
-    def init_cell_value_node(self, nodes):
-        try:
-            self.cell_value_node = nodes['cell_value_node']
-        except KeyError:
-            self.cell_value_node = nodes.new(type='ShaderNodeValue')
-            self.cell_value_node.name = 'cell_value_node'
-        finally:
-            self.cell_value_node.location = -1000, -400
+    def init_cell_math_alpha_node(nodes):
+        MaterialManager.cell_math_alpha_node = MaterialManager.get_or_create_node(nodes, 'math_alpha', 'ShaderNodeMath', (-800, 300))
+        MaterialManager.cell_math_alpha_node.operation = 'ADD'
 
-    def init_cell_mix_under_node(self, nodes):
-        try:
-            self.cell_mix_under_node = nodes['cell_mix_under_node']
-        except KeyError:
-            self.cell_mix_under_node = nodes.new(type='ShaderNodeMixRGB')
-            self.cell_mix_under_node.name = 'cell_mix_under_node'
-        finally:
-            self.cell_mix_under_node.blend_type = 'SUBTRACT'
-            self.cell_mix_under_node.inputs[0].default_value = 0.5
-            self.cell_mix_under_node.location = -800, -400
+    def init_cell_value_node(nodes):
+        MaterialManager.cell_value_node = MaterialManager.get_or_create_node(nodes, 'value', 'ShaderNodeValue', (-1000, -400))
 
-    def init_cell_mix_longest_distance_node(self, nodes):
-        try:
-            self.cell_mix_longest_distance_node = nodes['cell_mix_longest_distance_node']
-        except KeyError:
-            self.cell_mix_longest_distance_node = nodes.new(type='ShaderNodeMixRGB')
-            self.cell_mix_longest_distance_node.name = 'cell_mix_longest_distance_node'
-        finally:
-            self.cell_mix_longest_distance_node.inputs[2].default_value = [0.5, 0.5, 0.5, 1]
-            self.cell_mix_longest_distance_node.location = -400, 0
+    def init_cell_mix_under_node(nodes):
+        MaterialManager.cell_mix_under_node = MaterialManager.get_or_create_node(nodes, 'mix_under', 'ShaderNodeMixRGB', (-800, -400))
+        MaterialManager.cell_mix_under_node.blend_type = 'SUBTRACT'
+        MaterialManager.cell_mix_under_node.inputs[0].default_value = 0.5
 
-    def init_cell_output_node(self, nodes):
-        try:
-            self.cell_output_node = nodes['cell_output_node']
-        except KeyError:
-            self.cell_output_node = nodes.new(type='ShaderNodeOutputMaterial')
-            self.cell_output_node.name = 'cell_output_node'
-        finally:
-            self.cell_output_node.location = 300, 0
+    def init_cell_mix_longest_distance_node(nodes):
+        MaterialManager.cell_mix_longest_distance_node = MaterialManager.get_or_create_node(nodes, 'mix_longest_distance', 'ShaderNodeMixRGB', (-400, 0))
+        MaterialManager.cell_mix_longest_distance_node.inputs[2].default_value = [0.5, 0.5, 0.5, 1]
+
+    def init_cell_output_node(nodes):
+        MaterialManager.cell_output_node = MaterialManager.get_or_create_node(nodes, 'output', 'ShaderNodeOutputMaterial', (300, 0))
 
     @staticmethod
     def set_materials():
@@ -423,18 +362,18 @@ class MaterialManager:
         if not already_created or props.auto_overwrite:
             nodes.clear()
 
-        self.init_cell_rgb_node(MaterialManager, nodes, props)
-        self.init_cell_vertex_colors_node(MaterialManager, nodes, props)
-        self.init_cell_hsv_node(MaterialManager, nodes, scene)
-        self.init_cell_sep_rgb_node(MaterialManager, nodes)
-        self.init_cell_mix_distance_node(MaterialManager, nodes, props)
-        self.init_cell_math_node(MaterialManager, nodes, props)
-        self.init_cell_math_alpha_node(MaterialManager, nodes)
-        self.init_cell_value_node(MaterialManager, nodes)
-        self.init_cell_mix_under_node(MaterialManager, nodes)
-        self.init_cell_mix_longest_distance_node(MaterialManager, nodes)
-        self.init_cell_bsdf_node(MaterialManager, nodes)
-        self.init_cell_output_node(MaterialManager, nodes)
+        self.init_cell_rgb_node(nodes, props)
+        self.init_cell_vertex_colors_node(nodes, props)
+        self.init_cell_hsv_node(nodes, scene)
+        self.init_cell_sep_rgb_node(nodes)
+        self.init_cell_mix_distance_node(nodes, props)
+        self.init_cell_math_node(nodes, props)
+        self.init_cell_math_alpha_node(nodes)
+        self.init_cell_value_node(nodes)
+        self.init_cell_mix_under_node(nodes)
+        self.init_cell_mix_longest_distance_node(nodes)
+        self.init_cell_bsdf_node(nodes)
+        self.init_cell_output_node(nodes)
 
         try:
             self.cell_vertex_colors_node.layer_name = props.paint_style
@@ -458,7 +397,7 @@ class MaterialManager:
                 mod_mgr.add_driver_to(self.cell_mix_under_node.inputs[0], 'default_value', 'val_shift', 'SCENE', scene, 'mg_props.value_shift', '(val_shift + 1)/2')
             elif props.paint_style == UNIFORM:
                 links.new(self.cell_rgb_node.outputs[0], self.cell_hsv_node.inputs[4])
-            else:
+            else:  # Neighbors.
                 links.new(self.cell_vertex_colors_node.outputs[0], self.cell_hsv_node.inputs[4])
 
             links.new(self.cell_hsv_node.outputs[0], self.cell_bsdf_node.inputs[0])
