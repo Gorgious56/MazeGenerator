@@ -26,12 +26,6 @@ class MazeAlgorithm(object):
         self.bias = props.maze_bias
         self._seed = props.seed
         seed(self._seed)
-        self.__max_steps = 100000 if props.steps <= 0 else props.steps
-        self.__steps = 0
-
-    def is_last_step(self):
-        self.__steps += 1
-        return self.__steps >= self.__max_steps
 
     def add_template_passages(self):
         grid = self.grid
@@ -43,9 +37,7 @@ class MazeAlgorithm(object):
             shuffle(potential_passages)
 
             for pp in potential_passages[0: round(grid.weave * len(potential_passages))]:
-                if self.add_crossing(pp):
-                    if self.is_last_step():
-                        return
+                self.add_crossing(pp)
 
     def color_cells_by_tree_root(self):
         try:
@@ -132,8 +124,6 @@ class BinaryTree(MazeAlgorithm):
             if not self.union_find.connected(c, link_neighbor):
                 c.link(link_neighbor)
                 self.union_find.union(c, link_neighbor)
-            if self.is_last_step():
-                return
 
 
 class Sidewinder(MazeAlgorithm):
@@ -221,9 +211,6 @@ class Sidewinder(MazeAlgorithm):
                 if link:
                     self.link(link[0], link[1] if isinstance(link[1], Cell) else link[0].neighbor(link[1]))
 
-                if self.is_last_step():
-                    return
-
     def must_close_run(self):
         return self.bias > random()
 
@@ -262,8 +249,6 @@ class Eller(MazeAlgorithm):
                 if cell_nxt_col and ((c.row == grid.rows - 1 or self.bias < random()) and not uf.connected(c, cell_nxt_col)):
                     c.link(cell_nxt_col)
                     uf.union(c, cell_nxt_col)
-                    if self.is_last_step():
-                        return
             for c in row:
                 this_set = uf.find(c)
                 if this_set in sets_this_row:
@@ -278,8 +263,6 @@ class Eller(MazeAlgorithm):
                     if neigh:
                         c.link(neigh)
                         uf.union(c, neigh)
-                        if self.is_last_step():
-                            return
 
 
 class CrossStitch(MazeAlgorithm):
@@ -313,8 +296,6 @@ class CrossStitch(MazeAlgorithm):
             if unvisited_neighbor:
                 self.link_to(self.current, unvisited_neighbor)
                 self.set_current(unvisited_neighbor)
-                if self.is_last_step():
-                    return
             else:
                 self.set_current(None)
 
@@ -325,8 +306,6 @@ class CrossStitch(MazeAlgorithm):
                     if neighbor:
                         self.set_current(c)
                         self.link_to(self.current, neighbor)
-                        if self.is_last_step():
-                            return
 
     def link_to(self, c, other_c):
         c.link(other_c)
@@ -375,8 +354,6 @@ class KruskalRandom(MazeAlgorithm):
                 if not self.union_find.connected(c, n):
                     link_a, link_b = c.link(n)
                     self.union_find.union(link_a, link_b)
-                    if self.is_last_step():
-                        return
 
 
 class Prim(MazeAlgorithm):
@@ -402,8 +379,6 @@ class Prim(MazeAlgorithm):
             if not self.union_find.connected(cell, neighbor):
                 cell.link(neighbor)
                 self.union_find.union(cell, neighbor)
-                if self.is_last_step():
-                    return
                 self.push_to_queue(neighbor)
             self.push_to_queue(cell)
 
@@ -435,8 +410,6 @@ class GrowingTree(MazeAlgorithm):
                 available_neighbor = choice(cell.get_unlinked_neighbors())
                 cell.link(available_neighbor)
                 active_cells.append(available_neighbor)
-                if self.is_last_step():
-                    return
             except IndexError:
                 active_cells.remove(cell)
 
@@ -474,14 +447,10 @@ class RecursiveDivision(MazeAlgorithm):
                 y = my
                 for x in range(mx, ax):
                     self.link(grid[y, x], 2)
-                    if self.is_last_step():
-                        return
             elif dy > 1:
                 x = mx
                 for y in range(my, ay):
                     self.link(grid[y, x], 3)
-                    if self.is_last_step():
-                        return
             return
 
         wall = HORIZONTAL if dy > dx else (VERTICAL if dx > dy else randrange(2))
@@ -497,9 +466,7 @@ class RecursiveDivision(MazeAlgorithm):
             nx, ny = xp + 1, ay
             neighbor = 2
             ox, oy = nx, my
-        if self.link(grid[yp, xp], neighbor):
-            if self.is_last_step():
-                return
+        self.link(grid[yp, xp], neighbor)
 
         self.divide(mx, my, nx, ny)
         self.divide(ox, oy, ax, ay)
@@ -568,8 +535,6 @@ class RecursiveVoronoiDivision(MazeAlgorithm):
             actual_psg = frontier.pop(randrange(0, len(frontier)))
             actual_psg[0].link(actual_psg[1])
             for psg in frontier:
-                if self.is_last_step():
-                    return
                 # Make sure we don't close dead-ends or cells which got isolated from their set
                 if len(psg[0].links) > 1 \
                         and len(psg[1].links) > 1\
@@ -646,9 +611,6 @@ class VoronoiDivision(MazeAlgorithm):
                         linked_cells.append((actual_psg[1], actual_psg[0]))
                     for link in [link for link in frontier if len(link[0].links) > 1 and len(link[1].links) > 1]:
                         link[0].unlink(link[1])
-                        if self.is_last_step():
-                            return
-
 
 class AldousBroder(MazeAlgorithm):
     name = 'Aldous-Broder'
@@ -670,8 +632,6 @@ class AldousBroder(MazeAlgorithm):
             if len(neighbor.links) <= 0:
                 current.link(neighbor)
                 unvisited -= 1
-                if self.is_last_step():
-                    return
             current = neighbor
             current.group = expeditions
 
@@ -706,8 +666,6 @@ class Wilson(MazeAlgorithm):
                 path[i].group = 1
                 path[i + 1].group = 1
                 unvisited.remove(path[i])
-                if self.is_last_step():
-                    return
 
 
 class HuntAndKill(MazeAlgorithm):
@@ -732,8 +690,6 @@ class HuntAndKill(MazeAlgorithm):
                 if neighbor:
                     self.link_to(self.current, neighbor)
                     self.set_current(neighbor)
-                    if self.is_last_step():
-                        return
                 else:
                     self.current = None
             try:
@@ -741,8 +697,6 @@ class HuntAndKill(MazeAlgorithm):
                 self.set_current(choice(self.unvisited_legit_cells))
                 neighbor = choice(self.current.get_linked_neighbors())
                 self.link_to(neighbor, self.current)
-                if self.is_last_step():
-                    return
 
                 self.direction = neighbor.get_neighbor_direction(self.current)
 
@@ -792,8 +746,6 @@ class RecursiveBacktracker(MazeAlgorithm):
             unlinked_neighbor, direction = current.get_biased_unlinked_directional_neighbor(self.bias, direction)
             if unlinked_neighbor:
                 current.link(unlinked_neighbor)
-                if self.is_last_step():
-                    return
                 stack.append(unlinked_neighbor)
                 unlinked_neighbor.group = expeditions + 1
                 backtracking = False

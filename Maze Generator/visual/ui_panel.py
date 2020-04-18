@@ -109,7 +109,12 @@ class ParametersPanel(bpy.types.Panel):
         row = maze_size_ui('maze_levels', [0, 0, -1], [0, 0, 1], 'Levels').enabled = mg_props.maze_space_dimension == sp_rep.REP_REGULAR and mg_props.cell_type == cell_mgr.SQUARE
         row = layout.row()
         row.prop(mg_props, 'seed')
-        row.prop(mg_props, 'steps', icon='MOD_DYNAMICPAINT')
+        try:
+            cell_mask_mod = MazeVisual.obj_cells.modifiers[mod_mgr.M_MASK]
+        except (ReferenceError, KeyError):
+            return
+        row.prop(cell_mask_mod, 'threshold', text='Steps')
+        # row.prop(mg_props, 'steps', icon='MOD_DYNAMICPAINT')
 
         layout.prop(mg_props, 'braid_dead_ends', slider=True, text='Open Dead Ends')
         layout.prop(mg_props, 'sparse_dead_ends')
@@ -137,8 +142,8 @@ class ParametersPanel(bpy.types.Panel):
 
         try:
             row = box.row(align=True)
-            row.prop(MazeVisual.obj_cells.modifiers[mod_mgr.CELL_STAIRS_NAME], 'strength', text='Stairs')
-            row.prop(MazeVisual.obj_cells.modifiers[mod_mgr.CELL_WELD_NAME], 'merge_threshold', text='Merge')
+            row.prop(MazeVisual.obj_cells.modifiers[mod_mgr.M_STAIRS], 'strength', text='Stairs')
+            row.prop(MazeVisual.obj_cells.modifiers[mod_mgr.M_WELD], 'merge_threshold', text='Merge')
 
             row = box.row(align=True)
             row.prop(MazeVisual.obj_cells.modifiers["MG_TEX_DISP"], 'strength', text='Inflate', slider=True)
@@ -177,15 +182,16 @@ class CellsPanel(bpy.types.Panel):
         box = layout.box()
 
         try:
-            cell_solidify_mod = MazeVisual.obj_cells.modifiers[mod_mgr.CELL_SOLIDIFY_NAME]
-            cell_wire_mod = MazeVisual.obj_cells.modifiers[mod_mgr.CELL_WIREFRAME_NAME]
-            cell_bevel_mod = MazeVisual.obj_cells.modifiers[mod_mgr.CELL_BEVEL_NAME]
-            cell_subdiv_mod = MazeVisual.obj_cells.modifiers[mod_mgr.CELL_SUBSURF_NAME]
-        except ReferenceError:
+            # cell_solidify_mod = MazeVisual.obj_cells.modifiers[mod_mgr.M_THICKNESS_SOLID]
+            cell_thickness_mod = MazeVisual.obj_cells.modifiers[mod_mgr.M_THICKNESS_DISP]
+            cell_wire_mod = MazeVisual.obj_cells.modifiers[mod_mgr.M_WIREFRAME]
+            cell_bevel_mod = MazeVisual.obj_cells.modifiers[mod_mgr.M_BEVEL]
+            cell_subdiv_mod = MazeVisual.obj_cells.modifiers[mod_mgr.M_SUBDIV]
+        except (ReferenceError, KeyError):
             return
 
         box.prop(mg_props, 'cell_inset', slider=True, text='Inset')
-        box.prop(cell_solidify_mod, 'thickness')
+        box.prop(cell_thickness_mod, 'strength', text='Thickness')
         row = box.row(align=True)
         row.prop(mg_props, 'cell_use_smooth', toggle=True, icon='SHADING_RENDERED', text='Shade Smooth')
         row.prop(cell_subdiv_mod, 'levels', text='Subdiv')
@@ -206,7 +212,7 @@ class CellsPanel(bpy.types.Panel):
 
         wireframe_row = row.row()
         wireframe_row.prop(cell_wire_mod, 'thickness', slider=True, text='Wireframe')
-        wireframe_row.enabled = MazeVisual.obj_cells.modifiers[mod_mgr.CELL_BEVEL_NAME].width == 0
+        wireframe_row.enabled = MazeVisual.obj_cells.modifiers[mod_mgr.M_BEVEL].width == 0
 
         row = box.row(align=True)
         row.prop(mg_props, 'cell_contour_black', toggle=True, text='Black Outline')
@@ -246,9 +252,9 @@ class WallsPanel(bpy.types.Panel):
         mg_props = scene.mg_props
 
         try:
-            wall_solid_mod = MazeVisual.obj_walls.modifiers[mod_mgr.WALL_SOLIDIFY_NAME]
-            wall_screw_mod = MazeVisual.obj_walls.modifiers[mod_mgr.WALL_SCREW_NAME]
-            wall_bevel_mod = MazeVisual.obj_walls.modifiers[mod_mgr.WALL_BEVEL_NAME]
+            wall_solid_mod = MazeVisual.obj_walls.modifiers[mod_mgr.M_SOLID]
+            wall_screw_mod = MazeVisual.obj_walls.modifiers[mod_mgr.M_SCREW]
+            wall_bevel_mod = MazeVisual.obj_walls.modifiers[mod_mgr.M_BEVEL]
             wall_mat = MazeVisual.obj_walls.material_slots[0].material
             rgb_node = wall_mat.node_tree.nodes['RGB']
         except ReferenceError:
@@ -284,9 +290,9 @@ class DisplayPanel(bpy.types.Panel):
 
         box = layout.box()
         box.prop(mg_props, 'paint_style')
-        if mg_props.paint_style != 'DISTANCE':
+        if mg_props.paint_style not in ('DISTANCE', 'NEIGHBORS'):
             box.prop(mg_props, 'seed_color_button', text='Randomize Colors', toggle=True)
-        else:
+        elif mg_props.paint_style == 'DISTANCE':
             box.prop(mg_props, 'show_only_longest_path', text='Show Longest Path')
             row = box.row(align=True)
             row.box().template_color_ramp(MaterialManager.cell_cr_distance_node, property="color_ramp", expand=True)

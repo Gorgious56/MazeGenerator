@@ -14,9 +14,9 @@ def generate_cell_visual_enum():
             ]
 
 
-DISPLACE, STAIRS = 'DISPLACE', 'STAIRS'
+VG_DISPLACE, VG_STAIRS, VG_THICKNESS = 'MG_DISPLACE', 'MG_STAIRS', 'MG_CELL_THICKNESS'
 
-VERTEX_GROUPS = DISPLACE, STAIRS
+VERTEX_GROUPS = VG_DISPLACE, VG_STAIRS, VG_THICKNESS
 
 
 class CellVisual:
@@ -91,9 +91,9 @@ class CellVisual:
             self.add_face(delta)
             self.vertices_indices = [i + delta for i in range(len(self.vertices))]
 
-        def translate_vertices(self, delta):
-            for v in self.vertices:
-                v += delta
+        # def translate_vertices(self, delta):
+        #     for v in self.vertices:
+        #         v += delta
 
         def set_vertex_group(self, vertex_group_name, weights):
             self.vertex_groups[vertex_group_name] = weights

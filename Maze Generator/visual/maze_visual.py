@@ -8,7 +8,7 @@ from ..maze_logic.data_structure import grids
 from ..maze_logic import algorithm_manager
 from ..visual.cell_type_manager import POLAR, SQUARE, TRIANGLE, HEXAGON
 from ..visual import space_rep_manager as sp_rep
-from ..visual.cell_visual import DISTANCE, GROUP, NEIGHBORS, DISPLACE, STAIRS, UNIFORM
+from ..visual.cell_visual import DISTANCE, GROUP, NEIGHBORS, VG_DISPLACE, VG_STAIRS, UNIFORM
 
 
 class MazeVisual:
@@ -261,8 +261,8 @@ class MazeVisual:
             cv.color_layers[NEIGHBORS] = neighbors_colors[len(c.links)]
 
             for f in cv.faces:
-                f.set_vertex_group(STAIRS, [relative_distance] * f.corners())
-                f.set_wall_vertex_groups(STAIRS, [relative_distance] * f.wall_vertices())
+                f.set_vertex_group(VG_STAIRS, [relative_distance] * f.corners())
+                f.set_wall_vertex_groups(VG_STAIRS, [relative_distance] * f.wall_vertices())
 
         MeshManager.set_mesh_layers(self.obj_cells, self.obj_walls, cells_visual)
 

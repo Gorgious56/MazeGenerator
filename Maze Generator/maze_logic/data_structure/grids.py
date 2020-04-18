@@ -3,7 +3,7 @@ from mathutils import Vector
 from math import pi, floor, cos, sin
 from .cells import Cell, CellHex, CellOver, CellPolar, CellTriangle, CellUnder
 from ...visual import space_rep_manager as sp_mgr
-from ...visual.cell_visual import DISPLACE
+from ...visual.cell_visual import VG_DISPLACE
 from . import constants as cst
 
 
@@ -699,7 +699,7 @@ class GridWeave(Grid):
         cv = super().set_cell_visuals(c)
         if type(c) is CellUnder:
             for f in cv.faces:
-                f.set_vertex_group(DISPLACE, [v_level for v_level in f.vertices_levels])
+                f.set_vertex_group(VG_DISPLACE, [v_level for v_level in f.vertices_levels])
                 f.walls = None
         elif c.has_cell_under:
             for f in cv.faces:
