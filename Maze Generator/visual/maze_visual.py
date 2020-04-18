@@ -22,6 +22,7 @@ class MazeVisual:
     obj_cylinder = None
     obj_torus = None
     tex_disp = None
+    obj_thickness_shrinkwrap = None
     grid = None
     scene = None
     props = None
@@ -59,7 +60,7 @@ class MazeVisual:
 
     def update_wall_visibility():
         MazeVisual.obj_walls.hide_viewport = MazeVisual.obj_walls.hide_render = \
-            (MazeVisual.props.wall_hide and MazeVisual.props.cell_inset > 0) \
+            MazeVisual.props.wall_hide \
             or (MazeVisual.props.maze_weave and algorithm_manager.is_algo_weaved(MazeVisual.props))
 
     def generate_grid():
@@ -122,9 +123,18 @@ class MazeVisual:
         self.mesh_cells = bpy.data.meshes.get('MG_Cells Mesh', bpy.data.meshes.new("MG_Cells Mesh"))
         self.obj_cells = scene.objects.get('MG_Cells', bpy.data.objects.new('MG_Cells', self.mesh_cells))
 
+        self.obj_thickness_shrinkwrap = scene.objects.get('MG_Thickness_SW')
+        if not self.obj_thickness_shrinkwrap:
+            bpy.ops.mesh.primitive_plane_add(enter_editmode=False, align='WORLD', location=(0, 0, 0))
+            self.obj_thickness_shrinkwrap = bpy.context.selected_objects[0]
+            for i in range(3):
+                self.obj_thickness_shrinkwrap.scale[i] = 10000
+            self.obj_thickness_shrinkwrap.name = 'MG_Thickness_SW'
+        self.obj_thickness_shrinkwrap.hide_viewport = self.obj_thickness_shrinkwrap.hide_render = True
+
         self.obj_cylinder = scene.objects.get('MG_Curver_Cyl')
         if not self.obj_cylinder:
-            bpy.ops.curve.primitive_bezier_circle_add(enter_editmode=False, align='WORLD', location=(0, 0, 0), rotation=(math.pi / 2, 0, 0))            
+            bpy.ops.curve.primitive_bezier_circle_add(enter_editmode=False, align='WORLD', location=(0, 0, 0), rotation=(math.pi / 2, 0, 0))
             self.obj_cylinder = bpy.context.active_object
             self.obj_cylinder.name = 'MG_Curver_Cyl'
         self.obj_cylinder.hide_viewport = self.obj_cylinder.hide_render = True
@@ -136,7 +146,7 @@ class MazeVisual:
             self.obj_torus.name = 'MG_Curver_Tor'
         self.obj_torus.hide_viewport = self.obj_torus.hide_render = True
 
-        for obj in (self.obj_cells, self.obj_cylinder, self.obj_walls, self.obj_torus):
+        for obj in (self.obj_cells, self.obj_cylinder, self.obj_walls, self.obj_torus, self.obj_thickness_shrinkwrap):
             for col in obj.users_collection:
                 col.objects.unlink(obj)
             self.col_objects.objects.link(obj)
@@ -262,7 +272,7 @@ class MazeVisual:
                 f.set_vertex_group(VG_STAIRS, [relative_distance] * f.corners())
                 f.set_wall_vertex_groups(VG_STAIRS, [relative_distance] * f.wall_vertices())
 
-        MeshManager.set_mesh_layers(self.obj_cells, self.obj_walls, cells_visual)
+        MeshManager.set_mesh_layers(self.obj_cells, self.obj_walls, cells_visual, self.props)
 
 
 class MaterialManager:
@@ -384,7 +394,7 @@ class MaterialManager:
                 links.new(self.cell_sep_rgb_node.outputs[1], self.cell_math_node.inputs[0])
                 links.new(self.cell_value_node.outputs[0], self.cell_mix_under_node.inputs[1])
                 links.new(self.cell_sep_rgb_node.outputs[2], self.cell_mix_under_node.inputs[2])
-                links.new(self.cell_mix_under_node.outputs[0], self.cell_hsv_node.inputs[2])
+                # links.new(self.cell_mix_under_node.outputs[0], self.cell_hsv_node.inputs[2])
 
                 links.new(self.cell_math_node.outputs[0], self.cell_math_alpha_node.inputs[0])
                 links.new(self.cell_vertex_colors_node.outputs[1], self.cell_math_alpha_node.inputs[1])

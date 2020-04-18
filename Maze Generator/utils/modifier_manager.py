@@ -12,6 +12,7 @@ M_BEVEL = 'MG_BEVEL'
 M_THICKNESS_SOLID = 'MG_THICK_SOLID'
 M_WEAVE_MIX = 'MG_WEAVE_MIX'
 M_THICKNESS_DISP = 'MG_THICK_DISP'
+M_THICKNESS_SHRINKWRAP = 'MG_THICK_SHRINKWRAP'
 M_DECIMATE = 'MG_DECIMATE'
 M_DECIMATE_PLANAR = 'MG_DECIMATE_PLANAR'
 M_SUBDIV = 'MG_SUBSURF'
@@ -29,6 +30,16 @@ VISIBILIY = 'VISIBILITY'
 
 
 def generate_drivers(MV):
+    add_driver_to_vars(
+        MV.obj_thickness_shrinkwrap,
+        ('location', 2),
+        (
+            ('stairs', 'OBJECT', MV.obj_cells, 'modifiers["' + M_STAIRS + '"].strength'),
+            ('thickness', 'OBJECT', MV.obj_cells, 'modifiers["' + M_THICKNESS_DISP + '"].strength'),
+        ),
+        expression='thickness if stairs > 0 else stairs + thickness',
+    )
+    MV.obj_thickness_shrinkwrap
     # Scale the cylinder and torus objects when scaling the size of the maze
     for i, obj in enumerate((MV.obj_cylinder, MV.obj_torus)):
         drvList = obj.driver_add('scale')
@@ -172,10 +183,22 @@ def setup_modifiers_and_drivers(MV):
                 'mask_constant': 0.97,
             }),
             ('DISPLACE', M_THICKNESS_DISP, {
+                VISIBILIY: ('cell_thickness_equalize', 'not var'),
                 'direction': 'Z',
                 'vertex_group': cv.VG_THICKNESS,
                 'mid_level': 0,
                 'strength': 0,
+            }),
+            ('SHRINKWRAP', M_THICKNESS_SHRINKWRAP, {
+                VISIBILIY: ('cell_thickness_equalize', 'var'),
+                'vertex_group': cv.VG_THICKNESS,
+                'wrap_method': 'PROJECT',
+                'use_project_x': False,
+                'use_project_y': False,
+                'use_project_z': True,
+                'use_negative_direction': True,
+                'use_positive_direction': True,
+                'target': MV.obj_thickness_shrinkwrap
             }),
             ('DISPLACE', M_WEAVE_DISP, {
                 VISIBILIY: ('maze_weave', "var"),
@@ -320,7 +343,10 @@ def add_driver_to_vars(obj, prop_to, variables, expression=None):
 
     Each var must be under the form : (var_name, id_type, _id, prop_from)"""
     if obj:
-        driver = obj.driver_add(prop_to).driver
+        if type(prop_to) is tuple:
+            driver = obj.driver_add(prop_to[0], prop_to[1]).driver
+        else:
+            driver = obj.driver_add(prop_to).driver
         for i, var_prop in enumerate(variables):
             try:
                 var = driver.variables[i]

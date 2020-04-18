@@ -19,7 +19,7 @@ def work(grid, props):
 class MazeAlgorithm(object):
     name = 'NOT REGISTERED'
     weaved = True
-    settings = ['maze_bias']
+    settings = ['maze_bias', 'maze_weave']
 
     def __init__(self, grid=None, props=None):
         self.grid = grid

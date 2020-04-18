@@ -73,7 +73,13 @@ class ParametersPanel(bpy.types.Panel):
         else:
             box = layout.box()
             for setting in ALGORITHM_FROM_NAME[mg_props.maze_algorithm].settings:
-                box.prop(mg_props, setting)
+                if setting == 'maze_weave':                    
+                    if mg_props.maze_algorithm == KruskalRandom.name:
+                        box.prop(mg_props, 'maze_weave', slider=True)
+                    else:
+                        box.prop(mg_props, 'maze_weave_toggle', toggle=True)
+                else:
+                    box.prop(mg_props, setting)
 
         if mg_props.cell_type == cell_mgr.POLAR and mg_props.maze_space_dimension in (sp_rep.REP_CYLINDER, sp_rep.REP_MEOBIUS, sp_rep.REP_TORUS, sp_rep.REP_BOX):
             layout.label(text='Only Regular and Stairs for Polar cells', icon='ERROR')
@@ -120,11 +126,11 @@ class ParametersPanel(bpy.types.Panel):
         layout.prop(mg_props, 'sparse_dead_ends')
         row = layout.row()
         row_2 = row.row()
-        if mg_props.maze_algorithm == KruskalRandom.name:
-            row_2.prop(mg_props, 'maze_weave', slider=True)
-        else:
-            row_2.prop(mg_props, 'maze_weave_toggle', toggle=True)
-        row_2.enabled = is_algo_weaved(mg_props)
+        # if mg_props.maze_algorithm == KruskalRandom.name:
+        #     row_2.prop(mg_props, 'maze_weave', slider=True)
+        # else:
+        #     row_2.prop(mg_props, 'maze_weave_toggle', toggle=True)
+        # row_2.enabled = is_algo_weaved(mg_props)
 
         box = layout.box()
 
@@ -187,11 +193,15 @@ class CellsPanel(bpy.types.Panel):
             cell_wire_mod = MazeVisual.obj_cells.modifiers[mod_mgr.M_WIREFRAME]
             cell_bevel_mod = MazeVisual.obj_cells.modifiers[mod_mgr.M_BEVEL]
             cell_subdiv_mod = MazeVisual.obj_cells.modifiers[mod_mgr.M_SUBDIV]
+            cell_stairs = MazeVisual.obj_cells.modifiers[mod_mgr.M_STAIRS]
         except (ReferenceError, KeyError):
             return
 
         box.prop(mg_props, 'cell_inset', slider=True, text='Inset')
-        box.prop(cell_thickness_mod, 'strength', text='Thickness')
+        row = box.row(align=True)
+        row.prop(cell_thickness_mod, 'strength', text='Thickness')
+        if cell_stairs.strength != 0:
+            row.prop(mg_props, 'cell_thickness_equalize', toggle=True)
         row = box.row(align=True)
         row.prop(mg_props, 'cell_use_smooth', toggle=True, icon='SHADING_RENDERED', text='Shade Smooth')
         row.prop(cell_subdiv_mod, 'levels', text='Subdiv')
@@ -239,8 +249,10 @@ class WallsPanel(bpy.types.Panel):
         self.layout.label(text='Walls', icon='SNAP_EDGE')
         try:
             wall = context.scene.objects['MG_Walls']
-            self.layout.prop(wall, 'hide_viewport', text='')
-            self.layout.prop(wall, 'hide_render', text='')
+            wall_hide = context.scene.mg_props.wall_hide
+            self.layout.prop(context.scene.mg_props, 'wall_hide', text='', icon='HIDE_ON' if wall_hide else 'HIDE_OFF')
+            # self.layout.prop(wall, 'hide_viewport', text='')
+            # self.layout.prop(wall, 'hide_render', text='')
         except KeyError:
             pass
 
@@ -249,7 +261,6 @@ class WallsPanel(bpy.types.Panel):
             return
         layout = self.layout
         scene = context.scene
-        mg_props = scene.mg_props
 
         try:
             wall_solid_mod = MazeVisual.obj_walls.modifiers[mod_mgr.M_SOLID]
@@ -264,7 +275,7 @@ class WallsPanel(bpy.types.Panel):
         row.prop(wall_screw_mod, 'screw_offset', text='Height')
         row.prop(wall_solid_mod, 'thickness')
         layout.prop(rgb_node.outputs[0], 'default_value', text='Color')
-        layout.prop(mg_props, 'wall_hide', text='Auto-hide when insetting', toggle=True)
+        # layout.prop(mg_props, 'wall_hide', text='Auto-hide when insetting', toggle=True)
 
 
 class DisplayPanel(bpy.types.Panel):
@@ -299,7 +310,8 @@ class DisplayPanel(bpy.types.Panel):
 
         box.prop(MaterialManager.cell_hsv_node.inputs[0], 'default_value', text='Hue Shift', slider=True)
         box.prop(MaterialManager.cell_hsv_node.inputs[1], 'default_value', text='Saturation Shift', slider=True)
-        box.prop(mg_props, 'value_shift', slider=True, text='Value Shift')
+        box.prop(MaterialManager.cell_hsv_node.inputs[2], 'default_value', text='Value Shift', slider=True)
+        # box.prop(mg_props, 'value_shift', slider=True, text='Value Shift')
 
 
 class InfoPanel(bpy.types.Panel):
