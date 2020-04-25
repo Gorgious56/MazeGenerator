@@ -1,8 +1,8 @@
 import random
-from ...utils import event
-from ...utils import methods
-from ...visual import cell_visual
-from ...maze_logic.data_structure import constants as cst
+from ..utils import event
+from ..utils import methods
+from ..visual import cell_visual
+from . import constants as cst
 
 
 class Cell(object):

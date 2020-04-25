@@ -1,157 +1,57 @@
 import bpy
 import random
-import math
-from ..utils import modifier_manager as mod_mgr
-from ..utils.distance_manager import Distances
-from ..utils.mesh_manager import MeshManager
-from ..maze_logic.data_structure import grids
-from ..maze_logic import algorithm_manager
-from ..visual.cell_type_manager import POLAR, SQUARE, TRIANGLE, HEXAGON
-from ..visual import space_rep_manager as sp_rep
-from ..visual.cell_visual import DISTANCE, GROUP, NEIGHBORS, VG_DISPLACE, VG_STAIRS, UNIFORM
+from typing import Iterable
+from ..managers import modifier_manager as mod_mgr
+from ..managers.distance_manager import Distances
+from ..managers.mesh_manager import MeshManager
+from ..managers.object_manager import ObjectManager
+from ..managers.grid_manager import GridManager
+from ..managers import algorithm_manager
+from ..managers.cell_type_manager import POLAR, SQUARE, TRIANGLE, HEXAGON
+from ..managers import space_rep_manager as sp_rep
+from ..maze_logic import grids
+from ..visual.cell_visual import DISTANCE, GROUP, NEIGHBORS, VG_DISPLACE, VG_STAIRS, UNIFORM, CellVisual
 
 
 class MazeVisual:
-    Instance = None
     Mat_mgr = None
-    col_objects = None
-    obj_walls = None
-    mesh_walls = None
-    obj_cells = None
-    mesh_cells = None
-    obj_cylinder = None
-    obj_torus = None
     tex_disp = None
-    obj_thickness_shrinkwrap = None
-    grid = None
+    # grid = None
     scene = None
     props = None
 
-    def refresh_maze(scene):
+    def refresh_maze(scene: bpy.types.Scene) -> None:
         MazeVisual.scene = scene
         MazeVisual.props = scene.mg_props
-        MazeVisual.generate_objects()
+        ObjectManager.generate_objects(scene)
         MazeVisual.generate_textures()
         MaterialManager.set_materials()
-        MeshManager.create_vertex_groups(MazeVisual.obj_cells, MazeVisual.obj_walls)
-        mod_mgr.setup_modifiers_and_drivers(MazeVisual)
+        MeshManager.create_vertex_groups(ObjectManager.obj_cells, ObjectManager.obj_walls)
+        mod_mgr.setup_modifiers_and_drivers(MazeVisual, ObjectManager)
 
-    def generate_maze(scene):
+    def generate_maze(scene: bpy.types.Scene) -> None:
         self = MazeVisual
         self.scene = scene
         self.props = scene.mg_props
         props = self.props
 
-        self.generate_grid()
+        GridManager.generate_grid(self.props)
         if not algorithm_manager.is_algo_incompatible(props):
-            algorithm_manager.work(self.grid, props)
-            self.grid.sparse_dead_ends(props.sparse_dead_ends, props.braid_dead_ends, props.seed)
-            props.dead_ends = self.grid.braid_dead_ends(props.braid_dead_ends, props.seed)
+            algorithm_manager.work(GridManager.grid, props)
+            GridManager.grid.sparse_dead_ends(props.sparse_dead_ends, props.seed)
+            props.dead_ends = GridManager.grid.braid_dead_ends(props.braid_dead_ends, props.seed)
 
-            self.generate_objects()
+            ObjectManager.generate_objects(scene)
+            ObjectManager.update_wall_visibility(self.props, algorithm_manager.is_algo_weaved(self.props))
             self.generate_textures()
             self.build_objects()
-            MeshManager.create_vertex_groups(MazeVisual.obj_cells, MazeVisual.obj_walls)
-            mod_mgr.setup_modifiers_and_drivers(MazeVisual)
+            MeshManager.create_vertex_groups(ObjectManager.obj_cells, ObjectManager.obj_walls)
+            mod_mgr.setup_modifiers_and_drivers(MazeVisual, ObjectManager)
 
             MaterialManager.set_materials()
 
-            self.update_wall_visibility()
 
-    def update_wall_visibility():
-        MazeVisual.obj_walls.hide_viewport = MazeVisual.obj_walls.hide_render = \
-            MazeVisual.props.wall_hide \
-            or (MazeVisual.props.maze_weave and algorithm_manager.is_algo_weaved(MazeVisual.props))
-
-    def generate_grid():
-        self = MazeVisual
-        props = self.props
-
-        grid = None
-        maze_dimension = int(props.maze_space_dimension)
-        if props.cell_type == POLAR:
-            grid = grids.GridPolar
-        elif props.cell_type == HEXAGON:
-            grid = grids.GridHex
-        elif props.cell_type == TRIANGLE:
-            grid = grids.GridTriangle
-        else:
-            if props.maze_weave:
-                self.grid = grids.GridWeave(
-                    rows=props.maze_rows_or_radius,
-                    columns=props.maze_columns,
-                    levels=1,
-                    cell_size=1 - max(0.2, props.cell_inset),
-                    use_kruskal=algorithm_manager.is_kruskal_random(props.maze_algorithm),
-                    weave=props.maze_weave,
-                    space_rep=maze_dimension)
-                return
-            elif maze_dimension == int(sp_rep.REP_BOX):
-                rows = props.maze_rows_or_radius
-                cols = props.maze_columns
-                self.grid = grids.Grid(
-                    rows=3 * rows,
-                    columns=2 * cols + 2 * rows,
-                    levels=props.maze_levels if maze_dimension == int(sp_rep.REP_REGULAR) else 1,
-                    cell_size=1 - props.cell_inset,
-                    space_rep=maze_dimension,
-                    mask=[
-                        (0, 0, rows - 1, rows - 1),
-                        (rows + cols, 0, 2 * rows + 2 * cols - 1, rows - 1),
-                        (0, 2 * rows, rows - 1, 3 * rows - 1),
-                        (rows + cols, 2 * rows, 2 * rows + 2 * cols - 1, 3 * rows - 1)])
-                return
-            else:
-                grid = grids.Grid
-        self.grid = grid(
-            rows=props.maze_rows_or_radius,
-            columns=props.maze_columns,
-            levels=props.maze_levels if maze_dimension == int(sp_rep.REP_REGULAR) else 1,
-            cell_size=1 - props.cell_inset,
-            space_rep=maze_dimension)
-
-    def generate_objects():
-        self = MazeVisual
-        scene = self.scene
-        self.col_objects = bpy.data.collections.get('MG_Collection', bpy.data.collections.new(name='MG_Collection'))
-        if self.col_objects not in bpy.context.scene.collection.children[:]:
-            bpy.context.scene.collection.children.link(self.col_objects)
-
-        self.mesh_wall = bpy.data.meshes.get('MG_Wall Mesh', bpy.data.meshes.new("MG_Wall Mesh"))
-        self.obj_walls = scene.objects.get('MG_Walls', bpy.data.objects.new('MG_Walls', self.mesh_wall))
-
-        self.mesh_cells = bpy.data.meshes.get('MG_Cells Mesh', bpy.data.meshes.new("MG_Cells Mesh"))
-        self.obj_cells = scene.objects.get('MG_Cells', bpy.data.objects.new('MG_Cells', self.mesh_cells))
-
-        self.obj_thickness_shrinkwrap = scene.objects.get('MG_Thickness_SW')
-        if not self.obj_thickness_shrinkwrap:
-            bpy.ops.mesh.primitive_plane_add(enter_editmode=False, align='WORLD', location=(0, 0, 0))
-            self.obj_thickness_shrinkwrap = bpy.context.selected_objects[0]
-            for i in range(3):
-                self.obj_thickness_shrinkwrap.scale[i] = 10000
-            self.obj_thickness_shrinkwrap.name = 'MG_Thickness_SW'
-        self.obj_thickness_shrinkwrap.hide_viewport = self.obj_thickness_shrinkwrap.hide_render = True
-
-        self.obj_cylinder = scene.objects.get('MG_Curver_Cyl')
-        if not self.obj_cylinder:
-            bpy.ops.curve.primitive_bezier_circle_add(enter_editmode=False, align='WORLD', location=(0, 0, 0), rotation=(math.pi / 2, 0, 0))
-            self.obj_cylinder = bpy.context.active_object
-            self.obj_cylinder.name = 'MG_Curver_Cyl'
-        self.obj_cylinder.hide_viewport = self.obj_cylinder.hide_render = True
-
-        self.obj_torus = scene.objects.get('MG_Curver_Tor')
-        if not self.obj_torus:
-            bpy.ops.curve.primitive_bezier_circle_add(enter_editmode=False, align='WORLD', location=(0, 0, 0))
-            self.obj_torus = bpy.context.active_object
-            self.obj_torus.name = 'MG_Curver_Tor'
-        self.obj_torus.hide_viewport = self.obj_torus.hide_render = True
-
-        for obj in (self.obj_cells, self.obj_cylinder, self.obj_walls, self.obj_torus, self.obj_thickness_shrinkwrap):
-            for col in obj.users_collection:
-                col.objects.unlink(obj)
-            self.col_objects.objects.link(obj)
-
-    def generate_textures():
+    def generate_textures() -> None:
         self = MazeVisual
         tex_disp_name = 'MG_Tex_Disp'
 
@@ -162,9 +62,10 @@ class MazeVisual:
             self.tex_disp.noise_scale = 50
         self.tex_disp.cloud_type = 'COLOR'
 
-    def build_objects():
+    def build_objects() -> None:
+        om = ObjectManager
         self = MazeVisual
-        cells_visual = self.grid.get_blueprint()
+        cells_visual = GridManager.grid.get_blueprint()
 
         walls_corners = []
         walls_edges = []
@@ -179,8 +80,8 @@ class MazeVisual:
                         vertices += 2
                     f.translate_walls_indices(vertices - len(wall_corners))
 
-        self.mesh_wall.clear_geometry()
-        self.mesh_wall.from_pydata(
+        om.mesh_wall.clear_geometry()
+        om.mesh_wall.from_pydata(
             walls_corners,
             walls_edges,
             [])
@@ -195,8 +96,8 @@ class MazeVisual:
                 cells_faces.append(f.face)
                 vertices += f.corners()
 
-        self.mesh_cells.clear_geometry()
-        self.mesh_cells.from_pydata(
+        om.mesh_cells.clear_geometry()
+        om.mesh_cells.from_pydata(
             cells_corners,
             [],
             cells_faces
@@ -204,23 +105,24 @@ class MazeVisual:
 
         if self.props.cell_use_smooth:  # Update only when the mesh is supposed to be smoothed, because the default will be unsmoothed
             self.update_cell_smooth()
-        for mesh in (self.mesh_cells, self.mesh_wall):
+        for mesh in (om.mesh_cells, om.mesh_wall):
             mesh.use_auto_smooth = True
             mesh.auto_smooth_angle = 0.5
 
         MazeVisual.paint_cells(cells_visual)
 
     @staticmethod
-    def update_cell_smooth():
+    def update_cell_smooth() -> None:
         smooth = MazeVisual.props.cell_use_smooth
         for p in MazeVisual.mesh_cells.polygons:
             p.use_smooth = smooth
 
-    def paint_cells(cells_visual):
+    def paint_cells(cells_visual: Iterable[CellVisual]) -> None:
         self = MazeVisual
-        linked_cells = self.grid.get_linked_cells()
+        om = ObjectManager
+        linked_cells = GridManager.grid.get_linked_cells()
 
-        distances = Distances(self.grid.get_random_linked_cell(_seed=self.props.seed))
+        distances = Distances(GridManager.grid.get_random_linked_cell(_seed=self.props.seed))
         distances.get_distances()
         new_start, distance = distances.max()
         distances = Distances(new_start)
@@ -272,7 +174,7 @@ class MazeVisual:
                 f.set_vertex_group(VG_STAIRS, [relative_distance] * f.corners())
                 f.set_wall_vertex_groups(VG_STAIRS, [relative_distance] * f.wall_vertices())
 
-        MeshManager.set_mesh_layers(self.obj_cells, self.obj_walls, cells_visual, self.props)
+        MeshManager.set_mesh_layers(om.obj_cells, om.obj_walls, cells_visual, self.props)
 
 
 class MaterialManager:
@@ -290,73 +192,39 @@ class MaterialManager:
     cell_bsdf_node = None
     cell_output_node = None
 
-    def get_or_create_node(nodes, name, type, pos=None):
-        node = nodes.get(name, nodes.new(type=type))
-        node.name = name
+    def get_or_create_node(
+            nodes: bpy.types.Nodes,
+            node_attr_name: str,
+            _type: str,
+            pos: Iterable[float] = None,
+            inputs: dict = None,  # Index (integer or string), value
+            outputs: dict = None,  # Index (integer or string), value
+            attributes: dict = None) -> None:
+        node = nodes.get(node_attr_name, nodes.new(type=_type))
+        node.name = node_attr_name
         if pos:
             node.location = pos
-        return node
-
-    def init_cell_rgb_node(nodes, props):
-        MaterialManager.cell_rgb_node = MaterialManager.get_or_create_node(nodes, 'rgb', 'ShaderNodeRGB', (-400, -300))
-        random.seed(props.seed_color)
-        MaterialManager.cell_rgb_node.outputs['Color'].default_value = (random.random(), random.random(), random.random(), 1)
-
-    def init_cell_vertex_colors_node(nodes, props):
-        MaterialManager.cell_vertex_colors_node = MaterialManager.get_or_create_node(nodes, 'vertex_colors', 'ShaderNodeVertexColor', (-1200, 0))
-        MaterialManager.cell_vertex_colors_node.layer_name = props.paint_style
-
-    def init_cell_hsv_node(nodes, scene):
-        MaterialManager.cell_hsv_node = MaterialManager.get_or_create_node(nodes, 'hsv', 'ShaderNodeHueSaturation', (-200, 0))
-
-    def init_cell_bsdf_node(nodes):
-        MaterialManager.cell_bsdf_node = MaterialManager.get_or_create_node(nodes, 'bsdf', 'ShaderNodeBsdfPrincipled')
-
-    def init_cell_sep_rgb_node(nodes):
-        MaterialManager.cell_sep_rgb_node = MaterialManager.get_or_create_node(nodes, 'sep_rgb', 'ShaderNodeSeparateRGB', (-1000, 0))
-
-    def init_cell_mix_distance_node(nodes, props):
-        MaterialManager.cell_cr_distance_node = nodes.get('cr_distance', nodes.new(type='ShaderNodeValToRGB'))
-        if MaterialManager.cell_cr_distance_node.name != 'cr_distance':
-            MaterialManager.cell_cr_distance_node.name = 'cr_distance'
-            MaterialManager.cell_cr_distance_node.color_ramp.elements[0].color = (0, 1, 0, 1)
-            MaterialManager.cell_cr_distance_node.color_ramp.elements[1].color = [1, 0, 0, 1]
-        MaterialManager.cell_cr_distance_node.location = -800, -100
-
-    def init_cell_math_node(nodes, props):
-        MaterialManager.cell_math_node = MaterialManager.get_or_create_node(nodes, 'math_node', 'ShaderNodeMath', (-800, 100))
-        MaterialManager.cell_math_node.operation = 'MULTIPLY'
-        MaterialManager.cell_math_node.inputs[1].default_value = props.show_only_longest_path
-
-    def init_cell_math_alpha_node(nodes):
-        MaterialManager.cell_math_alpha_node = MaterialManager.get_or_create_node(nodes, 'math_alpha', 'ShaderNodeMath', (-800, 300))
-        MaterialManager.cell_math_alpha_node.operation = 'ADD'
-
-    def init_cell_value_node(nodes):
-        MaterialManager.cell_value_node = MaterialManager.get_or_create_node(nodes, 'value', 'ShaderNodeValue', (-1000, -400))
-
-    def init_cell_mix_under_node(nodes):
-        MaterialManager.cell_mix_under_node = MaterialManager.get_or_create_node(nodes, 'mix_under', 'ShaderNodeMixRGB', (-800, -400))
-        MaterialManager.cell_mix_under_node.blend_type = 'SUBTRACT'
-        MaterialManager.cell_mix_under_node.inputs[0].default_value = 0.5
-
-    def init_cell_mix_longest_distance_node(nodes):
-        MaterialManager.cell_mix_longest_distance_node = MaterialManager.get_or_create_node(nodes, 'mix_longest_distance', 'ShaderNodeMixRGB', (-400, 0))
-        MaterialManager.cell_mix_longest_distance_node.inputs[2].default_value = [0.5, 0.5, 0.5, 1]
-
-    def init_cell_output_node(nodes):
-        MaterialManager.cell_output_node = MaterialManager.get_or_create_node(nodes, 'output', 'ShaderNodeOutputMaterial', (300, 0))
+        if inputs:
+            for index, value in inputs.items():
+                node.inputs[index].default_value = value
+        if outputs:
+            for index, value in outputs.items():
+                node.outputs[index].default_value = value
+        if attributes:
+            for name, value in attributes.items():
+                setattr(node, name, value)
+        setattr(MaterialManager, node_attr_name, node)
 
     @staticmethod
-    def set_materials():
+    def set_materials() -> None:
         MaterialManager.set_cell_material()
         MaterialManager.set_cell_contour_material()
         MaterialManager.set_wall_material()
 
-    def set_cell_material():
+    def set_cell_material() -> None:
         self = MaterialManager
         already_created = False
-        obj_cells = MazeVisual.obj_cells
+        obj_cells = ObjectManager.obj_cells
         props = MazeVisual.props
         scene = MazeVisual.scene
 
@@ -372,18 +240,40 @@ class MaterialManager:
         if not already_created or props.auto_overwrite:
             nodes.clear()
 
-        self.init_cell_rgb_node(nodes, props)
-        self.init_cell_vertex_colors_node(nodes, props)
-        self.init_cell_hsv_node(nodes, scene)
-        self.init_cell_sep_rgb_node(nodes)
-        self.init_cell_mix_distance_node(nodes, props)
-        self.init_cell_math_node(nodes, props)
-        self.init_cell_math_alpha_node(nodes)
-        self.init_cell_value_node(nodes)
-        self.init_cell_mix_under_node(nodes)
-        self.init_cell_mix_longest_distance_node(nodes)
-        self.init_cell_bsdf_node(nodes)
-        self.init_cell_output_node(nodes)
+        random.seed(MazeVisual.props.seed_color)
+        MaterialManager.get_or_create_node(
+            nodes, 'cell_rgb_node', 'ShaderNodeRGB', (-400, -300),
+            outputs={'Color': (random.random(), random.random(), random.random(), 1)})
+        MaterialManager.get_or_create_node(
+            nodes, 'cell_vertex_colors_node', 'ShaderNodeVertexColor', (-1200, 0),
+            attributes={'layer_name': MazeVisual.props.paint_style})
+        MaterialManager.get_or_create_node(nodes, 'cell_hsv_node', 'ShaderNodeHueSaturation', (-200, 0))
+        MaterialManager.get_or_create_node(nodes, 'cell_sep_rgb_node', 'ShaderNodeSeparateRGB', (-1000, 0))
+
+        MaterialManager.cell_cr_distance_node = nodes.get('cell_cr_distance_node', nodes.new(type='ShaderNodeValToRGB'))
+        if MaterialManager.cell_cr_distance_node.name != 'cell_cr_distance_node':
+            MaterialManager.cell_cr_distance_node.name = 'cell_cr_distance_node'
+            MaterialManager.cell_cr_distance_node.color_ramp.elements[0].color = (0, 1, 0, 1)
+            MaterialManager.cell_cr_distance_node.color_ramp.elements[1].color = [1, 0, 0, 1]
+        MaterialManager.cell_cr_distance_node.location = -800, -100
+
+        MaterialManager.get_or_create_node(
+            nodes, 'cell_math_node', 'ShaderNodeMath', (-800, 100),
+            inputs={1: MazeVisual.props.show_only_longest_path},
+            attributes={'operation': 'MULTIPLY'})
+        MaterialManager.get_or_create_node(
+            nodes, 'cell_math_alpha_node', 'ShaderNodeMath', (-800, 300),
+            attributes={'operation': 'ADD'})
+        MaterialManager.get_or_create_node(nodes, 'cell_value_node', 'ShaderNodeValue', (-1000, -400))
+        MaterialManager.get_or_create_node(
+            nodes, 'cell_mix_under_node', 'ShaderNodeMixRGB', (-800, -400),
+            inputs={0: 0.5},
+            attributes={'blend_type': 'SUBTRACT'})
+        MaterialManager.get_or_create_node(
+            nodes, 'cell_mix_longest_distance_node', 'ShaderNodeMixRGB', (-400, 0), 
+            inputs={2: (0.5, 0.5, 0.5, 1)})
+        MaterialManager.get_or_create_node(nodes, 'cell_bsdf_node', 'ShaderNodeBsdfPrincipled')
+        MaterialManager.get_or_create_node(nodes, 'cell_output_node', 'ShaderNodeOutputMaterial', (300, 0))
 
         try:
             self.cell_vertex_colors_node.layer_name = props.paint_style
@@ -413,14 +303,12 @@ class MaterialManager:
             links.new(self.cell_hsv_node.outputs[0], self.cell_bsdf_node.inputs[0])
             links.new(self.cell_bsdf_node.outputs[0], self.cell_output_node.inputs[0])
 
-        except IndexError:
-            pass
-        except AttributeError:
+        except (IndexError, AttributeError):
             pass
 
-    def set_cell_contour_material():
+    def set_cell_contour_material() -> None:
         props = MazeVisual.props
-        obj_cells = MazeVisual.obj_cells
+        obj_cells = ObjectManager.obj_cells
         try:
             mat = obj_cells.material_slots[1].material
             if not props.auto_overwrite:
@@ -433,9 +321,9 @@ class MaterialManager:
         mat.node_tree.nodes['Principled BSDF'].inputs[0].default_value = (0, 0, 0, 1)
         mat.node_tree.nodes['Principled BSDF'].inputs['Roughness'].default_value = 1
 
-    def set_wall_material():
+    def set_wall_material() -> None:
         props = MazeVisual.props
-        obj_walls = MazeVisual.obj_walls
+        obj_walls = ObjectManager.obj_walls
         try:
             mat = obj_walls.material_slots[0].material
             if not props.auto_overwrite:

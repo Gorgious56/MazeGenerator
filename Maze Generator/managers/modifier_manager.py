@@ -1,8 +1,9 @@
 
+import bpy.types as bpy_types
 import math
-from ..visual import space_rep_manager as sp_rep
+from . import space_rep_manager as sp_rep
 from ..visual import cell_visual as cv
-from ..visual.cell_type_manager import POLAR, SQUARE, TRIANGLE, HEXAGON
+from .cell_type_manager import POLAR, SQUARE, TRIANGLE, HEXAGON
 
 M_WELD = 'MG_WELD'
 M_WELD_2 = 'MG_WELD_2'
@@ -29,71 +30,31 @@ M_MASK = 'MG_MASK_STAIRS'
 VISIBILIY = 'VISIBILITY'
 
 
-def generate_drivers(MV):
-    add_driver_to_vars(
-        MV.obj_thickness_shrinkwrap,
-        ('location', 2),
-        (
-            ('stairs', 'OBJECT', MV.obj_cells, 'modifiers["' + M_STAIRS + '"].strength'),
-            ('thickness', 'OBJECT', MV.obj_cells, 'modifiers["' + M_THICKNESS_DISP + '"].strength'),
-        ),
-        expression='thickness if stairs > 0 else stairs + thickness',
-    )
-    MV.obj_thickness_shrinkwrap
-    # Scale the cylinder and torus objects when scaling the size of the maze
-    for i, obj in enumerate((MV.obj_cylinder, MV.obj_torus)):
-        drvList = obj.driver_add('scale')
-        for fc in drvList:
-            drv = fc.driver
-            try:
-                var = drv.variables[0]
-            except IndexError:
-                var = drv.variables.new()
-
-            var.name = 'var'
-            var.type = 'SINGLE_PROP'
-
-            target = var.targets[0]
-            target.id_type = 'SCENE'
-            target.id = MV.scene
-            target.data_path = 'mg_props.maze_columns' if i == 0 else 'mg_props.maze_rows_or_radius'
-
-            exp = 'var * 0.314'
-            if MV.props.cell_type == SQUARE:
-                exp = 'var * 0.15915'
-            elif MV.props.cell_type == TRIANGLE:
-                if i == 0:
-                    exp = 'var * 0.07963'
-                else:
-                    exp = 'var * 0.13791'
-            elif MV.props.cell_type == HEXAGON:
-                if i == 0:
-                    exp = 'var * 0.2388'
-                else:
-                    exp = 'var * 0.2758'
-
-            drv.expression = exp
-
-
-def setup_modifiers_and_drivers(MV):
+def setup_modifiers_and_drivers(MV, OM) -> None:
     ow = MV.props.auto_overwrite
+    obj_walls = OM.obj_walls
+    obj_cells = OM.obj_cells
+    obj_cylinder = OM.obj_cylinder
+    obj_torus = OM.obj_torus
+    obj_thickness_shrinkwrap = OM.obj_thickness_shrinkwrap
+    scene = MV.scene
     mod_dic = {
-        MV.obj_walls: (
+        obj_walls: (
             ('MASK', M_MASK, {
-                VISIBILIY: (MV.obj_walls, MV.obj_walls, 'threshold', M_MASK, M_MASK, 'var < 1'),
+                VISIBILIY: (obj_walls, obj_walls, 'threshold', M_MASK, M_MASK, 'var < 1'),
                 'vertex_group': cv.VG_STAIRS,
                 'invert_vertex_group': True,
-                'threshold': (MV.obj_cells, MV.obj_walls, 'threshold', M_MASK, M_MASK, 'var'),
+                'threshold': (obj_cells, obj_walls, 'threshold', M_MASK, M_MASK, 'var'),
             }),
             ('DISPLACE', M_STAIRS, {
-                VISIBILIY: (MV.obj_cells, MV.obj_walls, 'strength', M_STAIRS, M_STAIRS, 'var != 0'),
-                'strength': (MV.obj_cells, MV.obj_walls, 'strength', M_STAIRS, M_STAIRS, 'var'),
+                VISIBILIY: (obj_cells, obj_walls, 'strength', M_STAIRS, M_STAIRS, 'var != 0'),
+                'strength': (obj_cells, obj_walls, 'strength', M_STAIRS, M_STAIRS, 'var'),
                 'direction': 'Z',
                 'vertex_group': cv.VG_STAIRS,
                 'mid_level': 0,
             }),
             ('WELD', M_WELD, {
-                'merge_threshold': (MV.obj_cells, MV.obj_walls, 'merge_threshold', M_WELD, M_WELD, 'var'),
+                'merge_threshold': (obj_cells, obj_walls, 'merge_threshold', M_WELD, M_WELD, 'var'),
             }),
             ('SCREW', M_SCREW, {
                 'angle': 0,
@@ -103,13 +64,13 @@ def setup_modifiers_and_drivers(MV):
                 'use_smooth_shade': ('wall_bevel', 'var > 0.005'),
             }),
             ('SOLIDIFY', M_SOLID, {
-                VISIBILIY: (MV.obj_walls, MV.obj_walls, 'thickness', M_SOLID, M_SOLID, 'var != 0'),
+                VISIBILIY: (obj_walls, obj_walls, 'thickness', M_SOLID, M_SOLID, 'var != 0'),
                 'solidify_mode': 'NON_MANIFOLD',
                 'thickness': 0.2,
                 'offset': 0,
             }),
             ('BEVEL', M_BEVEL, {
-                VISIBILIY: (MV.obj_walls, MV.obj_walls, 'width', M_BEVEL, M_BEVEL, 'var > 0'),
+                VISIBILIY: (obj_walls, obj_walls, 'width', M_BEVEL, M_BEVEL, 'var > 0'),
                 'segments': 4,
                 'limit_method': 'ANGLE',
                 'use_clamp_overlap': True,
@@ -127,11 +88,11 @@ def setup_modifiers_and_drivers(MV):
             }),
             ('CURVE', M_CYLINDER, {
                 VISIBILIY: ('maze_space_dimension', f'int(var) in ({sp_rep.REP_CYLINDER}, {sp_rep.REP_MEOBIUS}, {sp_rep.REP_TORUS})'),
-                'object': MV.obj_cylinder,
+                'object': obj_cylinder,
             }),
             ('CURVE', M_TORUS, {
                 VISIBILIY: ('maze_space_dimension', 'int(var) == ' + sp_rep.REP_TORUS),
-                'object': MV.obj_torus,
+                'object': obj_torus,
                 'deform_axis': 'POS_Y',
             }),
             ('WELD', M_CYLINDER_WELD, {
@@ -139,21 +100,21 @@ def setup_modifiers_and_drivers(MV):
                 'merge_threshold': 0.1,
             }),
             ('DISPLACE', M_TEXTURE_DISP, {
-                VISIBILIY: (MV.obj_cells, MV.obj_walls, 'strength', M_TEXTURE_DISP, M_TEXTURE_DISP, 'var != 0'),
-                'strength': (MV.obj_cells, MV.obj_walls, 'strength', M_TEXTURE_DISP, M_TEXTURE_DISP, 'var'),
+                VISIBILIY: (obj_cells, obj_walls, 'strength', M_TEXTURE_DISP, M_TEXTURE_DISP, 'var != 0'),
+                'strength': (obj_cells, obj_walls, 'strength', M_TEXTURE_DISP, M_TEXTURE_DISP, 'var'),
                 'texture': MV.tex_disp,
                 'direction': 'Z',
             }),
         ),
-        MV.obj_cells: (
+        obj_cells: (
             ('MASK', M_MASK, {
-                VISIBILIY: (MV.obj_cells, MV.obj_cells, 'threshold', M_MASK, M_MASK, 'var < 1'),
+                VISIBILIY: (obj_cells, obj_cells, 'threshold', M_MASK, M_MASK, 'var < 1'),
                 'vertex_group': cv.VG_STAIRS,
                 'invert_vertex_group': True,
                 'threshold': 1,
             }),
             ('DISPLACE', M_STAIRS, {
-                VISIBILIY: (MV.obj_cells, MV.obj_cells, 'strength', M_STAIRS, M_STAIRS, 'var != 0'),
+                VISIBILIY: (obj_cells, obj_cells, 'strength', M_STAIRS, M_STAIRS, 'var != 0'),
                 'direction': 'Z',
                 'vertex_group': cv.VG_STAIRS,
                 'mid_level': 0, 'strength': 0,
@@ -170,7 +131,7 @@ def setup_modifiers_and_drivers(MV):
                 'invert_vertex_group': False,
             }),
             ('SOLIDIFY', M_THICKNESS_SOLID, {
-                VISIBILIY: (MV.obj_cells, MV.obj_cells, 'thickness', M_THICKNESS_SOLID, M_THICKNESS_SOLID, 'var != 0'),
+                VISIBILIY: (obj_cells, obj_cells, 'thickness', M_THICKNESS_SOLID, M_THICKNESS_SOLID, 'var != 0'),
                 'thickness': .000000001,
                 'shell_vertex_group': cv.VG_THICKNESS
             }),
@@ -198,7 +159,7 @@ def setup_modifiers_and_drivers(MV):
                 'use_project_z': True,
                 'use_negative_direction': True,
                 'use_positive_direction': True,
-                'target': MV.obj_thickness_shrinkwrap
+                'target': obj_thickness_shrinkwrap
             }),
             ('DISPLACE', M_WEAVE_DISP, {
                 VISIBILIY: ('maze_weave', "var"),
@@ -213,11 +174,11 @@ def setup_modifiers_and_drivers(MV):
             }),
             ('CURVE', M_CYLINDER, {
                 VISIBILIY: ('maze_space_dimension', f'int(var) in ({sp_rep.REP_CYLINDER}, {sp_rep.REP_MEOBIUS}, {sp_rep.REP_TORUS})'),
-                'object': MV.obj_cylinder,
+                'object': obj_cylinder,
             }),
             ('CURVE', M_TORUS, {
                 VISIBILIY: ('maze_space_dimension', "int(var) == " + sp_rep.REP_TORUS),
-                'object': MV.obj_torus,
+                'object': obj_torus,
                 'deform_axis': 'POS_Y',
             }),
             ('WELD', M_CYLINDER_WELD, {
@@ -227,7 +188,7 @@ def setup_modifiers_and_drivers(MV):
                 'invert_vertex_group': True
             }),
             ('DISPLACE', M_TEXTURE_DISP, {
-                VISIBILIY: (MV.obj_cells, MV.obj_cells, 'strength', M_TEXTURE_DISP, M_TEXTURE_DISP, 'var != 0'),
+                VISIBILIY: (obj_cells, obj_cells, 'strength', M_TEXTURE_DISP, M_TEXTURE_DISP, 'var != 0'),
                 'texture': MV.tex_disp,
                 'direction': 'Z',
                 'strength': 0,
@@ -235,37 +196,47 @@ def setup_modifiers_and_drivers(MV):
             ('DECIMATE', M_DECIMATE, {
                 VISIBILIY:
                 (
-                    MV.obj_cells,
+                    obj_cells,
                     M_DECIMATE,
                     (
-                        ('cell_deci', 'SCENE', MV.scene, 'mg_props.cell_decimate'),
-                        ('cell_inset', 'SCENE', MV.scene, 'mg_props.cell_inset'),
+                        ('cell_deci', 'SCENE', scene, 'mg_props.cell_decimate'),
+                        ('cell_inset', 'SCENE', scene, 'mg_props.cell_inset'),
                     ),
                     'cell_deci > 0 and cell_inset > 0',
                 ),
                 'ratio': ('cell_decimate', '1 - var / 100'),
             }),
             ('SUBSURF', M_SUBDIV, {             
-                VISIBILIY: (MV.obj_cells, MV.obj_cells, 'levels', M_SUBDIV, M_SUBDIV, 'var > 0'),
-                'render_levels': (MV.obj_cells, MV.obj_cells, 'levels', M_SUBDIV, M_SUBDIV, 'var'),
+                VISIBILIY: (obj_cells, obj_cells, 'levels', M_SUBDIV, M_SUBDIV, 'var > 0'),
+                'render_levels': (obj_cells, obj_cells, 'levels', M_SUBDIV, M_SUBDIV, 'var'),
                 'levels': 0,
             }),
             ('DECIMATE', M_DECIMATE_PLANAR, {
                 VISIBILIY:
                 (
-                    MV.obj_cells,
+                    obj_cells,
                     M_DECIMATE_PLANAR,
                     (
-                        ('subdiv', 'OBJECT', MV.obj_cells, 'modifiers["' + M_SUBDIV + '"].levels'),
-                        ('cell_inset', 'SCENE', MV.scene, 'mg_props.cell_inset'),
+                        ('subdiv', 'OBJECT', obj_cells, 'modifiers["' + M_SUBDIV + '"].levels'),
+                        ('cell_inset', 'SCENE', scene, 'mg_props.cell_inset'),
+                        ('stairs', 'OBJECT', obj_cells, 'modifiers["' + M_STAIRS + '"].strength'),
                     ),
-                    'subdiv == 0 and cell_inset > 0',
+                    'subdiv == 0 and (cell_inset > 0 or stairs != 0)',
                 ),
                 'decimate_type': 'DISSOLVE',
-                'angle_limit': ('cell_type', f'0.02 if var == {int(POLAR)} or var != {int(sp_rep.REP_REGULAR)} else 0.43'),
+                'angle_limit':
+                (
+                    obj_cells,
+                    M_DECIMATE_PLANAR,
+                    (
+                        ('cell_type', 'SCENE', scene, 'mg_props.cell_type'),
+                        ('space_rep', 'SCENE', scene, 'mg_props.maze_space_dimension'),
+                    ),
+                    f'0.02 if cell_type == {int(POLAR)} or space_rep != {int(sp_rep.REP_REGULAR)} else 0.2'
+                )
             }),
             ('BEVEL', M_BEVEL, {
-                VISIBILIY: (MV.obj_cells, MV.obj_cells, 'width', M_BEVEL, M_BEVEL, 'var != 0'),
+                VISIBILIY: (obj_cells, obj_cells, 'width', M_BEVEL, M_BEVEL, 'var != 0'),
                 'segments': ('cell_contour_black', '2 if var else 4'),
                 'limit_method': 'ANGLE',
                 'material': ('cell_contour_black', '1 if var else 0'),
@@ -275,10 +246,13 @@ def setup_modifiers_and_drivers(MV):
                 'width': 0,
             }),
             ('WIREFRAME', M_WIREFRAME, {
-                VISIBILIY: (MV.obj_cells, MV.obj_cells, 'thickness', M_WIREFRAME, M_WIREFRAME, 'var != 0'),
+                VISIBILIY: (obj_cells, obj_cells, 'thickness', M_WIREFRAME, M_WIREFRAME, 'var != 0'),
                 'use_replace': False,
                 'material_offset': ('cell_contour_black', None),
                 'thickness': 0,
+                'vertex_group': cv.VG_THICKNESS,
+                'thickness_vertex_group': ('cell_thickness_equalize', "0 if var else ")
+                'invert_vertex_group': True,
             }),
         )
     }
@@ -286,12 +260,56 @@ def setup_modifiers_and_drivers(MV):
     for obj, mod_params in mod_dic.items():
         for params in mod_params:
             params[2]['show_expanded'] = False
-            add_modifier(obj=obj, mod_type=params[0], mod_name=params[1], properties=params[2], overwrite_props=ow, scene=MV.scene)
+            add_modifier(obj=obj, mod_type=params[0], mod_name=params[1], properties=params[2], overwrite_props=ow, scene=scene)
 
-    generate_drivers(MV)
+    add_driver_to_vars(
+        obj_thickness_shrinkwrap,
+        ('location', 2),
+        (
+            ('stairs', 'OBJECT', obj_cells, 'modifiers["' + M_STAIRS + '"].strength'),
+            ('thickness', 'OBJECT', obj_cells, 'modifiers["' + M_THICKNESS_DISP + '"].strength'),
+        ),
+        expression='thickness if stairs > 0 else stairs + thickness',
+    )
+
+    # Scale the cylinder and torus objects when scaling the size of the maze
+    for i, obj in enumerate((obj_cylinder, obj_torus)):
+        drvList = obj.driver_add('scale')
+        for fc in drvList:
+            drv = fc.driver
+            try:
+                var = drv.variables[0]
+            except IndexError:
+                var = drv.variables.new()
+
+            var.name = 'var'
+            var.type = 'SINGLE_PROP'
+
+            target = var.targets[0]
+            target.id_type = 'SCENE'
+            target.id = scene
+            target.data_path = 'mg_props.maze_columns' if i == 0 else 'mg_props.maze_rows_or_radius'
+
+            exp = 'var * 0.314'
+            if MV.props.cell_type == SQUARE:
+                exp = 'var * 0.15915'
+            elif MV.props.cell_type == TRIANGLE:
+                if i == 0:
+                    exp = 'var * 0.07963'
+                else:
+                    exp = 'var * 0.13791'
+            elif MV.props.cell_type == HEXAGON:
+                if i == 0:
+                    exp = 'var * 0.2388'
+                else:
+                    exp = 'var * 0.2758'
+
+            drv.expression = exp
 
 
-def add_modifier(obj, mod_type, mod_name, remove_if_already_exists=False, remove_all_modifiers=False, properties=None, overwrite_props=True, scene=None):
+def add_modifier(obj: bpy_types.Object, mod_type: str, mod_name: str,
+                 remove_if_already_exists: bool = False, remove_all_modifiers: bool = False,
+                 properties=None, overwrite_props: bool = True, scene: bpy_types.Scene = None) -> None:
     mod_name = mod_name if mod_name != "" else "Fallback"
 
     if obj is not None:
@@ -333,11 +351,11 @@ def add_modifier(obj, mod_type, mod_name, remove_if_already_exists=False, remove
                         setattr(mod, prop, value)
 
 
-def add_driver_to(obj, prop_to, var_name, id_type, _id, prop_from, expression=None):
+def add_driver_to(obj: bpy_types.Object, prop_to, var_name: str, id_type: str, _id, prop_from, expression: str = None) -> None:
     add_driver_to_vars(obj, prop_to, ((var_name, id_type, _id, prop_from),), expression)
 
 
-def add_driver_to_vars(obj, prop_to, variables, expression=None):
+def add_driver_to_vars(obj: bpy_types.Object, prop_to, variables, expression: str = None) -> None:
     """
     Add a driver to obj's prop_to property
 

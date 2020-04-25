@@ -2,7 +2,7 @@ import bmesh
 from ..visual.cell_visual import VERTEX_GROUPS
 
 
-class MeshManager(object):
+class MeshManager:
     vertex_groups_cells = {}
     vertex_group_walls = {}
 
@@ -23,7 +23,7 @@ class MeshManager(object):
                 if vg_name not in vertex_groups:
                     vertex_groups[vg_name] = obj.vertex_groups.new(name=vg_name)
 
-    def set_mesh_layers(obj_cells, obj_walls, cells_visual):
+    def set_mesh_layers(obj_cells, obj_walls, cells_visual, props):
         if cells_visual:
             mesh_walls = obj_walls.data
             MeshManager.remove_all_vertex_layers(mesh_walls)
@@ -67,3 +67,9 @@ class MeshManager(object):
                     for vg, weights in f.walls_vertex_groups.items():
                         for ind, weight in enumerate(weights):
                             MeshManager.vertex_group_walls[vg].add([f.walls_indices[ind]], weight, 'ADD')
+
+            # if props.cell_inset > 0:
+            #     bm_cells = bmesh.new()
+            #     bm_cells.from_mesh(mesh_cells)
+            #     bmesh.ops.remove_doubles(bm_cells, verts=bm_cells.verts, dist=0.000001)
+            #     bm_cells.to_mesh(mesh_cells)

@@ -1,12 +1,12 @@
 from random import seed, choice, choices, random, shuffle, randrange
 from math import ceil, hypot
-from . data_structure . cells import CellPolar, CellTriangle, CellHex, Cell
+from ..maze_logic.cells import CellPolar, CellTriangle, CellHex, Cell
 from ..utils . priority_queue import PriorityQueue
-from ..visual . cell_type_manager import POLAR, TRIANGLE, HEXAGON, SQUARE
+from .cell_type_manager import POLAR, TRIANGLE, HEXAGON, SQUARE
 from ..utils . union_find import UnionFind
 from ..utils import methods
-from ..maze_logic.data_structure import constants as cst
-from ..visual import space_rep_manager as sp_mgr
+from ..maze_logic import constants as cst
+from . import space_rep_manager as sp_mgr
 
 
 def work(grid, props):
@@ -611,6 +611,7 @@ class VoronoiDivision(MazeAlgorithm):
                         linked_cells.append((actual_psg[1], actual_psg[0]))
                     for link in [link for link in frontier if len(link[0].links) > 1 and len(link[1].links) > 1]:
                         link[0].unlink(link[1])
+
 
 class AldousBroder(MazeAlgorithm):
     name = 'Aldous-Broder'

@@ -1,8 +1,10 @@
 import bpy
-from ..utils import modifier_manager as mod_mgr
-from ..maze_logic.algorithm_manager import is_algo_weaved, ALGORITHM_FROM_NAME, KruskalRandom, is_algo_incompatible
-from . import space_rep_manager as sp_rep
-from . import cell_type_manager as cell_mgr
+from ..managers import modifier_manager as mod_mgr
+from ..managers.algorithm_manager import is_algo_weaved, ALGORITHM_FROM_NAME, KruskalRandom, is_algo_incompatible
+from ..managers import space_rep_manager as sp_rep
+from ..managers import cell_type_manager as cell_mgr
+from ..managers.object_manager import ObjectManager
+from ..managers.grid_manager import GridManager
 from .maze_visual import MazeVisual, MaterialManager
 
 
@@ -43,7 +45,7 @@ class ParametersPanel(bpy.types.Panel):
 
     @classmethod
     def poll(cls, context):
-        return MazeVisual.obj_cells or MazeVisual.obj_walls
+        return ObjectManager.obj_cells or ObjectManager.obj_walls
 
     def draw_header(self, context):
         self.layout.label(text='', icon='PREFERENCES')
@@ -116,7 +118,7 @@ class ParametersPanel(bpy.types.Panel):
         row = layout.row()
         row.prop(mg_props, 'seed')
         try:
-            cell_mask_mod = MazeVisual.obj_cells.modifiers[mod_mgr.M_MASK]
+            cell_mask_mod = ObjectManager.obj_cells.modifiers[mod_mgr.M_MASK]
         except (ReferenceError, KeyError):
             return
         row.prop(cell_mask_mod, 'threshold', text='Steps')
@@ -148,11 +150,11 @@ class ParametersPanel(bpy.types.Panel):
 
         try:
             row = box.row(align=True)
-            row.prop(MazeVisual.obj_cells.modifiers[mod_mgr.M_STAIRS], 'strength', text='Stairs')
-            row.prop(MazeVisual.obj_cells.modifiers[mod_mgr.M_WELD], 'merge_threshold', text='Merge')
+            row.prop(ObjectManager.obj_cells.modifiers[mod_mgr.M_STAIRS], 'strength', text='Stairs')
+            row.prop(ObjectManager.obj_cells.modifiers[mod_mgr.M_WELD], 'merge_threshold', text='Merge')
 
             row = box.row(align=True)
-            row.prop(MazeVisual.obj_cells.modifiers["MG_TEX_DISP"], 'strength', text='Inflate', slider=True)
+            row.prop(ObjectManager.obj_cells.modifiers["MG_TEX_DISP"], 'strength', text='Inflate', slider=True)
             row.prop(MazeVisual.tex_disp, 'noise_scale', text='Scale', slider=True)
         except ReferenceError:
             pass
@@ -168,7 +170,7 @@ class CellsPanel(bpy.types.Panel):
 
     @classmethod
     def poll(cls, context):
-        return MazeVisual.obj_cells
+        return ObjectManager.obj_cells
 
     def draw_header(self, context):
         self.layout.label(text='Cells', icon='TEXTURE_DATA')
@@ -189,11 +191,11 @@ class CellsPanel(bpy.types.Panel):
 
         try:
             # cell_solidify_mod = MazeVisual.obj_cells.modifiers[mod_mgr.M_THICKNESS_SOLID]
-            cell_thickness_mod = MazeVisual.obj_cells.modifiers[mod_mgr.M_THICKNESS_DISP]
-            cell_wire_mod = MazeVisual.obj_cells.modifiers[mod_mgr.M_WIREFRAME]
-            cell_bevel_mod = MazeVisual.obj_cells.modifiers[mod_mgr.M_BEVEL]
-            cell_subdiv_mod = MazeVisual.obj_cells.modifiers[mod_mgr.M_SUBDIV]
-            cell_stairs = MazeVisual.obj_cells.modifiers[mod_mgr.M_STAIRS]
+            cell_thickness_mod = ObjectManager.obj_cells.modifiers[mod_mgr.M_THICKNESS_DISP]
+            cell_wire_mod = ObjectManager.obj_cells.modifiers[mod_mgr.M_WIREFRAME]
+            cell_bevel_mod = ObjectManager.obj_cells.modifiers[mod_mgr.M_BEVEL]
+            cell_subdiv_mod = ObjectManager.obj_cells.modifiers[mod_mgr.M_SUBDIV]
+            cell_stairs = ObjectManager.obj_cells.modifiers[mod_mgr.M_STAIRS]
         except (ReferenceError, KeyError):
             return
 
@@ -222,7 +224,7 @@ class CellsPanel(bpy.types.Panel):
 
         wireframe_row = row.row()
         wireframe_row.prop(cell_wire_mod, 'thickness', slider=True, text='Wireframe')
-        wireframe_row.enabled = MazeVisual.obj_cells.modifiers[mod_mgr.M_BEVEL].width == 0
+        wireframe_row.enabled = ObjectManager.obj_cells.modifiers[mod_mgr.M_BEVEL].width == 0
 
         row = box.row(align=True)
         row.prop(mg_props, 'cell_contour_black', toggle=True, text='Black Outline')
@@ -243,7 +245,7 @@ class WallsPanel(bpy.types.Panel):
 
     @classmethod
     def poll(cls, context):
-        return MazeVisual.obj_walls
+        return ObjectManager.obj_walls
 
     def draw_header(self, context):
         self.layout.label(text='Walls', icon='SNAP_EDGE')
@@ -263,10 +265,10 @@ class WallsPanel(bpy.types.Panel):
         scene = context.scene
 
         try:
-            wall_solid_mod = MazeVisual.obj_walls.modifiers[mod_mgr.M_SOLID]
-            wall_screw_mod = MazeVisual.obj_walls.modifiers[mod_mgr.M_SCREW]
-            wall_bevel_mod = MazeVisual.obj_walls.modifiers[mod_mgr.M_BEVEL]
-            wall_mat = MazeVisual.obj_walls.material_slots[0].material
+            wall_solid_mod = ObjectManager.obj_walls.modifiers[mod_mgr.M_SOLID]
+            wall_screw_mod = ObjectManager.obj_walls.modifiers[mod_mgr.M_SCREW]
+            wall_bevel_mod = ObjectManager.obj_walls.modifiers[mod_mgr.M_BEVEL]
+            wall_mat = ObjectManager.obj_walls.material_slots[0].material
             rgb_node = wall_mat.node_tree.nodes['RGB']
         except ReferenceError:
             return
@@ -288,7 +290,7 @@ class DisplayPanel(bpy.types.Panel):
 
     @classmethod
     def poll(cls, context):
-        return MazeVisual.obj_cells or MazeVisual.obj_walls
+        return ObjectManager.obj_cells or ObjectManager.obj_walls
 
     def draw_header(self, context):
         self.layout.label(text='', icon='BRUSH_DATA')
@@ -334,7 +336,7 @@ class InfoPanel(bpy.types.Panel):
         gen_time = mg_props.generation_time
         if gen_time > 0:
             layout.label(text='Generation time : ' + str(gen_time) + ' ms', icon='TEMP')
-        if MazeVisual.grid:
+        if GridManager.grid:
             layout.label(text='Dead ends : ' + str(mg_props.dead_ends), icon='CON_FOLLOWPATH')
         layout.label(text='Disable Auto-overwrite (Trash icon) to keep modified values')
         # layout.prop(mg_props, 'info_show_help', toggle=True)
