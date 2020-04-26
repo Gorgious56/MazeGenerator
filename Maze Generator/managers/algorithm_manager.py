@@ -2,7 +2,7 @@ from random import seed, choice, choices, random, shuffle, randrange
 from math import ceil, hypot
 from ..maze_logic.cells import CellPolar, CellTriangle, CellHex, Cell
 from ..utils . priority_queue import PriorityQueue
-from .cell_type_manager import POLAR, TRIANGLE, HEXAGON, SQUARE
+from .cell_type_manager import POLAR, SQUARE
 from ..utils . union_find import UnionFind
 from ..utils import methods
 from ..maze_logic import constants as cst
@@ -43,7 +43,7 @@ class MazeAlgorithm(object):
         try:
             union_find = getattr(self, 'union_find')
             links = []
-            for c in self.grid.all_cells():
+            for c in self.grid.all_cells:
                 link = union_find.find(c)
                 if link:
                     try:
@@ -103,7 +103,7 @@ class BinaryTree(MazeAlgorithm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.union_find = UnionFind(self.grid.all_cells())
+        self.union_find = UnionFind(self.grid.all_cells)
         self.run()
         self.color_cells_by_tree_root()
 
@@ -140,7 +140,7 @@ class Sidewinder(MazeAlgorithm):
         super().__init__(*args, **kwargs)
         self.bias = (self.bias + 1) / 2
 
-        self.union_find = UnionFind(self.grid.all_cells())
+        self.union_find = UnionFind(self.grid.all_cells)
 
         self.run()
         self.color_cells_by_tree_root()
@@ -233,7 +233,7 @@ class Eller(MazeAlgorithm):
         super().__init__(*args, **kwargs)
         self.bias = (self.bias + 1) / 2
 
-        self.union_find = UnionFind(self.grid.all_cells())
+        self.union_find = UnionFind(self.grid.all_cells)
 
         self.run()
 
@@ -339,7 +339,7 @@ class KruskalRandom(MazeAlgorithm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.union_find = UnionFind(self.grid.all_cells())
+        self.union_find = UnionFind(self.grid.all_cells)
 
         self.add_template_passages()
 
@@ -364,7 +364,7 @@ class Prim(MazeAlgorithm):
 
         self.bias = round((1 - abs(self.bias)) * 10)
 
-        self.union_find = UnionFind(self.grid.all_cells())
+        self.union_find = UnionFind(self.grid.all_cells)
 
         self.q = PriorityQueue()
         self.run()
@@ -426,7 +426,7 @@ class RecursiveDivision(MazeAlgorithm):
         super().__init__(grid=grid, props=props, *args, **kwargs)
         self.bias = (self.bias + 1) / 2
 
-        self.union_find = UnionFind(self.grid.all_cells())
+        self.union_find = UnionFind(self.grid.all_cells)
 
         self.run()
 
@@ -493,7 +493,7 @@ class RecursiveVoronoiDivision(MazeAlgorithm):
 
         self.expeditions = 0
 
-        all_cells = self.grid.all_cells().copy()
+        all_cells = self.grid.all_cells.copy()
 
         # Destroy all walls:
         [[c.link(n, False) for n in c.neighbors if n.level == c.level] for c in all_cells]
@@ -555,7 +555,7 @@ class VoronoiDivision(MazeAlgorithm):
         self.room_size_deviation = props.maze_room_size_deviation
         self.rooms = grid.size // self.room_size
 
-        all_cells = self.grid.all_cells().copy()
+        all_cells = self.grid.all_cells.copy()
 
         shuffle(all_cells)
         self.union_find = UnionFind(all_cells)
@@ -574,7 +574,7 @@ class VoronoiDivision(MazeAlgorithm):
         frontiers = []
         [frontiers.append({}) for room in range(self.rooms)]
 
-        for c in self.grid.all_cells():
+        for c in self.grid.all_cells:
             dmin = 100000000
             j = -1
             for i, r_c in enumerate(self.room_centers):
@@ -588,7 +588,7 @@ class VoronoiDivision(MazeAlgorithm):
 
         cell_centers_union_groups = [union_find.find(c) for c in self.room_centers]
 
-        for c in self.grid.all_cells():
+        for c in self.grid.all_cells:
             for n in [n for n in c.neighbors if not union_find.connected(c, n)]:
                 try:
                     frontiers[cell_centers_union_groups.index(union_find.find(c))][cell_centers_union_groups.index(union_find.find(n))].append((c, n))
@@ -645,7 +645,7 @@ class Wilson(MazeAlgorithm):
         super().__init__(*args, **kwargs)
         grid = self.grid
 
-        unvisited = grid.all_cells().copy()
+        unvisited = grid.all_cells.copy()
         target_cell = choice(unvisited)
         unvisited.remove(target_cell)
         target_cell.group = -1

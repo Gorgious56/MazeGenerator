@@ -1,7 +1,6 @@
 import random
 from ..utils import event
 from ..utils import methods
-from ..visual import cell_visual
 from . import constants as cst
 
 
@@ -23,8 +22,6 @@ class Cell(object):
         self._neighbors = [None] * 6
 
         self.links = {}
-
-        self.visual = cell_visual.CellVisual(self)
 
     def __str__(self):
         return 'Cell(r' + str(self.row) + ';c' + str(self.column) + ')'
@@ -94,6 +91,9 @@ class Cell(object):
 
     def get_linked_neighbors(self):
         return [c for c in self.neighbors if c.has_any_link()]
+
+    def get_neighbors_linked_to_me(self):
+        return [n for n in self.neighbors if n in self.links]
 
     def get_wall_mask(self):
         return [not self.exists_and_is_linked(n) for n in self._neighbors] if self.has_any_link() else [False] * len(self._neighbors)
@@ -223,7 +223,7 @@ class CellTriangle(Cell):
         self._neighbors = [None] * 3
 
     def is_upright(self):
-        return (self.row + self.column) % 2 == 1
+        return (self.row + self.column) % 2 == 0
 
 
 class CellOver(Cell):
@@ -242,7 +242,7 @@ class CellOver(Cell):
         ns = super().neighbors
         ns.extend([n for n in self.neighbors_over if n])
         return ns
-    
+
     @property
     def neighbors_copy(self):  # Keep this for method patching using Kruskal's algorithm and weave maze until I know how to do it cleanly.
         if self.neighbors_over is None:
@@ -276,7 +276,7 @@ class CellOver(Cell):
         """
         Check if the cell is not between two Under Cells
 
-        params : 
+        params :
         index : Neighbor Index
         """
         neighbor = self.neighbor(index)
@@ -300,7 +300,6 @@ class CellUnder(Cell):
             cell_over.set_neighbor(n_idx, None)
             self.link(self.neighbor(n_idx))
         cell_over.has_cell_under = True
-
 
     def can_host_under_vertical_psg(self):
         return (self.neighbor(cst.WEST) and type(self.neighbor(cst.WEST)) is not CellUnder) \

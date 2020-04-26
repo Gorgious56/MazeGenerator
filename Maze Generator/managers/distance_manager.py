@@ -1,3 +1,6 @@
+from ..maze_logic import cells
+
+
 class Distances:
     def __init__(self, root):
         self.root = root
@@ -10,11 +13,12 @@ class Distances:
         del self.cells[key]
 
     def __getitem__(self, key):
-        return self.cells[key] if key in self.all_cells() else None
+        return self.cells[key] if key in self.all_cells else None
 
     def __setitem__(self, key, value):
         self.cells[key] = value
 
+    @property
     def all_cells(self):
         return self.cells.keys()
 
@@ -49,7 +53,8 @@ class Distances:
         breadcrumbs.path.reverse()
         return breadcrumbs
 
-    def max(self):
+    @property
+    def max(self) -> (cells.Cell, int):
         self.max_distance = 0
         max_cell = self.root
 

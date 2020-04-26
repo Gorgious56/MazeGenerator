@@ -1,5 +1,5 @@
 from ..maze_logic import grids
-from ..managers.cell_type_manager import POLAR, SQUARE, TRIANGLE, HEXAGON
+from ..managers.cell_type_manager import POLAR, TRIANGLE, HEXAGON
 from ..managers import space_rep_manager as sp_rep
 from ..managers import algorithm_manager
 

@@ -4,8 +4,10 @@ from mathutils import Vector
 from math import pi, floor, cos, sin
 from .cells import Cell, CellHex, CellOver, CellPolar, CellTriangle, CellUnder
 from ..managers import space_rep_manager as sp_mgr
-from ..visual.cell_visual import VG_DISPLACE, CellVisual
+# from ..managers.mesh_manager import VG_DISPLACE
 from . import constants as cst
+from ..managers.distance_manager import Distances
+from ..utils import event
 
 
 class Grid:
@@ -13,7 +15,7 @@ class Grid:
     CELL_TYPE = Cell
 
     def __init__(self, rows: int = 2, columns: int = 2, levels: int = 1, cell_size: int = 1, space_rep: int = 0, mask: Iterable[Tuple[int]] = None) -> None:
-        self.rows = rows
+        self.rows: int = rows
         self.columns = columns
         self.levels = levels
         self._cells = [None] * (rows * columns * levels)
@@ -21,6 +23,9 @@ class Grid:
         self.size_2D = rows * columns
         self.masked_cells = []  # This container is used in some algorithms.
         self.space_rep = space_rep
+        self.dead_ends_amount = 0
+        self.distances = None
+        self.longest_path = None
 
         self.mask = mask
 
@@ -30,12 +35,8 @@ class Grid:
 
         self.number_of_sides = self.CELL_SIDES
 
-        self.relative_positions_inset = self.get_relative_positions(self.cell_size)
-        self.relative_positions_one = self.get_relative_positions(1)
-        self.relative_positions_out = self.get_relative_positions_out()
-
-        self.prepare_grid()
-        self.init_cells_neighbors()
+        self.verts_indices = {}
+        self.new_cell_evt = event.EventHandler(event.Event('New Cell'), self)
 
     def __delitem__(self, key):
         del self._cells[key[0] + key[1] * self.columns]
@@ -74,6 +75,7 @@ class Grid:
             for c in range(self.columns):
                 for r in range(self.rows):
                     self[c, r, l] = self.CELL_TYPE(r, c, l) if self[c, r, l] is None else None
+                    self.new_cell_evt(self[c, r, l])
 
     def next_row(self, cell: Cell, reverse: bool = False) -> Cell:
         """
@@ -108,7 +110,7 @@ class Grid:
         if self.space_rep == int(sp_mgr.REP_BOX):
             rows = int(self.rows / 3)
             cols = int(self.columns / 2 - rows)
-            for c in self.all_cells():
+            for c in self.all_cells:
                 row, col, level = c.row, c.column, c.level
                 # North :
                 if row == 2 * rows - 1:
@@ -148,7 +150,7 @@ class Grid:
                         c.set_neighbor(cst.SOUTH, self[col, row - 1, level])
                         c.neighbor(cst.SOUTH).set_neighbor(cst.NORTH, c)
         else:
-            for c in self.all_cells():
+            for c in self.all_cells:
                 c.set_neighbor(cst.NORTH, self.next_row(c))
                 c.set_neighbor(cst.EAST, self.next_column(c))
                 c.set_neighbor(cst.UP, self.next_level(c))
@@ -165,7 +167,7 @@ class Grid:
                 self[c, r] = 0
 
     def get_linked_cells(self) -> List[Cell]:
-        return [c for c in self.all_cells() if any(c.links)]
+        return [c for c in self.all_cells if any(c.links)]
 
     def mask_cell(self, column: int, row: int) -> None:
         c = self[column, row]
@@ -179,7 +181,7 @@ class Grid:
         if _seed:
             random.seed(_seed)
         try:
-            return random.choice(self.all_cells())
+            return random.choice(self.all_cells)
         except IndexError:
             return None
 
@@ -211,11 +213,16 @@ class Grid:
         for c in (c for c in self._cells if c):
             yield c
 
+    @property
     def all_cells(self) -> List[Cell]:
         return [c for c in self._cells if c]
 
+    @property
+    def all_cells_with_a_link(self) -> List[Cell]:
+        return [c for c in self._cells if c and c.has_any_link()]
+
     def get_dead_ends(self) -> List[Cell]:
-        return [c for c in self.all_cells() if len(c.links) == 1]
+        return [c for c in self.all_cells if len(c.links) == 1]
 
     def braid_dead_ends(self, braid: int = 0, _seed: int = None) -> int:
         """
@@ -245,7 +252,7 @@ class Grid:
                             best = unconnected_neighbors
                         c.link(random.choice(best))
                         dead_ends -= 1
-        return dead_ends
+        self.dead_ends_amount = dead_ends
 
     def sparse_dead_ends(self, sparse: int = 0, _seed: int = None) -> None:
         """
@@ -272,91 +279,48 @@ class Grid:
                     pass
 
     def shuffled_cells(self) -> List[Cell]:
-        shuffled_cells = self.all_cells()
+        shuffled_cells = self.all_cells
         random.shuffle(shuffled_cells)
         return shuffled_cells
 
-    def get_blueprint(self) -> List[CellVisual]:
-        """
-        Returns the actual geometry blueprint for the cells
-        """
-        return [self.set_cell_visuals(c) for c in self.get_linked_cells()]
-
     def get_cell_center(self, cell: Cell) -> Vector:
-        return Vector((cell.column + cell.level * (self.columns + 1), cell.row, 0)) + self.offset
+        # return Vector((cell.column + cell.level * (self.columns + 1), cell.row, 0)) + self.offset
+        return Vector((cell.column + cell.level * (self.columns + 1), cell.row, 0))
 
-    def get_relative_positions_out(self) -> List[Vector]:
+    def get_cell_positions(self, cell):
         """
-               Neigh. 0
-              |  1  0  |
-              |  ^  ^  |
-        __ __  __*__*__  __ __
-              |  |  |  |
-         2 <- *__ __ __* -> 7
-     Neigh. 1 |  |  |  |     Neighbor 3
-         3 <- *__ __ __* -> 6
-              |  |  |  |
-        __ __  __*__*__  __ __
-              |  v  v  |
-              |  4  5  |
-               Neigh. 2
-        (Illustration with a square)
-        Returns * the positions of the inset junctions with the neighbors, at the frontier
-        Indexes i, i + 1 correspond to frontier with neighbor i
+        3 2
+        0 1
         """
-        cs = self.cell_size
-        pos_one, pos_out = self.relative_positions_one, []
-        for i in range(self.number_of_sides):
-            pos_out.append((pos_one[i] * (1 + cs) + pos_one[(i + 1) % self.number_of_sides] * (1 - cs)) / 2)
-            pos_out.append((pos_one[i] * (1 - cs) + pos_one[(i + 1) % self.number_of_sides] * (1 + cs)) / 2)
-        return pos_out
-
-    def get_relative_positions(self, size: float) -> Tuple[Vector]:
-        """
-        Returns the positions of each corner of the cell
-        """
-        top_right = Vector(((size / 2), (size / 2), 0))
-        top_left = Vector(((-size / 2), (size / 2), 0))
-        bot_left = Vector(((-size / 2), (-size / 2), 0))
-        bot_right = Vector(((size / 2), (-size / 2), 0))
-        return top_right, top_left, bot_left, bot_right
-
-    def get_cell_pos_offset(self, cell: Cell, center: Vector) -> Tuple[List[Vector]]:
-        """
-        Returns all the necessary cell corners positions with offset to build the geometry
-        """
-        if self.cell_size == 1:
-            return [center + vec for vec in self.relative_positions_one], (), ()
-        else:
-            return [center + vec for vec in self.relative_positions_one], \
-                [center + vec for vec in self.relative_positions_inset], \
-                [center + vec for vec in self.relative_positions_out]
-
-    def set_cell_visuals(self, cell: Cell) -> CellVisual:
-        """Build the actual geometry of the cell"""
-        cv = cell.visual
+        size = self.cell_size
         center = self.get_cell_center(cell)
-        walls_face = []
-        pos_one, pos_in, pos_out = self.get_cell_pos_offset(cell, center)
-        for i in range(self.number_of_sides):
-            if cell.get_wall_mask()[i]:
-                walls_face.extend((i, (i + 1) % self.number_of_sides))
-            elif self.cell_size != 1:
-                cv.add_face((pos_in[i], pos_out[2 * i], pos_out[(i * 2) + 1], pos_in[(i + 1) % self.number_of_sides]), walls=(0, 1, 2, 3), vertices_levels=(1, 0, 0, 1))
+        return center + Vector(((-size / 2), (-size / 2), 0)), center + Vector(((size / 2), (-size / 2), 0)), center + Vector(((size / 2), (size / 2), 0)), center + Vector(((-size / 2), (size / 2), 0))
 
-        cv.add_face(
-            ([(pos_one if self.cell_size == 1 else pos_in)[i % self.number_of_sides] for i in range(self.number_of_sides)]),
-            walls=walls_face,
-            vertices_levels=[1] * self.number_of_sides)
+    def calc_distances(self, props):
+        distances = Distances(self.get_random_linked_cell(_seed=props.seed))
+        distances.get_distances()
+        new_start, distance = distances.max
+        distances = Distances(new_start)
+        distances.get_distances()
+        goal, max_distance = distances.max
 
-        if self.levels > 0:
-            dz = 0.1
-            dd = self.cell_size / 4
-            if cell.neighbor_index_exists_and_is_linked(cst.UP):
-                cv.add_face((center + Vector((dd * 3 / 2, 0, dz)), center + Vector((dd / 2, dd, dz)), center + Vector((dd / 2, -dd, dz))))
-            if cell.neighbor_index_exists_and_is_linked(cst.DOWN):
-                cv.add_face((center + Vector((- dd * 3 / 2, 0, dz)), center + Vector((- dd / 2, -dd, dz)), center + Vector((- dd / 2, dd, dz))))
-        return cv
+        longest_path = distances.path_to(goal).path
+
+        # Avoid flickering when the algorithm randomly chooses start and end cells.
+        start = longest_path[0]
+        start = (start.row, start.column, start.level)
+        last_start = props.maze_last_start_cell
+        last_start = (last_start[0], last_start[1], last_start[2])
+        if start != last_start:
+            goal = longest_path[-1]
+            goal = (goal.row, goal.column, goal.level)
+            if goal == last_start:
+                distances.reverse()
+            else:
+                props.maze_last_start_cell = start
+        # End.
+        self.distances = distances
+        self.longest_path = longest_path
 
 
 class GridHex(Grid):
@@ -478,6 +442,7 @@ class GridPolar(Grid):
                 if c:
                     yield c
 
+    @property
     def all_cells(self):
         cells = []
         # return [c for c in row for row in self.each_row() if c]
@@ -668,12 +633,6 @@ class GridTriangle(Grid):
     CELL_SIDES = 3
     CELL_TYPE = CellTriangle
 
-    def __init__(self, rows, columns, levels, cell_size, space_rep, mask=None):
-        super().__init__(rows, columns, levels, cell_size, space_rep, mask)
-        self.relative_positions_inset_down = self.get_relative_positions(self.cell_size, upright=False)
-        self.relative_positions_one_down = self.get_relative_positions(1, upright=False)
-        self.relative_positions_out_down = self.get_relative_positions_out_down()
-
     def init_cells_neighbors(self) -> None:
         for c in self.each_cell():
             if c.is_upright():
@@ -681,54 +640,36 @@ class GridTriangle(Grid):
                 c.set_neighbor(1, self.next_column(c, reverse=True))
                 c.set_neighbor(2, self.next_row(c, reverse=True))
 
-    def get_relative_positions_out_down(self):
-        cs = self.cell_size
-        pos_one, pos_out = self.relative_positions_one_down, []
-        for i in range(self.number_of_sides):
-            pos_out.append((pos_one[i] * (1 + cs) + pos_one[(i + 1) % self.number_of_sides] * (1 - cs)) / 2)
-            pos_out.append((pos_one[i] * (1 - cs) + pos_one[(i + 1) % self.number_of_sides] * (1 + cs)) / 2)
-        return pos_out
-
     def get_cell_center(self, c):
-        return Vector((c.column * 0.5, c.row * (3 ** 0.5) / 2, 0)) + self.offset
+        return Vector((c.column * 0.5, c.row * (3 ** 0.5) / 2, 0))
 
     def _get_offset(self) -> Vector:
         return Vector((-self.columns / 4, -self.rows / 3, 0))
 
-    def get_relative_positions(self, size: float, upright: bool = True) -> Tuple[Vector]:
+    def get_cell_positions(self, cell):
         """
-        Returns the positions of each corner of the cell
+         2      IF UPRIGHT ELSE   2 1
+        0 1                        0
         """
+        size = self.cell_size
+        center = self.get_cell_center(cell)
+
         half_width = size / 2
 
         height = size * (3 ** 0.5) / 2
         half_height = height / 2
 
-        if upright:
+        if cell.is_upright():
             base_y = - half_height
             apex_y = half_height
         else:
             base_y = half_height
             apex_y = - half_height
 
-        north_or_south = Vector((0, apex_y, 0))
-        west = Vector((-half_width, base_y, 0))
-        east = Vector((half_width, base_y, 0))
-        return (east, north_or_south, west) if upright else (west, north_or_south, east)
-
-    def get_cell_pos_offset(self, cell: Cell, center: Vector) -> Tuple[List[Vector]]:
-        """
-        Returns all the necessary cell corners positions with offset to build the geometry
-        """
-        if cell.is_upright():
-            return super().get_cell_pos_offset(cell, center)
-        else:
-            if self.cell_size == 1:
-                return [center + vec for vec in self.relative_positions_one_down], (), ()
-            else:
-                return [center + vec for vec in self.relative_positions_one_down], \
-                    [center + vec for vec in self.relative_positions_inset_down], \
-                    [center + vec for vec in self.relative_positions_out_down]
+        north_or_south = Vector((0, apex_y, 0)) + center
+        west = Vector((-half_width, base_y, 0)) + center
+        east = Vector((half_width, base_y, 0)) + center
+        return (west, east, north_or_south) if cell.is_upright() else (north_or_south, east, west)
 
 
 class GridWeave(Grid):
@@ -760,15 +701,3 @@ class GridWeave(Grid):
         """
         self._cells.append(CellUnder(cell_over))
         return self._cells[-1]
-
-    def set_cell_visuals(self, c):
-        cv = super().set_cell_visuals(c)
-        if type(c) is CellUnder:
-            for f in cv.faces:
-                f.set_vertex_group(VG_DISPLACE, [v_level for v_level in f.vertices_levels])
-                f.walls = None
-        elif c.has_cell_under:
-            for f in cv.faces:
-                f.walls = None
-
-        return cv

@@ -1,11 +1,12 @@
 import bpy
 from ..managers import modifier_manager as mod_mgr
-from ..managers.algorithm_manager import is_algo_weaved, ALGORITHM_FROM_NAME, KruskalRandom, is_algo_incompatible
+from ..managers.algorithm_manager import ALGORITHM_FROM_NAME, KruskalRandom, is_algo_incompatible
 from ..managers import space_rep_manager as sp_rep
 from ..managers import cell_type_manager as cell_mgr
+from ..managers import texture_manager, material_manager
 from ..managers.object_manager import ObjectManager
 from ..managers.grid_manager import GridManager
-from .maze_visual import MazeVisual, MaterialManager
+from .maze_visual import MazeVisual
 
 
 class MazeGeneratorPanel(bpy.types.Panel):
@@ -75,7 +76,7 @@ class ParametersPanel(bpy.types.Panel):
         else:
             box = layout.box()
             for setting in ALGORITHM_FROM_NAME[mg_props.maze_algorithm].settings:
-                if setting == 'maze_weave':                    
+                if setting == 'maze_weave':
                     if mg_props.maze_algorithm == KruskalRandom.name:
                         box.prop(mg_props, 'maze_weave', slider=True)
                     else:
@@ -126,13 +127,6 @@ class ParametersPanel(bpy.types.Panel):
 
         layout.prop(mg_props, 'braid_dead_ends', slider=True, text='Open Dead Ends')
         layout.prop(mg_props, 'sparse_dead_ends')
-        row = layout.row()
-        row_2 = row.row()
-        # if mg_props.maze_algorithm == KruskalRandom.name:
-        #     row_2.prop(mg_props, 'maze_weave', slider=True)
-        # else:
-        #     row_2.prop(mg_props, 'maze_weave_toggle', toggle=True)
-        # row_2.enabled = is_algo_weaved(mg_props)
 
         box = layout.box()
 
@@ -151,11 +145,11 @@ class ParametersPanel(bpy.types.Panel):
         try:
             row = box.row(align=True)
             row.prop(ObjectManager.obj_cells.modifiers[mod_mgr.M_STAIRS], 'strength', text='Stairs')
-            row.prop(ObjectManager.obj_cells.modifiers[mod_mgr.M_WELD], 'merge_threshold', text='Merge')
+            # row.prop(ObjectManager.obj_cells.modifiers[mod_mgr.M_WELD], 'merge_threshold', text='Merge')
 
             row = box.row(align=True)
             row.prop(ObjectManager.obj_cells.modifiers["MG_TEX_DISP"], 'strength', text='Inflate', slider=True)
-            row.prop(MazeVisual.tex_disp, 'noise_scale', text='Scale', slider=True)
+            row.prop(texture_manager.TextureManager.tex_disp, 'noise_scale', text='Scale', slider=True)
         except ReferenceError:
             pass
 
@@ -249,20 +243,13 @@ class WallsPanel(bpy.types.Panel):
 
     def draw_header(self, context):
         self.layout.label(text='Walls', icon='SNAP_EDGE')
-        try:
-            wall = context.scene.objects['MG_Walls']
-            wall_hide = context.scene.mg_props.wall_hide
-            self.layout.prop(context.scene.mg_props, 'wall_hide', text='', icon='HIDE_ON' if wall_hide else 'HIDE_OFF')
-            # self.layout.prop(wall, 'hide_viewport', text='')
-            # self.layout.prop(wall, 'hide_render', text='')
-        except KeyError:
-            pass
+        wall_hide = context.scene.mg_props.wall_hide
+        self.layout.prop(context.scene.mg_props, 'wall_hide', text='', icon='HIDE_ON' if wall_hide else 'HIDE_OFF')
 
     def draw(self, context):
         if not MazeVisual.scene:
             return
         layout = self.layout
-        scene = context.scene
 
         try:
             wall_solid_mod = ObjectManager.obj_walls.modifiers[mod_mgr.M_SOLID]
@@ -308,11 +295,11 @@ class DisplayPanel(bpy.types.Panel):
         elif mg_props.paint_style == 'DISTANCE':
             box.prop(mg_props, 'show_only_longest_path', text='Show Longest Path')
             row = box.row(align=True)
-            row.box().template_color_ramp(MaterialManager.cell_cr_distance_node, property="color_ramp", expand=True)
+            row.box().template_color_ramp(material_manager.MaterialManager.cell_cr_distance_node, property="color_ramp", expand=True)
 
-        box.prop(MaterialManager.cell_hsv_node.inputs[0], 'default_value', text='Hue Shift', slider=True)
-        box.prop(MaterialManager.cell_hsv_node.inputs[1], 'default_value', text='Saturation Shift', slider=True)
-        box.prop(MaterialManager.cell_hsv_node.inputs[2], 'default_value', text='Value Shift', slider=True)
+        box.prop(material_manager.MaterialManager.cell_hsv_node.inputs[0], 'default_value', text='Hue Shift', slider=True)
+        box.prop(material_manager.MaterialManager.cell_hsv_node.inputs[1], 'default_value', text='Saturation Shift', slider=True)
+        box.prop(material_manager.MaterialManager.cell_hsv_node.inputs[2], 'default_value', text='Value Shift', slider=True)
         # box.prop(mg_props, 'value_shift', slider=True, text='Value Shift')
 
 
@@ -337,6 +324,6 @@ class InfoPanel(bpy.types.Panel):
         if gen_time > 0:
             layout.label(text='Generation time : ' + str(gen_time) + ' ms', icon='TEMP')
         if GridManager.grid:
-            layout.label(text='Dead ends : ' + str(mg_props.dead_ends), icon='CON_FOLLOWPATH')
+            layout.label(text='Dead ends : ' + str(GridManager.grid.dead_ends_amount), icon='CON_FOLLOWPATH')
         layout.label(text='Disable Auto-overwrite (Trash icon) to keep modified values')
         # layout.prop(mg_props, 'info_show_help', toggle=True)
