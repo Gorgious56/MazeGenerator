@@ -10,7 +10,7 @@ class Cell(object):
     column : Horizontal axis position in the grid
     row: Vertical axis position in the grid
     """
-    NEIGHBORS_RETURN = [cst.SOUTH, cst.EAST, cst.NORTH, cst.WEST, cst.DOWN, cst.UP]
+    _NEIGHBORS_RETURN = [cst.SOUTH, cst.EAST, cst.NORTH, cst.WEST, cst.DOWN, cst.UP]
 
     def __init__(self, row, col, level=0):
         self.row = row
@@ -35,6 +35,12 @@ class Cell(object):
             return self._neighbors.index(other_cell)
         except ValueError:
             return -1
+
+    def get_neighbor_towards(self, direction):
+        return self._neighbors[direction] if 0 <= direction < len(self._neighbors) else None
+
+    def get_half_neighbors(self):
+        return 0, 1
 
     def link(self, other_cell, bidirectional=True):
         if other_cell:
@@ -104,7 +110,7 @@ class Cell(object):
         return shuffled_neighbors
 
     def get_neighbor_return(self, index):
-        return self.NEIGHBORS_RETURN[index]
+        return self._NEIGHBORS_RETURN[index]
 
     def get_biased_neighbors(self, bias, relative_weight=15):
         _neighbors = self.neighbors
@@ -176,46 +182,46 @@ class Cell(object):
 
 
 class CellHex(Cell):
-    NEIGHBORS_RETURN = [3, 4, 5, 0, 1, 2]
+    _NEIGHBORS_RETURN = [3, 4, 5, 0, 1, 2]
 
     def __init__(self, row, col, lvl):
         super().__init__(row, col, lvl)
         self._neighbors = [None] * 6
 
+    def get_half_neighbors(self):
+        return 0, 1, 2
+
 
 class CellPolar(Cell):
+    _NEIGHBORS_RETURN = [2, lambda c: c._neighbors[1].get_neighbor_direction(c), 0, 1, 1]
 
     def __init__(self, row, col, lvl=0):
         super().__init__(row, col, lvl)
-        self.cw = None
-        self.ccw = None
-        self.inward = None
-        self.outward = []
+        self._neighbors = [None] * 5  # [out_ccw, in_ccw, in_cw, out_cw, out_mid]
 
-    @property
-    def neighbors(self):
-        _neighbors = []
-        for n in [self.cw, self.ccw, self.inward]:
-            if n:
-                _neighbors.append(n)
-        _neighbors.extend(self.outward)
-        return _neighbors
+    def get_half_neighbors(self):
+        return 0, 1
 
-    def get_wall_mask(self):
-        return [not self.exists_and_is_linked(n) for n in self._neighbors] if self.has_any_link() else [False] * len(self._neighbors)
+    def get_neighbor_return(self, index):
+        ret = self._NEIGHBORS_RETURN[index]
+        return ret if type(ret) is int else ret(self)
+
 
     def is_linked_outward(self):
-        for n in self.outward:
-            if n and self.is_linked(n):
-                return True
-        return False
+        return any([n for n in self._neighbors[3:5] if n and self.is_linked(n)])
 
     def has_outward_neighbor(self):
-        return len(self.outward) > 0
+        return any(self._neighbors[3:5])
+
+    def add_outward(self, cell):
+        if self._neighbors[3]:
+            self.set_neighbor(4, cell)
+        else:
+            self.set_neighbor(3, cell)
 
 
 class CellTriangle(Cell):
-    NEIGHBORS_RETURN = (0, 1, 2)
+    _NEIGHBORS_RETURN = (0, 1, 2)
 
     def __init__(self, row, col, lvl):
         super().__init__(row, col, lvl)
@@ -224,6 +230,9 @@ class CellTriangle(Cell):
 
     def is_upright(self):
         return (self.row + self.column) % 2 == 0
+
+    def get_half_neighbors(self):
+        return (0, 1, 2) if self.is_upright() else []
 
 
 class CellOver(Cell):
@@ -236,7 +245,7 @@ class CellOver(Cell):
     @property
     def neighbors(self):
         if self.neighbors_over is None:
-            self.neighbors_over = [None] * len(self.NEIGHBORS_RETURN)
+            self.neighbors_over = [None] * len(self._NEIGHBORS_RETURN)
             for i, neighbor in enumerate(self._neighbors):
                 self.neighbors_over[i] = neighbor._neighbors[i] if self.can_tunnel_towards(i) else None
         ns = super().neighbors
@@ -246,7 +255,7 @@ class CellOver(Cell):
     @property
     def neighbors_copy(self):  # Keep this for method patching using Kruskal's algorithm and weave maze until I know how to do it cleanly.
         if self.neighbors_over is None:
-            self.neighbors_over = [None] * len(self.NEIGHBORS_RETURN)
+            self.neighbors_over = [None] * len(self._NEIGHBORS_RETURN)
             for i, neighbor in enumerate(self._neighbors):
                 self.neighbors_over[i] = neighbor._neighbors[i] if self.can_tunnel_towards(i) else None
         ns = super().neighbors

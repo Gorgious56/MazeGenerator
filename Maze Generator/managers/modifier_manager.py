@@ -3,7 +3,7 @@ import bpy.types as bpy_types
 import math
 from . import space_rep_manager as sp_rep
 from . import mesh_manager as cv
-from .cell_type_manager import POLAR, SQUARE, TRIANGLE, HEXAGON
+from .cell_type_manager import SQUARE, TRIANGLE, HEXAGON
 
 M_WELD = 'MG_WELD'
 M_WELD_2 = 'MG_WELD_2'
@@ -26,6 +26,7 @@ M_TORUS = 'MG_TORUS'
 M_STAIRS = 'MG_STAIRS'
 M_TEXTURE_DISP = 'MG_TEX_DISP'
 M_MASK = 'MG_MASK_STAIRS'
+M_MASK_SPARSE = 'MG_MASK_SPARSE'
 M_VERT_WEIGHT_PROX = 'MG_WEIGHT_PROX'
 M_SMOOTH_CENTER_NAME = 'MG_SMOOTH_CENTER'
 M_SMOOTH_BRIDGE_COL_X_NAME, M_SMOOTH_BRIDGE_COL_Y_NAME = 'MG_SMOOTH_BRIDGE_COL_X', 'MG_SMOOTH_BRIDGE_COL_Y'
@@ -46,6 +47,12 @@ def setup_modifiers_and_drivers(MV, OM, TM) -> None:
     scene = MV.scene
     mod_dic = {
         obj_walls: (
+            ('MASK', M_MASK_SPARSE, {
+                VISIBILIY: ('sparse_dead_ends', 'var > 0'),
+                'vertex_group': cv.VG_STAIRS,
+                'invert_vertex_group': True,
+                'threshold': 1
+            }), 
             ('MASK', M_MASK, {
                 VISIBILIY: (obj_walls, obj_walls, 'threshold', M_MASK, M_MASK, 'var < 1'),
                 'vertex_group': cv.VG_STAIRS,
@@ -65,13 +72,13 @@ def setup_modifiers_and_drivers(MV, OM, TM) -> None:
                 'angle': 0,
                 'steps': 1,
                 'render_steps': 1,
-                'screw_offset': 0.5,
+                'screw_offset': 0.3,
                 'use_smooth_shade': ('wall_bevel', 'var > 0.005'),
             }),
             ('SOLIDIFY', M_SOLID, {
                 VISIBILIY: (obj_walls, obj_walls, 'thickness', M_SOLID, M_SOLID, 'var != 0'),
                 'solidify_mode': 'NON_MANIFOLD',
-                'thickness': 0.2,
+                'thickness': 0.1,
                 'offset': 0,
             }),
             ('VERTEX_WEIGHT_PROXIMITY', M_VERT_WEIGHT_PROX, {
@@ -134,6 +141,12 @@ def setup_modifiers_and_drivers(MV, OM, TM) -> None:
             }),
         ),
         obj_cells: (
+            ('MASK', M_MASK_SPARSE, {
+                VISIBILIY: ('sparse_dead_ends', 'var > 0'),
+                'vertex_group': cv.VG_STAIRS,
+                'invert_vertex_group': True,
+                'threshold': 1
+            }),            
             ('MASK', M_MASK, {
                 VISIBILIY: (obj_cells, obj_cells, 'threshold', M_MASK, M_MASK, 'var < 1'),
                 'vertex_group': cv.VG_STAIRS,
@@ -146,24 +159,24 @@ def setup_modifiers_and_drivers(MV, OM, TM) -> None:
                 'vertex_group': cv.VG_STAIRS,
                 'mid_level': 0, 'strength': 0,
             }),
-            ('WELD', M_WELD_2, {
-                VISIBILIY: ('maze_weave', 'var != 0'),
-                'vertex_group': cv.VG_DISPLACE,
-                'invert_vertex_group': False,
-            }),
+            # ('WELD', M_WELD_2, {
+            #     VISIBILIY: ('maze_weave', 'var != 0'),
+            #     'vertex_group': cv.VG_DISPLACE,
+            #     'invert_vertex_group': False,
+            # }),
             ('SOLIDIFY', M_THICKNESS_SOLID, {
                 VISIBILIY: (obj_cells, obj_cells, 'thickness', M_THICKNESS_SOLID, M_THICKNESS_SOLID, 'var != 0'),
                 'thickness': .000000001,
                 'shell_vertex_group': cv.VG_THICKNESS
             }),
-            ('VERTEX_WEIGHT_MIX', M_WEAVE_MIX, {
-                VISIBILIY: ('maze_weave', "var"),
-                'vertex_group_a': cv.VG_THICKNESS,
-                'vertex_group_b': cv.VG_DISPLACE,
-                'mix_mode': 'ADD',
-                'mix_set': 'B',
-                'mask_constant': 0.97,
-            }),
+            # ('VERTEX_WEIGHT_MIX', M_WEAVE_MIX, {
+            #     VISIBILIY: ('maze_weave', "var"),
+            #     'vertex_group_a': cv.VG_THICKNESS,
+            #     'vertex_group_b': cv.VG_DISPLACE,
+            #     'mix_mode': 'ADD',
+            #     'mix_set': 'B',
+            #     'mask_constant': 0.97,
+            # }),
             ('DISPLACE', M_THICKNESS_DISP, {
                 VISIBILIY: ('cell_thickness_equalize', 'not var'),
                 'direction': 'Z',
@@ -182,13 +195,13 @@ def setup_modifiers_and_drivers(MV, OM, TM) -> None:
                 'use_positive_direction': True,
                 'target': obj_thickness_shrinkwrap
             }),
-            ('DISPLACE', M_WEAVE_DISP, {
-                VISIBILIY: ('maze_weave', "var"),
-                'direction': 'Z',
-                'vertex_group': cv.VG_DISPLACE,
-                'mid_level': 0,
-                'strength': 0.2
-            }),
+            # ('DISPLACE', M_WEAVE_DISP, {
+            #     VISIBILIY: ('maze_weave', "var"),
+            #     'direction': 'Z',
+            #     'vertex_group': cv.VG_DISPLACE,
+            #     'mid_level': 0,
+            #     'strength': 0.2
+            # }),
             ('SIMPLE_DEFORM', M_MOEBIUS, {
                 VISIBILIY: ('maze_space_dimension', "int(var) == " + sp_rep.REP_MEOBIUS),
                 'angle': 2 * math.pi + (1 / 18 if MV.props.cell_type == TRIANGLE else 0),

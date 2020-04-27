@@ -18,6 +18,7 @@ class Grid:
         self.rows: int = rows
         self.columns = columns
         self.levels = levels
+
         self._cells = [None] * (rows * columns * levels)
         self.size = rows * columns * levels
         self.size_2D = rows * columns
@@ -289,12 +290,12 @@ class Grid:
 
     def get_cell_positions(self, cell):
         """
-        3 2
-        0 1
+        1 0
+        2 3
         """
         size = self.cell_size
         center = self.get_cell_center(cell)
-        return center + Vector(((-size / 2), (-size / 2), 0)), center + Vector(((size / 2), (-size / 2), 0)), center + Vector(((size / 2), (size / 2), 0)), center + Vector(((-size / 2), (size / 2), 0))
+        return center + Vector(((size / 2), (size / 2), 0)), center + Vector(((-size / 2), (size / 2), 0)), center + Vector(((-size / 2), (-size / 2), 0)), center + Vector(((size / 2), (-size / 2), 0))
 
     def calc_distances(self, props):
         distances = Distances(self.get_random_linked_cell(_seed=props.seed))
@@ -334,36 +335,33 @@ class GridHex(Grid):
         for c in self.each_cell():
             row, col = c.row, c.column
             north_diagonal = row + (1 if col % 2 == 0 else 0)
-
             # Neighbor 0 : NE
             c.set_neighbor(0, self[col + 1, north_diagonal])
             # Neighbor 1 : N
             c.set_neighbor(1, self[col, row + 1])
             # Neighbor 2 : NW
-            c.set_neighbor(2, self[col - 1, north_diagonal])
-            # # Neighbor 3 : SW
 
-    def get_relative_positions(self, size: float) -> Tuple[Vector]:
-        """
-        Returns the positions of each corner of the cell
-        """
+    def get_cell_center(self, c):
+        return Vector([1 + 3 * c.column / 2, - (3 ** 0.5) * ((1 + c.column % 2) / 2 - c.row), 0])
+
+    def get_cell_positions(self, cell):
+        size = self.cell_size
+        center = self.get_cell_center(cell)
         a_size = size / 2
         b_size = size * (3 ** 0.5) / 2
 
-        east = Vector((size, 0, 0))
-        north_east = Vector((a_size, b_size, 0))
-        north_west = Vector((-a_size, b_size, 0))
-        west = Vector((- size, 0, 0))
-        south_west = Vector((-a_size, -b_size, 0))
-        south_east = Vector((a_size, -b_size, 0))
+        east = Vector((size, 0, 0)) + center
+        north_east = Vector((a_size, b_size, 0)) + center
+        north_west = Vector((-a_size, b_size, 0)) + center
+        west = Vector((- size, 0, 0)) + center
+        south_west = Vector((-a_size, -b_size, 0)) + center
+        south_east = Vector((a_size, -b_size, 0)) + center
         return east, north_east, north_west, west, south_west, south_east
-
-    def get_cell_center(self, c):
-        return Vector([1 + 3 * c.column / 2, - (3 ** 0.5) * ((1 + c.column % 2) / 2 - c.row), 0]) + self.offset
 
 
 class GridPolar(Grid):
     CELL_TYPE = CellPolar
+    CELL_SIDES = 5
 
     def __init__(self, rows, columns, levels, cell_size=1, space_rep=0, *args, **kwargs):
         self.rows_polar = []
@@ -375,19 +373,32 @@ class GridPolar(Grid):
         del self[key[0], key[1]]
 
     def __getitem__(self, key):
+        key = list(key)
         try:
-            return self.rows_polar[key[0]][key[1]]
+            row = self.rows_polar[key[0]]
+            if key[1] == len(row):
+                key[1] = 0
+            elif key[1] == -1:
+                key[1] = len(row) - 1
+            return row[key[1]]
         except IndexError:
             return None
 
     def __setitem__(self, key, value):
         try:
-            self.rows_polar[key[0]][key[1]] = value
+            row = self.rows_polar[key[0]]
+            if key[1] == len(row):
+                key[1] = 0
+            elif key[1] == -1:
+                key[1] = len(row) - 1
+            row[key[1]] = value
         except IndexError:
             pass
 
     def next_column(self, cell, reverse=False):
-        return self.rows_polar[cell.row][cell.column + 1] if 0 <= cell.column < self.row_length(cell.row) - 1 else None
+        if cell:
+            return self[cell.row, cell.column + (- 1 if reverse else 1)]
+        # return self.rows_polar[cell.row][cell.column + 1] if 0 <= cell.column < self.row_length(cell.row) - 1 else None
 
     def next_row(self, cell, reverse=False):
         return random.choice(cell.outward) if cell.outward else None
@@ -412,22 +423,30 @@ class GridPolar(Grid):
             if cells != previous_count:
                 self.doubling_rows.append(r - 1)
             rows[r] = [CellPolar(r, col) for col in range(cells)]
+
         self.rows_polar = rows
+
+        for cell in self.all_cells:
+            self.new_cell_evt(cell)
 
     def init_cells_neighbors(self) -> None:
         # 0>cw - 1>ccw - 2>inward - 3>outward
-        for c in self.each_cell():
+        for c in self.all_cells:
             row, col = c.row, c.column
             if row > 0:
                 row_length = self.row_length(c.row)
-                c.ccw = self[row, (col + 1) % row_length]
-                c.cw = self[row, col - 1]
+                c.set_neighbor(0, self.next_column(c))
+                c.set_neighbor(2, self.next_column(c, reverse=True))
+                # c.ccw = self[row, (col + 1) % row_length]
+                # c.cw = self[row, col - 1]
 
                 ratio = row_length / self.row_length(c.row - 1)
                 parent = self[row - 1, floor(col // ratio)]
-                parent.outward.append(c)
+                parent.add_outward(c)
+                # parent.outward.append(c)
 
-                c.inward = parent
+                # c.inward = parent
+                c.set_neighbor(1, parent)
 
     def each_row(self) -> Generator[List[Cell], None, None]:
         """
@@ -457,176 +476,29 @@ class GridPolar(Grid):
             random.seed(_seed)
         return random.choice([c for c in random.choice(self.rows_polar)])
 
-    def set_cell_visuals(self, c):
-        # The faces are all inverted but reverting all of the calculations is a big hassle.
-        # Hacky but works.
-        cv = c.visual
-        row_length = self.row_length(c.row)
-        cs = self.cell_size
-        t = 2 * pi / row_length
-        r_in = c.row
-        r_out = c.row + 1
-        t_ccw = (c.column + 1) * t
-        t_cw = c.column * t
-
-        face_walls = []
-
-        if cs == 1:
-            if c.row == 0:
-                [face_walls.extend(((2 - i % 6), (3 - i) % 6)) for i, o in enumerate(c.outward) if not c.exists_and_is_linked(o)]
-                sqrt_3_over_2 = (3 ** 0.5) / 2
-                cv.add_face((
-                    Vector((-1, 0, 0)), Vector((-0.5, sqrt_3_over_2, 0)), Vector((0.5, sqrt_3_over_2, 0)),
-                    Vector((1, 0, 0)), Vector((0.5, -sqrt_3_over_2, 0)), Vector((-0.5, -sqrt_3_over_2, 0))),
-                    walls=face_walls)
-            else:
-                if not c.exists_and_is_linked(c.inward):
-                    face_walls.extend((0, 1))
-                if not c.exists_and_is_linked(c.ccw):
-                    face_walls.extend((1, 2))
-
-                if c.row in self.doubling_rows:
-                    if c.row == self.rows - 1:
-                        face_walls.extend((2, 3, 3, 4))
-                    else:
-                        [face_walls.extend((3 - i, 4 - i)) for i, o in enumerate(c.outward)if not c.exists_and_is_linked(o)]
-                    if not c.exists_and_is_linked(c.cw):
-                        face_walls.extend((4, 0))
-                    cv.add_face(
-                        (self.get_position(r_in, t_cw), self.get_position(r_in, t_ccw), self.get_position(r_out, t_ccw), self.get_position(r_out, (t_cw + t_ccw) / 2), self.get_position(r_out, t_cw)),
-                        walls=face_walls)
-                else:
-                    if not c.exists_and_is_linked(c.cw):
-                        face_walls.extend((3, 0))
-                    if c.row == self.rows - 1 or not c.is_linked_outward():
-                        face_walls.extend((2, 3))
-                    cv.add_face(
-                        (self.get_position(r_in, t_cw), self.get_position(r_in, t_ccw), self.get_position(r_out, t_ccw), self.get_position(r_out, t_cw)),
-                        walls=face_walls)
-        else:
-            r_in_b = c.row + 0.5 - cs / 2
-            r_out_b = c.row + 0.5 + cs / 2
-            t_ccw_b = (c.column + 0.5 + cs / 2) * t
-            t_cw_b = (c.column + 0.5 - cs / 2) * t
-            if c.row == 0:
-                [face_walls.extend(((2 - i % 6), (3 - i) % 6)) for i, o in enumerate(c.outward) if not c.exists_and_is_linked(o)]
-                sqrt_3_over_2 = (3 ** 0.5) * cs / 2
-                cv.add_face((
-                    Vector((-cs, 0, 0)), Vector((-cs / 2, sqrt_3_over_2, 0)), Vector((cs / 2, sqrt_3_over_2, 0)),
-                    Vector((cs, 0, 0)), Vector((cs / 2, -sqrt_3_over_2, 0)), Vector((-cs / 2, -sqrt_3_over_2, 0))),
-                    walls=face_walls)
-            elif c.row in self.doubling_rows:
-                t_over = pi / row_length
-                t_cw_over = (c.column * 2 + 1) * t_over
-
-                if c.exists_and_is_linked(c.inward):
-                    if c.row == 1:
-                        r_inward_b = cs
-                        cv.add_face(
-                            (self.get_position(r_in_b, t_ccw_b), self.get_position(r_in_b, t_cw_b), self.get_position(r_inward_b, c.column * pi / 3), self.get_position(r_inward_b, (c.column + 1) * pi / 3)),
-                            walls=(0, 3, 2, 1))
-                    elif c.row - 1 in self.doubling_rows:
-                        c_i = c.inward
-                        row_length_i = len(self.rows_polar[c_i.row])
-                        t_i = 2 * pi / row_length_i
-                        t_over_i = pi / row_length_i
-                        t_cw_over_i = (c_i.column * 2 + 1) * t_over_i
-                        r_out_b_i = c_i.row + 0.5 + cs / 2
-                        t_cw_b_i = (c_i.column + 0.5 - cs / 2) * t_i
-                        t_ccw_b_i = (c_i.column + 0.5 + cs / 2) * t_i
-                        if c_i.outward.index(c) == 0:
-                            cv.add_face(
-                                (self.get_position(r_in_b, t_ccw_b), self.get_position(r_in_b, t_cw_b), self.get_position(r_out_b_i, t_cw_b_i), self.get_position(r_out_b_i, t_cw_over_i)),
-                                walls=(0, 3, 2, 1))
-                        else:
-                            cv.add_face(
-                                (self.get_position(r_in_b, t_ccw_b), self.get_position(r_in_b, t_cw_b), self.get_position(r_out_b_i, t_cw_over_i), self.get_position(r_out_b_i, t_ccw_b_i)),
-                                walls=(0, 3, 2, 1))
-                    else:
-                        r_inward_b = c.row - 0.5 + cs / 2
-                        cv.add_face(
-                            (self.get_position(r_in_b, t_ccw_b), self.get_position(r_in_b, t_cw_b), self.get_position(r_inward_b, t_cw_b), self.get_position(r_inward_b, t_ccw_b)),
-                            walls=(0, 3, 2, 1))
-                else:
-                    face_walls.extend((0, 1))
-
-                if c.exists_and_is_linked(c.ccw):
-                    cv.add_face(
-                        (self.get_position(r_out_b, t_ccw_b), self.get_position(r_in_b, t_ccw_b), self.get_position(r_in_b, t_ccw), self.get_position(r_out_b, t_ccw)),
-                        walls=(0, 3, 2, 1))
-                else:
-                    face_walls.extend((1, 2))
-
-                if c.exists_and_is_linked(c.cw):
-                    cv.add_face(
-                        (self.get_position(r_in_b, t_cw_b), self.get_position(r_out_b, t_cw_b), self.get_position(r_out_b, t_cw), self.get_position(r_in_b, t_cw)),
-                        walls=(0, 3, 2, 1))
-                else:
-                    face_walls.extend((4, 0))
-
-                if not c.exists_and_is_linked(c.outward[0]):
-                    face_walls.extend((3, 4))
-                if not c.exists_and_is_linked(c.outward[1]):
-                    face_walls.extend((2, 3))
-
-                cv.add_face(
-                    (self.get_position(r_in_b, t_cw_b), self.get_position(r_in_b, t_ccw_b), self.get_position(r_out_b, t_ccw_b), self.get_position(r_out_b, t_cw_over), self.get_position(r_out_b, t_cw_b)),
-                    walls=face_walls)
-            else:
-                if c.exists_and_is_linked(c.inward):
-                    if c.row - 1 in self.doubling_rows:
-                        c_i = c.inward
-                        row_length_i = len(self.rows_polar[c_i.row])
-                        t_i = 2 * pi / row_length_i
-                        t_over_i = pi / row_length_i
-                        t_cw_over_i = (c_i.column * 2 + 1) * t_over_i
-                        r_out_b_i = c_i.row + 0.5 + cs / 2
-                        t_cw_b_i = (c_i.column + 0.5 - cs / 2) * t_i
-                        t_ccw_b_i = (c_i.column + 0.5 + cs / 2) * t_i
-                        if c_i.outward.index(c) == 0:
-                            cv.add_face(
-                                (self.get_position(r_in_b, t_ccw_b), self.get_position(r_in_b, t_cw_b), self.get_position(r_out_b_i, t_cw_b_i), self.get_position(r_out_b_i, t_cw_over_i)),
-                                walls=(0, 3, 2, 1))
-                        else:
-                            cv.add_face(
-                                (self.get_position(r_in_b, t_ccw_b), self.get_position(r_in_b, t_cw_b), self.get_position(r_out_b_i, t_cw_over_i), self.get_position(r_out_b_i, t_ccw_b_i)),
-                                walls=(0, 3, 2, 1))
-                    else:
-                        r_inward_b = c.row - 0.5 + cs / 2
-                        cv.add_face(
-                            (self.get_position(r_in_b, t_ccw_b), self.get_position(r_in_b, t_cw_b), self.get_position(r_inward_b, t_cw_b), self.get_position(r_inward_b, t_ccw_b)),
-                            walls=(0, 3, 2, 1))
-                else:
-                    face_walls.extend((0, 1))
-
-                if c.exists_and_is_linked(c.ccw):
-                    cv.add_face(
-                        (self.get_position(r_out_b, t_ccw_b), self.get_position(r_in_b, t_ccw_b), self.get_position(r_in_b, t_ccw), self.get_position(r_out_b, t_ccw)),
-                        walls=(0, 3, 2, 1))
-                else:
-                    face_walls.extend((1, 2))
-
-                if c.exists_and_is_linked(c.cw):
-                    cv.add_face(
-                        (self.get_position(r_in_b, t_cw_b), self.get_position(r_out_b, t_cw_b), self.get_position(r_out_b, t_cw), self.get_position(r_in_b, t_cw)),
-                        walls=(0, 3, 2, 1))
-                else:
-                    face_walls.extend((3, 0))
-
-                if c.row == self.rows - 1 or not c.is_linked_outward():
-                    face_walls.extend((2, 3))
-
-                cv.add_face(
-                    (self.get_position(r_in_b, t_cw_b), self.get_position(r_in_b, t_ccw_b), self.get_position(r_out_b, t_ccw_b), self.get_position(r_out_b, t_cw_b)),
-                    walls=face_walls)
-
-        return cv
-
     def get_position(self, radius, angle):
         return Vector((radius * cos(angle), radius * sin(angle), 0))
 
     def row_length(self, row):
         return len(self.rows_polar[row])
+
+    def get_cell_positions(self, cell):
+        row_length = self.row_length(cell.row)
+        cs = self.cell_size
+        t = 2 * pi / row_length
+        r_in = cell.row + 0.5 - cs / 2
+        r_out = cell.row + 0.5 + cs / 2
+        t_ccw = (cell.column + 0.5 + cs / 2) * t
+        t_cw = (cell.column + 0.5 - cs / 2) * t
+
+        r_in_cw = self.get_position(r_in, t_cw)
+        r_out_cw = self.get_position(r_out, t_cw)
+        r_in_ccw = self.get_position(r_in, t_ccw)
+        r_out_ccw = self.get_position(r_out, t_ccw)
+        return r_out_ccw, r_in_ccw, r_in_cw, r_out_cw, (r_out_ccw + r_out_cw) / 2
+
+    def _get_offset(self) -> Vector:
+        return Vector((0, 0, 0))
 
 
 class GridTriangle(Grid):
@@ -640,11 +512,11 @@ class GridTriangle(Grid):
                 c.set_neighbor(1, self.next_column(c, reverse=True))
                 c.set_neighbor(2, self.next_row(c, reverse=True))
 
-    def get_cell_center(self, c):
-        return Vector((c.column * 0.5, c.row * (3 ** 0.5) / 2, 0))
-
     def _get_offset(self) -> Vector:
         return Vector((-self.columns / 4, -self.rows / 3, 0))
+
+    def get_cell_center(self, c):
+        return Vector((c.column * 0.5, c.row * (3 ** 0.5) / 2, 0))
 
     def get_cell_positions(self, cell):
         """
@@ -669,7 +541,7 @@ class GridTriangle(Grid):
         north_or_south = Vector((0, apex_y, 0)) + center
         west = Vector((-half_width, base_y, 0)) + center
         east = Vector((half_width, base_y, 0)) + center
-        return (west, east, north_or_south) if cell.is_upright() else (north_or_south, east, west)
+        return (east, north_or_south, west) if cell.is_upright() else (west, north_or_south, east)
 
 
 class GridWeave(Grid):
