@@ -1,6 +1,6 @@
-from bpy.types import Operator, BoolProperty
+from bpy.types import Operator
 from time import time
-from . visual . maze_visual import MazeVisual
+from ..visual.maze_visual import MazeVisual
 
 
 class GenerateMazeOperator(Operator):
