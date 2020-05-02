@@ -199,10 +199,10 @@ class CellsPanel(bpy.types.Panel):
         if cell_stairs.strength != 0:
             row.prop(mg_props, 'cell_thickness_equalize', toggle=True)
         row = box.row(align=True)
-        row.prop(mg_props, 'cell_use_smooth', toggle=True, icon='SHADING_RENDERED', text='Shade Smooth')
         row.prop(cell_subdiv_mod, 'levels', text='Subdiv')
+        row.prop(mg_props, 'cell_decimate', slider=True, text='Decimate', icon='MOD_DECIM')
 
-        box.prop(mg_props, 'cell_decimate', slider=True, text='Decimate', icon='MOD_DECIM')
+        box.prop(mg_props, 'cell_use_smooth', toggle=True, icon='SHADING_RENDERED', text='Shade Smooth')
 
         if cell_subdiv_mod.levels > 0 and (cell_bevel_mod.width > 0 or cell_wire_mod.thickness > 0):
             box.label(text='Bevel conflicts with Subdivision', icon='ERROR')
@@ -290,12 +290,21 @@ class DisplayPanel(bpy.types.Panel):
 
         box = layout.box()
         box.prop(mg_props, 'paint_style')
+        row = box.row(align=True)
+        row.prop(mg_props, 'show_longest_path', text='Longest Path', toggle=True)
+        try:
+            longest_path_mask_mod = ObjectManager.obj_cells.modifiers[mod_mgr.M_MASK_LONGEST_PATH]
+            row_2 = row.row()
+            row_2.prop(longest_path_mask_mod, 'show_viewport', text='Hide Rest', toggle=True)
+            row_2.enabled = mg_props.show_longest_path
+        except ReferenceError:
+            pass
         if mg_props.paint_style not in ('DISTANCE', 'NEIGHBORS'):
             box.prop(mg_props, 'seed_color_button', text='Randomize Colors', toggle=True)
         elif mg_props.paint_style == 'DISTANCE':
-            box.prop(mg_props, 'show_only_longest_path', text='Show Longest Path')
             row = box.row(align=True)
             row.box().template_color_ramp(material_manager.MaterialManager.cell_cr_distance_node, property="color_ramp", expand=True)
+
 
         box.prop(material_manager.MaterialManager.cell_hsv_node.inputs[0], 'default_value', text='Hue Shift', slider=True)
         box.prop(material_manager.MaterialManager.cell_hsv_node.inputs[1], 'default_value', text='Saturation Shift', slider=True)
@@ -327,3 +336,4 @@ class InfoPanel(bpy.types.Panel):
             layout.label(text='Dead ends : ' + str(GridManager.grid.dead_ends_amount), icon='CON_FOLLOWPATH')
         layout.label(text='Disable Auto-overwrite (Trash icon) to keep modified values')
         # layout.prop(mg_props, 'info_show_help', toggle=True)
+        layout.operator('maze.sample')

@@ -5,7 +5,7 @@ class Distances:
     def __init__(self, root):
         self.root = root
         self.cells = {}
-        self.cells[root] = 0
+        self.cells[root] = 1
         self.path = []
         self.max_distance = 0
 
@@ -13,7 +13,7 @@ class Distances:
         del self.cells[key]
 
     def __getitem__(self, key):
-        return self.cells[key] if key in self.all_cells else None
+        return self.cells.get(key, None)
 
     def __setitem__(self, key, value):
         self.cells[key] = value
@@ -66,4 +66,4 @@ class Distances:
 
     def reverse(self):
         for c, d in self.cells.items():
-            self[c] = self.max_distance - d
+            self[c] = max(1, self.max_distance - d)

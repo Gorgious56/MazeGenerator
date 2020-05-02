@@ -7,6 +7,7 @@ from ..managers.mesh_manager import DISTANCE, UNIFORM
 
 class MaterialManager:
     cell_rgb_node = None
+    cell_math_compare_node = None
     cell_vertex_colors_node = None
     cell_sep_rgb_node = None
     cell_value_node = None
@@ -28,7 +29,9 @@ class MaterialManager:
             inputs: dict = None,  # Index (integer or string), value
             outputs: dict = None,  # Index (integer or string), value
             attributes: dict = None) -> None:
-        node = nodes.get(node_attr_name, nodes.new(type=_type))
+        node = nodes.get(node_attr_name)
+        if not node:
+            node = nodes.new(type=_type)
         node.name = node_attr_name
         if pos:
             node.location = pos
@@ -85,21 +88,26 @@ class MaterialManager:
 
         MaterialManager.get_or_create_node(
             nodes, 'cell_math_node', 'ShaderNodeMath', (-800, 100),
-            inputs={1: props.show_only_longest_path},
+            inputs={1: props.show_longest_path},
             attributes={'operation': 'MULTIPLY'})
         MaterialManager.get_or_create_node(
             nodes, 'cell_math_alpha_node', 'ShaderNodeMath', (-800, 300),
             attributes={'operation': 'ADD'})
-        MaterialManager.get_or_create_node(nodes, 'cell_value_node', 'ShaderNodeValue', (-1000, -400))
-        MaterialManager.get_or_create_node(
-            nodes, 'cell_mix_under_node', 'ShaderNodeMixRGB', (-800, -400),
-            inputs={0: 0.5},
-            attributes={'blend_type': 'SUBTRACT'})
+        # MaterialManager.get_or_create_node(nodes, 'cell_value_node', 'ShaderNodeValue', (-1000, -400))
+        # MaterialManager.get_or_create_node(
+        #     nodes, 'cell_mix_under_node', 'ShaderNodeMixRGB', (-800, -400),
+        #     inputs={0: 0.5},
+        #     attributes={'blend_type': 'SUBTRACT'})
         MaterialManager.get_or_create_node(
             nodes, 'cell_mix_longest_distance_node', 'ShaderNodeMixRGB', (-400, 0),
             inputs={2: (0.5, 0.5, 0.5, 1)})
         MaterialManager.get_or_create_node(nodes, 'cell_bsdf_node', 'ShaderNodeBsdfPrincipled')
         MaterialManager.get_or_create_node(nodes, 'cell_output_node', 'ShaderNodeOutputMaterial', (300, 0))
+
+        MaterialManager.get_or_create_node(
+            nodes, 'cell_math_compare_node', 'ShaderNodeMath', (-1000, 200),
+            inputs={1: 0},
+            attributes={'operation': 'COMPARE'})
 
         try:
             self.cell_vertex_colors_node.layer_name = props.paint_style
@@ -108,23 +116,20 @@ class MaterialManager:
                 links.new(self.cell_vertex_colors_node.outputs[0], self.cell_sep_rgb_node.inputs[0])
                 links.new(self.cell_sep_rgb_node.outputs[0], self.cell_cr_distance_node.inputs[0])
                 links.new(self.cell_sep_rgb_node.outputs[1], self.cell_math_node.inputs[0])
-                links.new(self.cell_value_node.outputs[0], self.cell_mix_under_node.inputs[1])
-                links.new(self.cell_sep_rgb_node.outputs[2], self.cell_mix_under_node.inputs[2])
-                # links.new(self.cell_mix_under_node.outputs[0], self.cell_hsv_node.inputs[2])
+                # links.new(self.cell_value_node.outputs[0], self.cell_mix_under_node.inputs[1])
+                # links.new(self.cell_sep_rgb_node.outputs[2], self.cell_mix_under_node.inputs[2])
+                links.new(self.cell_sep_rgb_node.outputs[0], self.cell_math_compare_node.inputs[0])
+                links.new(self.cell_math_compare_node.outputs[0], self.cell_math_alpha_node.inputs[1])
 
                 links.new(self.cell_math_node.outputs[0], self.cell_math_alpha_node.inputs[0])
-                links.new(self.cell_vertex_colors_node.outputs[1], self.cell_math_alpha_node.inputs[1])
                 links.new(self.cell_math_alpha_node.outputs[0], self.cell_mix_longest_distance_node.inputs[0])
 
                 links.new(self.cell_cr_distance_node.outputs[0], self.cell_mix_longest_distance_node.inputs[1])
                 links.new(self.cell_mix_longest_distance_node.outputs[0], self.cell_hsv_node.inputs[4])
-
-                modifier_manager.add_driver_to(self.cell_value_node.outputs[0], 'default_value', 'val_shift', 'SCENE', scene, 'mg_props.value_shift', '1 + val_shift')
-                modifier_manager.add_driver_to(self.cell_mix_under_node.inputs[0], 'default_value', 'val_shift', 'SCENE', scene, 'mg_props.value_shift', '(val_shift + 1)/2')
             elif props.paint_style == UNIFORM:
-                links.new(self.cell_rgb_node.outputs[0], self.cell_hsv_node.inputs[4])
+                links.new(self.cell_rgb_node.outputs[0], self.cell_mix_longest_distance_node.inputs[1])
             else:  # Neighbors.
-                links.new(self.cell_vertex_colors_node.outputs[0], self.cell_hsv_node.inputs[4])
+                links.new(self.cell_vertex_colors_node.outputs[0], self.cell_mix_longest_distance_node.inputs[1])
 
             links.new(self.cell_hsv_node.outputs[0], self.cell_bsdf_node.inputs[0])
             links.new(self.cell_bsdf_node.outputs[0], self.cell_output_node.inputs[0])
