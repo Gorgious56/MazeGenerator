@@ -30,6 +30,7 @@ class MazeVisual:
 
         if not algorithm_manager.is_algo_incompatible(props):
             algorithm_manager.work(grid_manager.GridManager.grid, props)
+            grid_manager.GridManager.grid.calc_state()
             grid_manager.GridManager.grid.sparse_dead_ends(props.sparse_dead_ends, props.seed)
             grid_manager.GridManager.grid.braid_dead_ends(props.braid_dead_ends, props.seed)
 

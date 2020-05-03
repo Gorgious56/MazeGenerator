@@ -21,9 +21,12 @@ class Grid:
         self._cells = [None] * (rows * columns * levels)
         self.size = rows * columns * levels
         self.size_2D = rows * columns
-        self.masked_cells = []  # This container is used in some algorithms.
+        self.masked_cells = 0  # This container is used in some algorithms.
         self.space_rep = space_rep
-        self.dead_ends_amount = 0
+
+        self.dead_ends = []
+        self.max_links_per_cell = 0
+        self.groups = set()
         self.distances = None
         self.longest_path = None
 
@@ -55,6 +58,10 @@ class Grid:
                     key[1] = 0
         return self._cells[key[0] + key[1] * self.columns + key[2] * self.size_2D] \
             if (self.columns > key[0] >= 0 and self.rows > key[1] >= 0 and self.levels > key[2] >= 0) else None
+
+    @property
+    def dead_ends_amount(self):
+        return len(self.dead_ends)
 
     def __setitem__(self, key, value):
         if len(key) == 2:
@@ -192,7 +199,7 @@ class Grid:
     def mask_cell(self, column: int, row: int) -> None:
         c = self[column, row]
         if c is not None:
-            self.masked_cells.append(c)
+            self.masked_cells += 1
             for i, n in enumerate(c.get_neighbors()):
                 n.neighbors[c.neighbors_return[i]] = None
                 c.unlink(n)
@@ -241,8 +248,16 @@ class Grid:
     def all_cells_with_a_link(self) -> List[Cell]:
         return [c for c in self._cells if c and c.has_any_link()]
 
-    def get_dead_ends(self) -> List[Cell]:
-        return [c for c in self.all_cells if len(c.links) == 1]
+    def calc_state(self):
+        self.dead_ends = []
+        self.max_links_per_cell = 0
+        self.groups = set()
+        for c in self.all_cells:
+            links = len(c.links)
+            if links == 1:
+                self.dead_ends.append(c)
+            self.max_links_per_cell = max(links, self.max_links_per_cell)
+            self.groups.add(c.group)
 
     def braid_dead_ends(self, braid: int = 0, _seed: int = None) -> int:
         """
@@ -253,8 +268,7 @@ class Grid:
 
         Returns the number of dead-ends after braiding
         """
-        dead_ends_shuffle = self.get_dead_ends()
-        dead_ends = len(dead_ends_shuffle)
+        dead_ends_shuffle = self.dead_ends.copy()
         if braid > 0:
             braid /= 100
             random.seed(_seed)
@@ -267,12 +281,11 @@ class Grid:
                     if len(unconnected_neighbors) > 0:
                         best = [n for n in unconnected_neighbors if len(n.links) < 2]
                         if best:
-                            dead_ends -= 1
+                            self.dead_ends.remove(best)
                         else:
                             best = unconnected_neighbors
                         self.link(c, random.choice(best))
-                        dead_ends -= 1
-        self.dead_ends_amount = dead_ends
+                        self.dead_ends.remove(c)
 
     def sparse_dead_ends(self, sparse: int = 0, _seed: int = None) -> None:
         """
@@ -294,9 +307,11 @@ class Grid:
                 try:
                     c.unlink(next(iter(c.links)))
                     culled_cells += 1
-                    if culled_cells >= max_cells_to_cull:
+                    if culled_cells >= max_cells_to_cull:                     
+                        self.dead_ends.remove(c)
                         return
                 except (StopIteration, AttributeError):
+                    self.dead_ends.remove(c)
                     pass
 
     def shuffled_cells(self) -> List[Cell]:
@@ -343,8 +358,8 @@ class Grid:
         self.distances = distances
         self.longest_path = longest_path
 
-    def link(self, cell_a, cell_b):
-        return cell_a.link(cell_b)
+    def link(self, cell_a, cell_b, bidirectional=True):
+        return cell_a.link(cell_b, bidirectional)
 
     def unlink(self, cell_a, cell_b):
         cell_a.unlink(cell_b)
@@ -420,27 +435,38 @@ class GridPolar(Grid):
         except IndexError:
             pass
 
+    def previous_column(self, cell):
+        if not cell:
+            return
+        elif cell.row == 0:
+            return random.choice(cell.neighbors)
+        else:
+            return self[cell.row, cell.column - 1]
+
     def next_column(self, cell):
-        if cell:
-            if cell.row == 0:
-                return random.choice(cell.neighbors)
-            else:
-                return self[cell.row, cell.column + 1]
+        if not cell:
+            return
+        elif cell.row == 0:
+            return random.choice(cell.neighbors)
+        else:
+            return self[cell.row, cell.column + 1]
 
     def next_row(self, cell):
-        if cell.row == 0:
+        if not cell:
+            return
+        elif cell.row == 0:
             return random.choice(cell.neighbors)
         else:
             outward_neighbors = [c for c in cell._neighbors[3::] if c]
             return random.choice(outward_neighbors) if outward_neighbors else None
 
     def previous_row(self, cell):
-        if cell.row == 0:
-            return None
+        if not cell or cell.row == 0:
+            return
         else:
             return cell.neighbor(1)
 
-    def next_level(self, cell, reverse=False):
+    def next_level(self, cell):
         return None
 
     def get_columns_this_row(self, row):
@@ -474,7 +500,7 @@ class GridPolar(Grid):
             if row > 0:
                 row_length = self.row_length(c.row)
                 c.set_neighbor(cst.POL_CCW, self.next_column(c))
-                c.set_neighbor(cst.POL_CW, self.next_column(c, reverse=True))
+                c.set_neighbor(cst.POL_CW, self.previous_column(c))
 
                 ratio = row_length / self.row_length(c.row - 1)
                 parent = self[row - 1, floor(col // ratio)]
@@ -507,7 +533,7 @@ class GridPolar(Grid):
                     cells.append(c)
         return cells
 
-    def random_cell(self, _seed=None, filter_mask=True):
+    def random_cell(self, _seed=None):
         if _seed:
             random.seed(_seed)
         return random.choice([c for c in random.choice(self.rows_polar)])
@@ -550,8 +576,8 @@ class GridTriangle(Grid):
         for c in self.each_cell():
             if c.is_upright():
                 c.set_neighbor(0, self.next_column(c))
-                c.set_neighbor(1, self.next_column(c, reverse=True))
-                c.set_neighbor(2, self.next_row(c, reverse=True))
+                c.set_neighbor(1, self.previous_column(c))
+                c.set_neighbor(2, self.previous_row(c))
 
     def _get_offset(self) -> Vector:
         return Vector((-self.columns / 4, -self.rows / 3, 0))

@@ -121,7 +121,7 @@ class BinaryTree(MazeAlgorithm):
                 if next_row in c.neighbors:
                     neighbors.append(next_row)
                 elif c.column == columns_this_row - 1:
-                    prev_column = grid.next_column(c, reverse=True)
+                    prev_column = grid.previous_column(c)
                     if prev_column:
                         grid.link(c, prev_column)
                         c = prev_column
@@ -130,7 +130,8 @@ class BinaryTree(MazeAlgorithm):
                 next_level = grid.next_level(c)
                 if next_level in c.neighbors:
                     neighbors.append(next_level)
-
+            if not neighbors:
+                continue
             link_neighbor = methods.get_biased_choices(neighbors, bias, 5)[0]
             if not self.union_find.connected(c, link_neighbor):
                 grid.link(c, link_neighbor)
@@ -177,7 +178,7 @@ class Sidewinder(MazeAlgorithm):
                     if east_neighbor:
                         grid.link(c, east_neighbor)
                     else:
-                        grid.link(c, grid.next_column(c, reverse=True))
+                        grid.link(c, grid.previous_column(c))
 
     def must_close_run(self):
         return self.bias > random()
@@ -227,7 +228,7 @@ class Eller(MazeAlgorithm):
                     if neigh not in c.neighbors:
                         other_col = grid.next_column(c)
                         if not other_col:
-                            other_col = grid.next_column(c, reverse=True)
+                            other_col = grid.previous_column(c)
                         grid.link(other_col, grid.next_row(other_col))
                         uf.union(other_col, grid.next_row(other_col))
                         neigh = other_col
@@ -584,10 +585,10 @@ class AldousBroder(MazeAlgorithm):
         grid = self.grid
 
         expeditions = 1
-        current = grid.random_cell(self._seed, True)
+        current = grid.random_cell(self._seed)
         current.group = expeditions
 
-        unvisited = grid.size - 1 - len(grid.masked_cells)
+        unvisited = grid.size - 1 - grid.masked_cells
         while unvisited > 0:
 
             neighbor = choice(current.neighbors)

@@ -77,6 +77,7 @@ class ParametersPanel(bpy.types.Panel):
             box = layout.box()
             for setting in ALGORITHM_FROM_NAME[mg_props.maze_algorithm].settings:
                 if setting == 'maze_weave':
+                    continue
                     if mg_props.maze_algorithm == KruskalRandom.name:
                         box.prop(mg_props, 'maze_weave', slider=True)
                     else:
@@ -205,7 +206,7 @@ class CellsPanel(bpy.types.Panel):
             box.label(text='Bevel conflicts with Subdivision', icon='ERROR')
 
         box = layout.box()
-        box.label(text='Contour (Bevel conflicts with Wireframe)')
+        box.label(text='Contour')
 
         row = box.row(align=True)
 
@@ -223,6 +224,11 @@ class CellsPanel(bpy.types.Panel):
         replace_row = row.row()
         replace_row.prop(cell_wire_mod, 'use_replace', toggle=True)
         replace_row.enabled = cell_wire_mod.thickness > 0
+
+        if (cell_wire_mod.thickness > 0 or cell_bevel_mod.width > 0) and mg_props.cell_inset < 0.1:
+            box.label(text='Set Inset > 0,1', icon='ERROR')
+        if cell_bevel_mod.width > 0 and cell_thickness_mod.strength == 0:
+            box.label(text='Set Cell Thickness != 0', icon='ERROR')
 
 
 class WallsPanel(bpy.types.Panel):
@@ -294,9 +300,9 @@ class DisplayPanel(bpy.types.Panel):
             row_2.enabled = mg_props.show_longest_path
         except ReferenceError:
             pass
-        if mg_props.paint_style not in ('DISTANCE', 'NEIGHBORS'):
-            box.prop(mg_props, 'seed_color_button', text='Randomize Colors', toggle=True)
-        elif mg_props.paint_style == 'DISTANCE':
+        if mg_props.paint_style == 'UNIFORM':
+            box.prop(material_manager.MaterialManager.cell_rgb_node.outputs[0], 'default_value', text='Color')
+        else:
             row = box.row(align=True)
             row.box().template_color_ramp(material_manager.MaterialManager.cell_cr_distance_node, property="color_ramp", expand=True)
 
@@ -327,6 +333,7 @@ class InfoPanel(bpy.types.Panel):
             layout.label(text='Generation time : ' + str(gen_time) + ' ms', icon='TEMP')
         if GridManager.grid:
             layout.label(text='Dead ends : ' + str(GridManager.grid.dead_ends_amount), icon='CON_FOLLOWPATH')
-        layout.label(text='Disable Auto-overwrite (Trash icon) to keep modified values')
-        # layout.prop(mg_props, 'info_show_help', toggle=True)
-        layout.operator('maze.sample')
+            layout.label(text='Max Neighbors : ' + str(GridManager.grid.max_links_per_cell), icon='LIBRARY_DATA_DIRECT')
+            layout.label(text='Groups : ' + str(len(GridManager.grid.groups)), icon='SELECT_SUBTRACT')
+        # layout.label(text='Disable Auto-overwrite (Trash icon) to keep modified values')
+            layout.operator('maze.sample')

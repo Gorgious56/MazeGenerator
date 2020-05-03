@@ -74,18 +74,19 @@ class MeshManager:
 
         random.seed(props.seed_color)
 
-        rand = random.random
-        groups = []
+        # rand = random.random
+        groups = grid.groups
         group_colors = {}
-        for c in grid.get_linked_cells():
-            if c.group not in groups:
-                groups.append(c.group)
+        max_groups = max(max(grid.groups), 1)
         for g in groups:
-            group_colors[g] = rand(), rand(), rand(), 1
+            val = g / max_groups
+            group_colors[g] = val, val, val, 1
 
+        max_neighbors = max(grid.max_links_per_cell, 1)
         neighbors_colors = {}
-        for n in [i for i in range(10)]:
-            neighbors_colors[n] = (rand(), rand(), rand(), 1)
+        for n in range(max_neighbors + 1):
+            val = n / max_neighbors
+            neighbors_colors[n] = val, val, val, 1
 
         bm_cells.verts.ensure_lookup_table()
         bm_walls.verts.ensure_lookup_table()

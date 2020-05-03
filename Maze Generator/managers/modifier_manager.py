@@ -260,23 +260,44 @@ def setup_modifiers_and_drivers(MV, OM, TM) -> None:
                 'levels': 0,
             }),
             ('BEVEL', M_BEVEL, {
-                VISIBILIY: (obj_cells, obj_cells, 'width', M_BEVEL, M_BEVEL, 'var != 0'),
+                VISIBILIY:
+                (
+                    obj_cells,
+                    M_BEVEL,
+                    (
+                        ('cell_bevel', 'OBJECT', obj_cells, 'modifiers["' + M_BEVEL + '"].width'),
+                        ('cell_inset', 'SCENE', scene, 'mg_props.cell_inset'),
+                    ),
+                    'cell_bevel != 0 and cell_inset > 0.1',
+                ),
                 'segments': ('cell_contour_black', '2 if var else 4'),
                 'limit_method': 'ANGLE',
                 'material': ('cell_contour_black', '1 if var else 0'),
                 'profile': ('cell_contour_black', '1 if var else 0.5'),
                 'angle_limit': 0.75,
-                'use_clamp_overlap': False,
+                # 'use_clamp_overlap': False,
                 'width': 0,
+                'miter_inner': ('cell_contour_black', '2 if var else 0'),
+                'miter_outer': ('cell_contour_black', '2 if var else 0'),
             }),
             ('WIREFRAME', M_WIREFRAME, {
-                VISIBILIY: (obj_cells, obj_cells, 'thickness', M_WIREFRAME, M_WIREFRAME, 'var != 0'),
+                VISIBILIY:
+                (
+                    obj_cells,
+                    M_WIREFRAME,
+                    (
+                        ('cell_wireframe', 'OBJECT', obj_cells, 'modifiers["' + M_WIREFRAME + '"].thickness'),
+                        ('cell_inset', 'SCENE', scene, 'mg_props.cell_inset'),
+                    ),
+                    'cell_wireframe != 0 and cell_inset > 0.1',
+                ),
+                # VISIBILIY: (obj_cells, obj_cells, 'thickness', M_WIREFRAME, M_WIREFRAME, 'var != 0'),
                 'use_replace': False,
                 'material_offset': ('cell_contour_black', None),
                 'thickness': 0,
-                'vertex_group': cv.VG_THICKNESS,
-                'thickness_vertex_group': ('cell_thickness_equalize', "not var"),
-                'invert_vertex_group': True,
+                # 'vertex_group': cv.VG_THICKNESS,
+                # 'thickness_vertex_group': ('cell_thickness_equalize', "not var"),
+                # 'invert_vertex_group': True,
             }),
         )
     }

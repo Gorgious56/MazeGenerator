@@ -58,8 +58,7 @@ class MaterialManager:
 
         random.seed(props.seed_color)
         get_or_create_node(
-            nodes, 'cell_rgb_node', 'ShaderNodeRGB', (-400, -300),
-            outputs={'Color': (random.random(), random.random(), random.random(), 1)})
+            nodes, 'cell_rgb_node', 'ShaderNodeRGB', (-400, -300))
         get_or_create_node(
             nodes, 'cell_vertex_colors_distance_node', 'ShaderNodeVertexColor', (-1400, 0),
             attributes={'layer_name': mesh_manager.DISTANCE})
@@ -73,8 +72,11 @@ class MaterialManager:
         get_or_create_node(nodes, 'cell_sep_rgb_node', 'ShaderNodeSeparateRGB', (-1200, 0))
 
         get_or_create_node(nodes, 'cell_cr_distance_node', 'ShaderNodeValToRGB', (-800, -100))
-        MaterialManager.cell_cr_distance_node.color_ramp.elements[0].color = (0, 1, 0, 1)
-        MaterialManager.cell_cr_distance_node.color_ramp.elements[1].color = (1, 0, 0, 1)
+        try:
+            MaterialManager.cell_cr_distance_node.color_ramp.elements[0].color = (0, 1, 0, 1)
+            MaterialManager.cell_cr_distance_node.color_ramp.elements[1].color = (1, 0, 0, 1)
+        except IndexError:
+            pass
 
         get_or_create_node(
             nodes, 'cell_math_node', 'ShaderNodeMath', (-800, 100),
@@ -94,32 +96,28 @@ class MaterialManager:
             inputs={1: 0},
             attributes={'operation': 'COMPARE'})
 
-        try:
-            links = mat.node_tree.links
-            if props.paint_style == mesh_manager.DISTANCE:
-                links.new(self.cell_vertex_colors_distance_node.outputs[0], self.cell_sep_rgb_node.inputs[0])
-                links.new(self.cell_sep_rgb_node.outputs[0], self.cell_cr_distance_node.inputs[0])
-                links.new(self.cell_sep_rgb_node.outputs[1], self.cell_math_node.inputs[0])
-                links.new(self.cell_sep_rgb_node.outputs[0], self.cell_math_compare_node.inputs[0])
-                links.new(self.cell_math_compare_node.outputs[0], self.cell_math_alpha_node.inputs[1])
+        links = mat.node_tree.links
+        links.new(self.cell_sep_rgb_node.outputs[0], self.cell_cr_distance_node.inputs[0])
+        links.new(self.cell_sep_rgb_node.outputs[1], self.cell_math_node.inputs[0])
+        links.new(self.cell_sep_rgb_node.outputs[0], self.cell_math_compare_node.inputs[0])
+        links.new(self.cell_math_compare_node.outputs[0], self.cell_math_alpha_node.inputs[1])
 
-                links.new(self.cell_math_node.outputs[0], self.cell_math_alpha_node.inputs[0])
-                links.new(self.cell_math_alpha_node.outputs[0], self.cell_mix_longest_distance_node.inputs[0])
+        links.new(self.cell_math_node.outputs[0], self.cell_math_alpha_node.inputs[0])
+        links.new(self.cell_math_alpha_node.outputs[0], self.cell_mix_longest_distance_node.inputs[0])
 
-                links.new(self.cell_cr_distance_node.outputs[0], self.cell_mix_longest_distance_node.inputs[1])
-                links.new(self.cell_mix_longest_distance_node.outputs[0], self.cell_hsv_node.inputs[4])
-            elif props.paint_style == mesh_manager.UNIFORM:
-                links.new(self.cell_rgb_node.outputs[0], self.cell_mix_longest_distance_node.inputs[1])
-            elif props.paint_style == mesh_manager.GROUP:
-                links.new(self.cell_vertex_colors_group_node.outputs[0], self.cell_mix_longest_distance_node.inputs[1])
-            else:  # Neighbors.
-                links.new(self.cell_vertex_colors_neighbors_node.outputs[0], self.cell_mix_longest_distance_node.inputs[1])
+        links.new(self.cell_cr_distance_node.outputs[0], self.cell_mix_longest_distance_node.inputs[1])
+        links.new(self.cell_mix_longest_distance_node.outputs[0], self.cell_hsv_node.inputs[4])
+        if props.paint_style == mesh_manager.DISTANCE:
+            links.new(self.cell_vertex_colors_distance_node.outputs[0], self.cell_sep_rgb_node.inputs[0])
+        elif props.paint_style == mesh_manager.UNIFORM:
+            links.new(self.cell_rgb_node.outputs[0], self.cell_mix_longest_distance_node.inputs[1])
+        elif props.paint_style == mesh_manager.GROUP:
+            links.new(self.cell_vertex_colors_group_node.outputs[0], self.cell_cr_distance_node.inputs[0])
+        else:  # Neighbors.
+            links.new(self.cell_vertex_colors_neighbors_node.outputs[0], self.cell_cr_distance_node.inputs[0])
 
-            links.new(self.cell_hsv_node.outputs[0], self.cell_bsdf_node.inputs[0])
-            links.new(self.cell_bsdf_node.outputs[0], self.cell_output_node.inputs[0])
-
-        except (IndexError, AttributeError):
-            pass
+        links.new(self.cell_hsv_node.outputs[0], self.cell_bsdf_node.inputs[0])
+        links.new(self.cell_bsdf_node.outputs[0], self.cell_output_node.inputs[0])
 
     def set_cell_contour_material(props) -> None:
         obj_cells = object_manager.ObjectManager.obj_cells
