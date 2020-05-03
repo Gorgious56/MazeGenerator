@@ -270,7 +270,7 @@ class Grid:
                             dead_ends -= 1
                         else:
                             best = unconnected_neighbors
-                        c.link(random.choice(best))
+                        self.link(c, random.choice(best))
                         dead_ends -= 1
         self.dead_ends_amount = dead_ends
 
@@ -342,6 +342,12 @@ class Grid:
         # End.
         self.distances = distances
         self.longest_path = longest_path
+
+    def link(self, cell_a, cell_b):
+        return cell_a.link(cell_b)
+
+    def unlink(self, cell_a, cell_b):
+        cell_a.unlink(cell_b)
 
 
 class GridHex(Grid):

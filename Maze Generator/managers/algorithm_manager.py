@@ -54,6 +54,7 @@ class MazeAlgorithm(object):
             print('No Union Find Algorithm declared for this algorithm')
 
     def add_crossing(self, cell):
+        grid = self.grid
         can_cross = not cell.has_any_link()
         if can_cross:
             north = cell.neighbor(cst.NORTH)
@@ -61,30 +62,30 @@ class MazeAlgorithm(object):
             south = cell.neighbor(cst.SOUTH)
             east = cell.neighbor(cst.EAST)
             if random() > 0.5:  # Vertical underway
-                cell.link(west)
+                grid.link(cell, west)
                 self.union_find.union(cell, west)
-                cell.link(east)
+                grid.link(cell, east)
                 self.union_find.union(cell, east)
 
                 new_cell_under = self.grid.tunnel_under(cell)
                 self.union_find.data[new_cell_under] = new_cell_under
 
-                north.link(north.neighbor(cell.get_neighbor_return(cst.NORTH)))
+                grid.link(north, north.neighbor(cell.get_neighbor_return(cst.NORTH)))
                 self.union_find.union(north, north.neighbor(cell.get_neighbor_return(cst.NORTH)))
-                south.link(south.neighbor(cell.get_neighbor_return(cst.SOUTH)))
+                grid.link(south, south.neighbor(cell.get_neighbor_return(cst.SOUTH)))
                 self.union_find.union(south, south.neighbor(cell.get_neighbor_return(cst.SOUTH)))
             else:
-                cell.link(north)
+                grid.link(cell, north)
                 self.union_find.union(cell, north)
-                cell.link(south)
+                grid.link(cell, south)
                 self.union_find.union(cell, south)
 
                 new_cell_under = self.grid.tunnel_under(cell)
                 self.union_find.data[new_cell_under] = new_cell_under
 
-                west.link(west.neighbor(cell.get_neighbor_return(cst.WEST)))
+                grid.link(west, west.neighbor(cell.get_neighbor_return(cst.WEST)))
                 self.union_find.union(west, west.neighbor(cell.get_neighbor_return(cst.WEST)))
-                east.link(east.neighbor(cell.get_neighbor_return(cst.EAST)))
+                grid.link(east, east.neighbor(cell.get_neighbor_return(cst.EAST)))
                 self.union_find.union(east, east.neighbor(cell.get_neighbor_return(cst.EAST)))
             return True
         return False
@@ -132,7 +133,7 @@ class BinaryTree(MazeAlgorithm):
 
             link_neighbor = methods.get_biased_choices(neighbors, bias, 5)[0]
             if not self.union_find.connected(c, link_neighbor):
-                c.link(link_neighbor)
+                grid.link(c, link_neighbor)
                 self.union_find.union(c, link_neighbor)
 
 
@@ -208,10 +209,10 @@ class Eller(MazeAlgorithm):
         for row in grid.each_row():
             sets_this_row = {}
             for c in row:
-                cell_nxt_col = grid.next_column(c)
-                if cell_nxt_col and ((c.row == grid.rows - 1 or self.bias < random()) and not uf.connected(c, cell_nxt_col)):
-                    c.link(cell_nxt_col)
-                    uf.union(c, cell_nxt_col)
+                next_col = grid.next_column(c)
+                if next_col and ((c.row == grid.rows - 1 or self.bias < random()) and not uf.connected(c, next_col)):
+                    grid.link(c, next_col)
+                    uf.union(c, next_col)
             for c in row:
                 this_set = uf.find(c)
                 if this_set in sets_this_row:
@@ -231,7 +232,7 @@ class Eller(MazeAlgorithm):
                         uf.union(other_col, grid.next_row(other_col))
                         neigh = other_col
                     if neigh:
-                        c.link(neigh)
+                        grid.link(c, neigh)
                         uf.union(c, neigh)
 
 
@@ -278,6 +279,7 @@ class CrossStitch(MazeAlgorithm):
                         self.link_to(self.current, neighbor)
 
     def link_to(self, c, other_c):
+        self.grid.link(c, other_c)
         if other_c in self.unvisited_legit_cells:
             self.unvisited_legit_cells.remove(other_c)
         if c in self.unvisited_legit_cells:
@@ -317,7 +319,7 @@ class KruskalRandom(MazeAlgorithm):
         for c in unvisited_cells:
             for n in methods.get_biased_choices(c.neighbors, self.bias, k=len(c.neighbors)):
                 if not self.union_find.connected(c, n):
-                    link_a, link_b = c.link(n)
+                    link_a, link_b = grid.link(c, n)  # Keep this because of the weave maze
                     self.union_find.union(link_a, link_b)
 
 
@@ -342,7 +344,7 @@ class Prim(MazeAlgorithm):
         while not self.q.is_empty():
             cell, neighbor = self.q.pop()
             if not self.union_find.connected(cell, neighbor):
-                cell.link(neighbor)
+                self.grid.link(cell, neighbor)
                 self.union_find.union(cell, neighbor)
                 self.push_to_queue(neighbor)
             self.push_to_queue(cell)
@@ -435,7 +437,7 @@ class RecursiveDivision(MazeAlgorithm):
         if cell:
             n = cell.neighbor(neighbor_number)
             if n and not self.union_find.connected(cell, n):
-                cell.link(n)
+                self.grid.link(cell, n)
                 self.union_find.union(cell, n)
                 return True
         return False
@@ -456,7 +458,7 @@ class RecursiveVoronoiDivision(MazeAlgorithm):
         all_cells = self.grid.all_cells.copy()
 
         # Destroy all walls:
-        [[c.link(n, False) for n in c.neighbors if n.level == c.level] for c in all_cells]
+        [[grid.link(c, n, False) for n in c.neighbors if n.level == c.level] for c in all_cells]
         self.run(all_cells)
 
     def run(self, cells):
@@ -493,7 +495,7 @@ class RecursiveVoronoiDivision(MazeAlgorithm):
         # Unlink all the cells in the frontier but one
         if len(frontier) > 0:
             actual_psg = frontier.pop(randrange(0, len(frontier)))
-            actual_psg[0].link(actual_psg[1])
+            self.grid.link(actual_psg[0], actual_psg[1])
             for psg in frontier:
                 # Make sure we don't close dead-ends or cells which got isolated from their set
                 if len(psg[0].links) > 1 \
@@ -525,7 +527,7 @@ class VoronoiDivision(MazeAlgorithm):
         self.expeditions = 0
 
         # Destroy all walls:
-        [[c.link(n, False) for n in c.neighbors if n.level == c.level] for c in all_cells]
+        [[grid.link(c, n, False) for n in c.neighbors if n.level == c.level] for c in all_cells]
         self.run(all_cells)
 
     def run(self, cells):
@@ -591,7 +593,7 @@ class AldousBroder(MazeAlgorithm):
             neighbor = choice(current.neighbors)
 
             if len(neighbor.links) <= 0:
-                current.link(neighbor)
+                grid.link(current, neighbor)
                 unvisited -= 1
             current = neighbor
             current.group = expeditions
@@ -623,7 +625,7 @@ class Wilson(MazeAlgorithm):
                     path.append(cell)
 
             for i in range(0, len(path) - 1):
-                path[i].link(path[i + 1])
+                grid.link(path[i], path[i + 1])
                 path[i].group = 1
                 path[i + 1].group = 1
                 unvisited.remove(path[i])
@@ -666,6 +668,7 @@ class HuntAndKill(MazeAlgorithm):
                 break
 
     def link_to(self, c, other_c):
+        self.grid.link(c, other_c)
         if other_c in self.unvisited_legit_cells:
             self.unvisited_legit_cells.remove(other_c)
         if c in self.unvisited_legit_cells:
@@ -702,7 +705,7 @@ class RecursiveBacktracker(MazeAlgorithm):
 
             unlinked_neighbor, direction = current.get_biased_unlinked_directional_neighbor(self.bias, direction)
             if unlinked_neighbor:
-                current.link(unlinked_neighbor)
+                self.grid.link(current, unlinked_neighbor)
                 stack.append(unlinked_neighbor)
                 unlinked_neighbor.group = expeditions + 1
                 backtracking = False
