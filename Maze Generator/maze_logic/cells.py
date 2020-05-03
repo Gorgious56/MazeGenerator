@@ -1,6 +1,5 @@
 import random
 from ..utils import event
-from ..utils import methods
 from . import constants as cst
 
 
@@ -11,6 +10,7 @@ class Cell(object):
     row: Vertical axis position in the grid
     """
     _NEIGHBORS_RETURN = [cst.SOUTH, cst.EAST, cst.NORTH, cst.WEST, cst.DOWN, cst.UP]
+    _CORNERS = 4
 
     def __init__(self, row, col, level=0):
         self.row = row
@@ -37,7 +37,11 @@ class Cell(object):
             return -1
 
     def get_neighbor_towards(self, direction):
-        return self._neighbors[direction] if 0 <= direction < len(self._neighbors) else None
+        return self.neighbor(direction) if 0 <= direction < len(self._neighbors) else None
+
+    @property
+    def corners(self):
+        return self._CORNERS
 
     def get_half_neighbors(self):
         return 0, 1
@@ -78,28 +82,23 @@ class Cell(object):
     def neighbor(self, index):
         return self._neighbors[index] if 0 <= index < len(self._neighbors) else None
 
-    def neighbors_in_range(self, min, max):
-        if 0 <= min < max < len(self._neighbors):
-            return [n for n in self._neighbors[min: max] if n]
-        else:
-            return []
+    def set_neighbor(self, index, cell, bidirectional=True):
+        if cell:
+            if index >= len(self._neighbors) or len(self._neighbors) == 0:
+                self._neighbors.append(cell)
+            else:
+                self._neighbors[index] = cell
+            if bidirectional:
+                cell.set_neighbor(self.get_neighbor_return(index), self, bidirectional=False)
 
-    def set_neighbor(self, index, cell):
-        try:
-            self._neighbors[index] = cell
-            if cell:
-                cell._neighbors[self.get_neighbor_return(index)] = self
-        except IndexError:
-            print(f"{self} neighbor n° {index} can't be set")
+    def get_neighbor_return(self, index):
+        return self._NEIGHBORS_RETURN[index]
 
     def get_unlinked_neighbors(self):
         return [c for c in self.neighbors if not c.has_any_link()]
 
     def get_linked_neighbors(self):
         return [c for c in self.neighbors if c.has_any_link()]
-
-    def get_neighbors_linked_to_me(self):
-        return [n for n in self.neighbors if n in self.links]
 
     def get_wall_mask(self):
         return [not self.exists_and_is_linked(n) for n in self._neighbors] if self.has_any_link() else [False] * len(self._neighbors)
@@ -108,7 +107,6 @@ class Cell(object):
         direction = int(direction)
         if direction == -1 or type(self) is not Cell:
             try:
-                # unlinked_neighbor = self.get_neighbor_level_biased((1 + bias) / 2)
                 unlinked_neighbor = random.choice(self.get_unlinked_neighbors())
                 return unlinked_neighbor, self.get_neighbor_direction(unlinked_neighbor)
             except IndexError:
@@ -116,9 +114,9 @@ class Cell(object):
         else:
             left_dir = (direction + 1) % 4
             right_dir = (direction - 1) % 4
-            left = self._neighbors[left_dir]
-            front = self._neighbors[direction]
-            right = self._neighbors[right_dir]
+            left = self.neighbor(left_dir)
+            front = self.neighbor(direction)
+            right = self.neighbor(right_dir)
 
             choose_left = (1 - 2 * bias) / 3
             choose_front = (1 - abs(bias) / 3) / 3
@@ -160,6 +158,7 @@ class Cell(object):
 
 class CellHex(Cell):
     _NEIGHBORS_RETURN = [3, 4, 5, 0, 1, 2]
+    _CORNERS = 6
 
     def __init__(self, row, col, lvl):
         super().__init__(row, col, lvl)
@@ -170,35 +169,55 @@ class CellHex(Cell):
 
 
 class CellPolar(Cell):
-    _NEIGHBORS_RETURN = [2, lambda c: c._neighbors[1].get_neighbor_direction(c), 0, 1, 1]
+    _NEIGHBORS_RETURN = [2, lambda c: c.neighbor(1).get_neighbor_direction(c), 0, 1, 1]
 
-    def __init__(self, row, col, lvl=0):
+    def __init__(self, row, col, lvl=0, doubling=False):
         super().__init__(row, col, lvl)
-        self._neighbors = [None] * 5  # [out_ccw, in_ccw, in_cw, out_cw, out_mid]
+        if row == 0:
+            self._neighbors = []
+            self._NEIGHBORS_RETURN = [1] * 6
+        else:
+            self._neighbors = [None] * 4  # [ccw, in, cw, out]
 
     def get_half_neighbors(self):
-        return 0, 1
+        if self.row != 0:
+            return 0, 1
+        else:
+            return ()
+
+    def set_neighbor(self, index, cell, bidirectional=True):
+        if cell:
+            if self.row == 0:
+                self._neighbors.append(cell)
+            elif index >= len(self._neighbors) or len(self._neighbors) == 0:
+                self._neighbors.append(cell)
+            else:
+                if index == -1 and self._neighbors[-1]:
+                    self._neighbors.append(cell)
+                else:
+                    self._neighbors[index] = cell
+            if bidirectional:
+                cell.set_neighbor(self.get_neighbor_return(index), self, bidirectional=False)
 
     def get_neighbor_return(self, index):
+
         ret = self._NEIGHBORS_RETURN[index]
         return ret if type(ret) is int else ret(self)
 
+    @property
+    def corners(self):
+        return len(self._neighbors)
 
     def is_linked_outward(self):
-        return any([n for n in self._neighbors[3:5] if n and self.is_linked(n)])
+        return any([n for n in self._neighbors[(3 if self.row > 0 else 0)::] if n and self.is_linked(n)])
 
     def has_outward_neighbor(self):
-        return any(self._neighbors[3:5])
-
-    def add_outward(self, cell):
-        if self._neighbors[3]:
-            self.set_neighbor(4, cell)
-        else:
-            self.set_neighbor(3, cell)
+        return any(self._neighbors[(3 if self.row > 0 else 0)::])
 
 
 class CellTriangle(Cell):
     _NEIGHBORS_RETURN = (0, 1, 2)
+    _CORNERS = 3
 
     def __init__(self, row, col, lvl):
         super().__init__(row, col, lvl)
@@ -224,7 +243,7 @@ class CellOver(Cell):
         if self.neighbors_over is None:
             self.neighbors_over = [None] * len(self._NEIGHBORS_RETURN)
             for i, neighbor in enumerate(self._neighbors):
-                self.neighbors_over[i] = neighbor._neighbors[i] if self.can_tunnel_towards(i) else None
+                self.neighbors_over[i] = neighbor.neighbor(i) if self.can_tunnel_towards(i) else None
         ns = super().neighbors
         ns.extend([n for n in self.neighbors_over if n])
         return ns
@@ -234,14 +253,14 @@ class CellOver(Cell):
         if self.neighbors_over is None:
             self.neighbors_over = [None] * len(self._NEIGHBORS_RETURN)
             for i, neighbor in enumerate(self._neighbors):
-                self.neighbors_over[i] = neighbor._neighbors[i] if self.can_tunnel_towards(i) else None
+                self.neighbors_over[i] = neighbor.neighbor(i) if self.can_tunnel_towards(i) else None
         ns = super().neighbors
         ns.extend([n for n in self.neighbors_over if n])
         return ns
 
     def can_tunnel_towards(self, direction):
-        potential_host = self._neighbors[direction]
-        return potential_host and potential_host._neighbors[direction] and potential_host.can_host_psg_towards(direction)
+        potential_host = self.neighbor(direction)
+        return potential_host and potential_host.neighbor(direction) and potential_host.can_host_psg_towards(direction)
 
     def can_host_psg_towards(self, direction):
         return self.can_host_under_vertical_psg() if direction % 2 == 0 else self.can_host_under_horiz_psg()

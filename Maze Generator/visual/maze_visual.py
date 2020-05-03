@@ -9,7 +9,7 @@ class MazeVisual:
     def refresh_maze(scene: bpy.types.Scene) -> None:
         MazeVisual.scene = scene
         MazeVisual.props = scene.mg_props
-        object_manager.ObjectManager.generate_objects(scene)
+        object_manager.ObjectManager.get_or_create_and_link_objects(scene)
         texture_manager.TextureManager.generate_textures(bpy.data.textures)
         material_manager.MaterialManager.set_materials(MazeVisual.props, scene)
         mesh_manager.MeshManager.create_vertex_groups(object_manager.ObjectManager.obj_cells, object_manager.ObjectManager.obj_walls)
@@ -33,7 +33,7 @@ class MazeVisual:
             grid_manager.GridManager.grid.sparse_dead_ends(props.sparse_dead_ends, props.seed)
             grid_manager.GridManager.grid.braid_dead_ends(props.braid_dead_ends, props.seed)
 
-            object_manager.ObjectManager.generate_objects(scene)
+            object_manager.ObjectManager.get_or_create_and_link_objects(scene)
             object_manager.ObjectManager.update_wall_visibility(self.props, algorithm_manager.is_algo_weaved(self.props))
 
             texture_manager.TextureManager.generate_textures(bpy.data.textures)
