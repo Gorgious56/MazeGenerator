@@ -123,7 +123,6 @@ class ParametersPanel(bpy.types.Panel):
         except (ReferenceError, KeyError):
             return
         row.prop(cell_mask_mod, 'threshold', text='Steps')
-        # row.prop(mg_props, 'steps', icon='MOD_DYNAMICPAINT')
 
         layout.prop(mg_props, 'braid_dead_ends', slider=True, text='Open Dead Ends')
         layout.prop(mg_props, 'sparse_dead_ends')
@@ -145,7 +144,6 @@ class ParametersPanel(bpy.types.Panel):
         try:
             row = box.row(align=True)
             row.prop(ObjectManager.obj_cells.modifiers[mod_mgr.M_STAIRS], 'strength', text='Stairs')
-            # row.prop(ObjectManager.obj_cells.modifiers[mod_mgr.M_WELD], 'merge_threshold', text='Merge')
 
             row = box.row(align=True)
             row.prop(ObjectManager.obj_cells.modifiers["MG_TEX_DISP"], 'strength', text='Inflate', slider=True)
@@ -184,7 +182,6 @@ class CellsPanel(bpy.types.Panel):
         box = layout.box()
 
         try:
-            # cell_solidify_mod = MazeVisual.obj_cells.modifiers[mod_mgr.M_THICKNESS_SOLID]
             cell_thickness_mod = ObjectManager.obj_cells.modifiers[mod_mgr.M_THICKNESS_DISP]
             cell_wire_mod = ObjectManager.obj_cells.modifiers[mod_mgr.M_WIREFRAME]
             cell_bevel_mod = ObjectManager.obj_cells.modifiers[mod_mgr.M_BEVEL]
@@ -255,16 +252,14 @@ class WallsPanel(bpy.types.Panel):
             wall_solid_mod = ObjectManager.obj_walls.modifiers[mod_mgr.M_SOLID]
             wall_screw_mod = ObjectManager.obj_walls.modifiers[mod_mgr.M_SCREW]
             wall_bevel_mod = ObjectManager.obj_walls.modifiers[mod_mgr.M_BEVEL]
-            wall_mat = ObjectManager.obj_walls.material_slots[0].material
-            rgb_node = wall_mat.node_tree.nodes['RGB']
+            wall_bsdf_node = material_manager.MaterialManager.wall_principled
         except ReferenceError:
             return
         row = layout.row(align=True)
         layout.prop(wall_bevel_mod, 'width', text='Bevel')
         row.prop(wall_screw_mod, 'screw_offset', text='Height')
         row.prop(wall_solid_mod, 'thickness')
-        layout.prop(rgb_node.outputs[0], 'default_value', text='Color')
-        # layout.prop(mg_props, 'wall_hide', text='Auto-hide when insetting', toggle=True)
+        layout.prop(wall_bsdf_node.inputs[0], 'default_value', text='Color')
 
 
 class DisplayPanel(bpy.types.Panel):
@@ -305,11 +300,9 @@ class DisplayPanel(bpy.types.Panel):
             row = box.row(align=True)
             row.box().template_color_ramp(material_manager.MaterialManager.cell_cr_distance_node, property="color_ramp", expand=True)
 
-
         box.prop(material_manager.MaterialManager.cell_hsv_node.inputs[0], 'default_value', text='Hue Shift', slider=True)
         box.prop(material_manager.MaterialManager.cell_hsv_node.inputs[1], 'default_value', text='Saturation Shift', slider=True)
         box.prop(material_manager.MaterialManager.cell_hsv_node.inputs[2], 'default_value', text='Value Shift', slider=True)
-        # box.prop(mg_props, 'value_shift', slider=True, text='Value Shift')
 
 
 class InfoPanel(bpy.types.Panel):

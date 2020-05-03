@@ -1,8 +1,6 @@
 import bmesh
 import random
-from typing import Iterable
 from mathutils import Matrix
-from ..maze_logic import grids
 
 
 DISTANCE = 'DISTANCE'
@@ -21,9 +19,9 @@ def generate_cell_visual_enum():
             ]
 
 
-VG_DISPLACE, VG_STAIRS, VG_THICKNESS = 'MG_DISPLACE', 'MG_STAIRS', 'MG_CELL_THICKNESS'
+VG_DISPLACE, VG_STAIRS, VG_THICKNESS, VG_LONGEST_PATH = 'MG_DISPLACE', 'MG_STAIRS', 'MG_CELL_THICKNESS', 'MG_LONGEST_PATH'
 
-VERTEX_GROUPS = VG_STAIRS, VG_THICKNESS
+VERTEX_GROUPS = VG_STAIRS, VG_THICKNESS, VG_LONGEST_PATH
 
 
 class MeshManager:
@@ -95,10 +93,12 @@ class MeshManager:
             for v_ind in vg_info:
                 bm_cells_vert = bm_cells.verts[v_ind]
                 bm_cells_vert[vg_cells][0] = weights[0]
+                bm_cells_vert[vg_cells][2] = weights[1]
 
                 bm_walls_vert = bm_walls.verts[v_ind]
                 bm_walls_vert[vg_walls][0] = weights[0]
                 bm_walls_vert[vg_walls][1] = 1
+                bm_walls_vert[vg_walls][2] = weights[1]
 
                 for loop in bm_cells_vert.link_loops:
                     loop[distance_vc] = (weights[0], weights[1], 0, 0)
@@ -129,8 +129,8 @@ class MeshManager:
         MeshManager.cells = 0
 
     def on_new_cell(grid, cell):
-        MeshManager.verts_indices[cell] = range(MeshManager.cells, MeshManager.cells + grid.CELL_SIDES)
-        MeshManager.cells += grid.CELL_SIDES
+        MeshManager.verts_indices[cell] = range(MeshManager.cells, MeshManager.cells + cell.corners)
+        MeshManager.cells += cell.corners
 
     def get_mesh_info(grid):
         all_cells = grid.all_cells
@@ -143,17 +143,18 @@ class MeshManager:
         longest_path = grid.longest_path
         for c in all_cells:
             verts_indices = MeshManager.verts_indices[c]
-            corners = grid.get_cell_positions(c)
-            for i in range(len(corners)):
-                verts[verts_indices[i]] = corners[i]
+            corners_positions = grid.get_cell_positions(c)
+
+            for i in range(len(corners_positions)):
+                verts[verts_indices[i]] = corners_positions[i]
             if c.has_any_link():
                 faces.append(verts_indices)
                 this_distance = grid.distances[c]
-                cells_data[verts_indices] = ((this_distance / max_distance) if this_distance else 0, 0 if c in longest_path else 1, c.group, len(c.links))
+                cells_data[verts_indices] = (((this_distance) / max_distance) if this_distance else -1, 0 if c in longest_path else 1, c.group, len(c.links))
             half_neighbors = c.get_half_neighbors()
             for direction, w in enumerate(c.get_wall_mask()):
                 if w and direction < len(verts_indices):
-                    walls_edges.append((verts_indices[direction], verts_indices[(direction + 1) % grid.CELL_SIDES]))
+                    walls_edges.append((verts_indices[direction], verts_indices[(direction + 1) % c.corners]))
                 elif not w and direction in half_neighbors:
                     n = c.get_neighbor_towards(direction)
                     if n:
@@ -161,8 +162,8 @@ class MeshManager:
                         first_idx = direction
                         second_idx = c.get_neighbor_return(direction)
 
-                        faces.append((verts_indices[first_idx], neighbor_indices[(second_idx + 1) % grid.CELL_SIDES], neighbor_indices[second_idx], verts_indices[(first_idx + 1) % grid.CELL_SIDES]))
-                        walls_edges.append((verts_indices[first_idx], neighbor_indices[(second_idx + 1) % grid.CELL_SIDES]))
-                        walls_edges.append((verts_indices[(first_idx + 1) % grid.CELL_SIDES], neighbor_indices[second_idx]))
+                        faces.append((verts_indices[first_idx], neighbor_indices[(second_idx + 1) % n.corners], neighbor_indices[second_idx], verts_indices[(first_idx + 1) % c.corners]))
+                        walls_edges.append((verts_indices[first_idx], neighbor_indices[(second_idx + 1) % n.corners]))
+                        walls_edges.append((verts_indices[(first_idx + 1) % c.corners], neighbor_indices[second_idx]))
 
         return verts, faces, cells_data, walls_edges
