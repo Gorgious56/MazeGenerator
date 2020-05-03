@@ -11,7 +11,6 @@ from ..utils import event
 
 
 class Grid:
-    CELL_SIDES = 4
     CELL_TYPE = Cell
 
     def __init__(self, rows: int = 2, columns: int = 2, levels: int = 1, cell_size: int = 1, space_rep: int = 0, mask: Iterable[Tuple[int]] = None) -> None:
@@ -33,8 +32,6 @@ class Grid:
         self.offset = self._get_offset()
 
         self.cell_size = cell_size
-
-        self.number_of_sides = self.CELL_SIDES
 
         self.verts_indices = {}
         self.new_cell_evt = event.EventHandler(event.Event('New Cell'), self)
@@ -78,34 +75,56 @@ class Grid:
                     self[c, r, l] = self.CELL_TYPE(r, c, l) if self[c, r, l] is None else None
                     self.new_cell_evt(self[c, r, l])
 
-    def next_row(self, cell: Cell, reverse: bool = False) -> Cell:
+    def next_row(self, cell: Cell) -> Cell:
         """
         Returns the cell next row to the one passed as parameter
-        Returns None if either cell exists
-
-        Set reverse to True to get the cell in the previous row
+        Returns None if either one of the cells doesn't exist
         """
         if cell:
-            return self[cell.column, cell.row + (-1 if reverse else 1), cell.level]
+            return self[cell.column, cell.row + 1, cell.level]
 
-    def next_column(self, cell: Cell, reverse: bool = False) -> Cell:
+    def previous_row(self, cell: Cell) -> Cell:
         """
-        Returns the cell next column to the one passed as parameter
-        Returns None if either cell exists
-
-        Set reverse to True to get the cell in the previous column
+        Returns the cell in the previous row to the one passed as parameter
+        Returns None if either one of the cells doesn't exist
         """
         if cell:
-            return self[cell.column + (-1 if reverse else 1), cell.row, cell.level]
+            return self[cell.column, cell.row - 1, cell.level]
 
-    def next_level(self, cell: Cell, reverse: bool = False) -> Cell:
+    def next_column(self, cell: Cell) -> Cell:
         """
-        Returns the cell next level to the one passed as parameter
-        Returns None if either cell exists
+        Returns the cell in the next column to the one passed as parameter
+        Returns None if either one of the cells doesn't exist
+        """
+        if cell:
+            return self[cell.column + 1, cell.row, cell.level]
 
-        Set reverse to True to get the cell in the previous level
+    def previous_column(self, cell: Cell) -> Cell:
         """
-        return self[cell.column, cell.row, cell.level + (-1 if reverse else 1)]
+        Returns the cell in the previous column to the one passed as parameter
+        Returns None if either one of the cells doesn't exist
+        """
+        if cell:
+            return self[cell.column - 1, cell.row, cell.level]
+
+    def next_level(self, cell: Cell) -> Cell:
+        """
+        Returns the cell in the next level to the one passed as parameter
+        Returns None if either one of the cells doesn't exist
+        """
+        if cell:
+            return self[cell.column, cell.row, cell.level + 1]
+
+    def previous_level(self, cell: Cell) -> Cell:
+        """
+        Returns the cell in the previous level to the one passed as parameter
+        Returns None if either one of the cells doesn't exist
+        """
+        if cell:
+            return self[cell.column, cell.row, cell.level - 1]
+
+    def get_columns_this_row(self, row):
+        return self.columns
 
     def init_cells_neighbors(self) -> None:
         if self.space_rep == int(sp_mgr.REP_BOX):
@@ -270,6 +289,7 @@ class Grid:
             dead_ends = self.get_dead_ends()
             if not any(dead_ends):
                 return
+            random.shuffle(dead_ends)
             for c in dead_ends:
                 try:
                     c.unlink(next(iter(c.links)))
@@ -325,7 +345,6 @@ class Grid:
 
 
 class GridHex(Grid):
-    CELL_SIDES = 6
     CELL_TYPE = CellHex
 
     def _get_offset(self) -> Vector:
@@ -340,6 +359,7 @@ class GridHex(Grid):
             # Neighbor 1 : N
             c.set_neighbor(1, self[col, row + 1])
             # Neighbor 2 : NW
+            c.set_neighbor(2, self[col - 1, north_diagonal])
 
     def get_cell_center(self, c):
         return Vector([1 + 3 * c.column / 2, - (3 ** 0.5) * ((1 + c.column % 2) / 2 - c.row), 0])
@@ -361,7 +381,6 @@ class GridHex(Grid):
 
 class GridPolar(Grid):
     CELL_TYPE = CellPolar
-    CELL_SIDES = 5
 
     def __init__(self, rows, columns, levels, cell_size=1, space_rep=0, *args, **kwargs):
         self.rows_polar = []
@@ -395,16 +414,31 @@ class GridPolar(Grid):
         except IndexError:
             pass
 
-    def next_column(self, cell, reverse=False):
+    def next_column(self, cell):
         if cell:
-            return self[cell.row, cell.column + (- 1 if reverse else 1)]
-        # return self.rows_polar[cell.row][cell.column + 1] if 0 <= cell.column < self.row_length(cell.row) - 1 else None
+            if cell.row == 0:
+                return random.choice(cell.neighbors)
+            else:
+                return self[cell.row, cell.column + 1]
 
-    def next_row(self, cell, reverse=False):
-        return random.choice(cell.outward) if cell.outward else None
+    def next_row(self, cell):
+        if cell.row == 0:
+            return random.choice(cell.neighbors)
+        else:
+            outward_neighbors = [c for c in cell._neighbors[3::] if c]
+            return random.choice(outward_neighbors) if outward_neighbors else None
+
+    def previous_row(self, cell):
+        if cell.row == 0:
+            return None
+        else:
+            return cell.neighbor(1)
 
     def next_level(self, cell, reverse=False):
         return None
+
+    def get_columns_this_row(self, row):
+        return len(self.rows_polar[row])
 
     def prepare_grid(self):
         rows = [None] * self.rows
@@ -426,27 +460,23 @@ class GridPolar(Grid):
 
         self.rows_polar = rows
 
-        for cell in self.all_cells:
-            self.new_cell_evt(cell)
-
     def init_cells_neighbors(self) -> None:
-        # 0>cw - 1>ccw - 2>inward - 3>outward
-        for c in self.all_cells:
+        # 0>ccw - 1>in - 2>cw - 3...>outward
+        all_cells = self.all_cells
+        for c in all_cells:
             row, col = c.row, c.column
             if row > 0:
                 row_length = self.row_length(c.row)
-                c.set_neighbor(0, self.next_column(c))
-                c.set_neighbor(2, self.next_column(c, reverse=True))
-                # c.ccw = self[row, (col + 1) % row_length]
-                # c.cw = self[row, col - 1]
+                c.set_neighbor(cst.POL_CCW, self.next_column(c))
+                c.set_neighbor(cst.POL_CW, self.next_column(c, reverse=True))
 
                 ratio = row_length / self.row_length(c.row - 1)
                 parent = self[row - 1, floor(col // ratio)]
-                parent.add_outward(c)
-                # parent.outward.append(c)
 
-                # c.inward = parent
-                c.set_neighbor(1, parent)
+                c.set_neighbor(cst.POL_IN, parent)
+
+        for cell in all_cells:
+            self.new_cell_evt(cell)
 
     def each_row(self) -> Generator[List[Cell], None, None]:
         """
@@ -476,33 +506,38 @@ class GridPolar(Grid):
             random.seed(_seed)
         return random.choice([c for c in random.choice(self.rows_polar)])
 
-    def get_position(self, radius, angle):
-        return Vector((radius * cos(angle), radius * sin(angle), 0))
-
     def row_length(self, row):
         return len(self.rows_polar[row])
 
     def get_cell_positions(self, cell):
-        row_length = self.row_length(cell.row)
         cs = self.cell_size
+        cell_corners = cell.corners
+        if cell.row == 0:
+            a_size = cs / 2
+            b_size = cs * (3 ** 0.5) / 2
+            return Vector((cs, 0, 0)), Vector((a_size, b_size, 0)), Vector((-a_size, b_size, 0)), Vector((-cs, 0, 0)), Vector((-a_size, -b_size, 0)), Vector((a_size, -b_size, 0))
+
+        def get_position(radius, angle):
+            return Vector((radius * cos(angle), radius * sin(angle), 0))
+
+        row_length = self.row_length(cell.row)
         t = 2 * pi / row_length
         r_in = cell.row + 0.5 - cs / 2
-        r_out = cell.row + 0.5 + cs / 2
-        t_ccw = (cell.column + 0.5 + cs / 2) * t
+        r_out = r_in + cs
         t_cw = (cell.column + 0.5 - cs / 2) * t
+        t_ccw = t_cw + cs * t
 
-        r_in_cw = self.get_position(r_in, t_cw)
-        r_out_cw = self.get_position(r_out, t_cw)
-        r_in_ccw = self.get_position(r_in, t_ccw)
-        r_out_ccw = self.get_position(r_out, t_ccw)
-        return r_out_ccw, r_in_ccw, r_in_cw, r_out_cw, (r_out_ccw + r_out_cw) / 2
+        r_in_cw = get_position(r_in, t_cw)
+        r_out_cw = get_position(r_out, t_cw)
+        r_in_ccw = get_position(r_in, t_ccw)
+        r_out_ccw = get_position(r_out, t_ccw)
+        return (r_out_ccw, r_in_ccw, r_in_cw, r_out_cw, get_position(r_out, (2 * cell.column + 1) * 2 * pi / self.row_length(cell.row + 1))) if cell_corners == 5 else (r_out_ccw, r_in_ccw, r_in_cw, r_out_cw)
 
     def _get_offset(self) -> Vector:
         return Vector((0, 0, 0))
 
 
 class GridTriangle(Grid):
-    CELL_SIDES = 3
     CELL_TYPE = CellTriangle
 
     def init_cells_neighbors(self) -> None:

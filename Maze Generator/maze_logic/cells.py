@@ -104,29 +104,6 @@ class Cell(object):
     def get_wall_mask(self):
         return [not self.exists_and_is_linked(n) for n in self._neighbors] if self.has_any_link() else [False] * len(self._neighbors)
 
-    def get_shuffled_neighbors(self):
-        shuffled_neighbors = self.neighbors
-        random.shuffle(shuffled_neighbors)
-        return shuffled_neighbors
-
-    def get_neighbor_return(self, index):
-        return self._NEIGHBORS_RETURN[index]
-
-    def get_biased_neighbors(self, bias, relative_weight=15):
-        _neighbors = self.neighbors
-        return methods.get_biased_choice(_neighbors, bias, relative_weight, k=len(_neighbors))
-
-    def get_biased_linked_neighbor(self, bias, relative_weight=5):
-        return methods.get_biased_choice(self.get_linked_neighbors(), bias, relative_weight)
-
-    def get_neighbor_level_biased(self, bias=0):
-        """
-        Get a random neighbor
-        A bias of 0 will prefer selecting a cell on the same level
-        A bias of 1 will prefer selecting a cell on a different level
-        """
-        pass
-
     def get_biased_unlinked_directional_neighbor(self, bias, direction):
         direction = int(direction)
         if direction == -1 or type(self) is not Cell:

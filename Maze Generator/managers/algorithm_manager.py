@@ -1,6 +1,5 @@
 from random import seed, choice, choices, random, shuffle, randrange
 from math import ceil, hypot
-from ..maze_logic.cells import CellPolar, CellTriangle, CellHex, Cell
 from ..utils . priority_queue import PriorityQueue
 from .cell_type_manager import POLAR, SQUARE
 from ..utils . union_find import UnionFind
@@ -110,17 +109,28 @@ class BinaryTree(MazeAlgorithm):
     def run(self):
         grid = self.grid
         bias = self.bias
-        for c in grid.each_cell():
+        for c in grid.all_cells:
             neighbors = []
-            next_col = grid.next_column(c)
-            neighbors.append(next_col)
-            if not next_col or c.row < grid.rows - 1:
-                neighbors.append(grid.next_row(c))
-            if c.row == self.grid.rows - 1:
-                neighbors.append(grid.next_level(c))
+            east_neighbor = grid.next_column(c)
+            columns_this_row = grid.get_columns_this_row(c.row)
+            if east_neighbor and east_neighbor in c.neighbors and c.column < columns_this_row - 1:
+                neighbors.append(east_neighbor)
+            if not east_neighbor or c.row < grid.rows - 1:
+                next_row = grid.next_row(c)
+                if next_row in c.neighbors:
+                    neighbors.append(next_row)
+                elif c.column == columns_this_row - 1:
+                    prev_column = grid.next_column(c, reverse=True)
+                    if prev_column:
+                        grid.link(c, prev_column)
+                        c = prev_column
+                        neighbors = [grid.next_row(c)]
+            if grid.levels > 1 and c.row == self.grid.rows - 1:
+                next_level = grid.next_level(c)
+                if next_level in c.neighbors:
+                    neighbors.append(next_level)
 
-            neighbors = [n for n in neighbors if n]
-            link_neighbor = methods.get_biased_choice(neighbors, bias, 5)
+            link_neighbor = methods.get_biased_choices(neighbors, bias, 5)[0]
             if not self.union_find.connected(c, link_neighbor):
                 c.link(link_neighbor)
                 self.union_find.union(c, link_neighbor)
@@ -150,73 +160,26 @@ class Sidewinder(MazeAlgorithm):
         for row in grid.each_row():
             run = []
             for c in row:
-                link = None
                 run.append(c)
-
-                c_type = type(c)
-                if c_type is CellTriangle:
-                    if c.is_upright():
-                        if (c.row == grid.rows - 1 or c.column == grid.columns - 1) and c.neighbor(cst.TRI_UP_LEFT):
-                            self.link(c, c.neighbor(cst.TRI_UP_LEFT))
-                        if c.neighbor(cst.TRI_UP_RIGHT):
-                            link = c, cst.TRI_UP_RIGHT
-                        else:
-                            down_cells_in_run = [c for c in run if not c.is_upright()]
-                            shuffle(down_cells_in_run)
-                            while down_cells_in_run:
-                                member = down_cells_in_run.pop(0)
-                                if member.neighbor(cst.TRI_DN_UP):
-                                    link = member, cst.TRI_DN_UP
-                                    break
+                east_neighbor = grid.next_column(c)
+                link_north = False
+                if not east_neighbor or c.column == grid.get_columns_this_row(c.row) - 1 or (grid.next_row(c) and self.must_close_run()):
+                    shuffle(run)
+                    for member in run:
+                        next_row = grid.next_row(member)
+                        if next_row and next_row in member.neighbors:
+                            grid.link(member, next_row)
                             run = []
+                            link_north = True
+                            break
+                if not link_north:
+                    if east_neighbor:
+                        grid.link(c, east_neighbor)
                     else:
-                        if c.row == grid.rows - 1 and c.neighbor(cst.TRI_DN_LEFT):
-                            link = c, cst.TRI_DN_LEFT
-                        elif (c.neighbor(cst.TRI_DN_RIGHT) is None) or (c.neighbor(cst.TRI_DN_RIGHT) is not None and self.must_close_run()):
-                            member = choice([c for c in run if not c.is_upright()])
-                            if member.neighbor(cst.TRI_DN_UP):
-                                link = member, cst.TRI_DN_UP
-                            run = []
-                        else:
-                            link = c, cst.TRI_DN_RIGHT
-                elif c_type is CellHex:
-                    other = 5 if c.column % 2 == 0 else 0
-                    if (c.neighbor(other) is None) or (c.neighbor(other) and self.must_close_run()):
-                        member = choice(run)
-                        north_neighbors = [n for n in c.neighbors[0:3] if n and not n.has_any_link()]
-                        if north_neighbors:
-                            link = member, choice(north_neighbors)
-                        elif c.neighbor(5):
-                            link = c, other
-                        run = []
-                    else:
-                        link = c, other
-                elif c_type is CellPolar:
-                    if (c.ccw and c.ccw.column == 0) or (c.has_outward_neighbor() and self.must_close_run()) or (c.row == 0):
-                        member = choice(run)
-                        if member.has_outward_neighbor():
-                            link = member, choice(member.outward)
-                        run = []
-                    else:
-                        link = c, c.ccw
-                else:  # Cell is Square
-                    if (c.neighbor(cst.EAST) is None) or (c.neighbor(cst.NORTH) and self.must_close_run()):
-                        member = choice(run)
-                        if member.neighbors[0]:
-                            link = member, 0
-                        run = []
-                    else:
-                        link = c, 3
-
-                if link:
-                    self.link(link[0], link[1] if isinstance(link[1], Cell) else link[0].neighbor(link[1]))
+                        grid.link(c, grid.next_column(c, reverse=True))
 
     def must_close_run(self):
         return self.bias > random()
-
-    def link(self, cell_a, cell_b):
-        cell_a.link(cell_b)
-        self.union_find.union(cell_a, cell_b)
 
 
 class Eller(MazeAlgorithm):
@@ -260,6 +223,13 @@ class Eller(MazeAlgorithm):
                 ch_len = min(len(cells), randrange(1, ceil(self.bias * len(cells) + 2)))
                 for c in choices(cells, k=ch_len):
                     neigh = grid.next_row(c)
+                    if neigh not in c.neighbors:
+                        other_col = grid.next_column(c)
+                        if not other_col:
+                            other_col = grid.next_column(c, reverse=True)
+                        grid.link(other_col, grid.next_row(other_col))
+                        uf.union(other_col, grid.next_row(other_col))
+                        neigh = other_col
                     if neigh:
                         c.link(neigh)
                         uf.union(c, neigh)
@@ -302,21 +272,16 @@ class CrossStitch(MazeAlgorithm):
             while self.unvisited_legit_cells:
                 c = self.unvisited_legit_cells[0]
                 if not c.has_any_link():
-                    neighbor = c.get_biased_linked_neighbor(self.bias, 5)
+                    neighbor = methods.get_biased_choices(c.get_linked_neighbors(), self.bias)[0]
                     if neighbor:
                         self.set_current(c)
                         self.link_to(self.current, neighbor)
 
     def link_to(self, c, other_c):
-        c.link(other_c)
-        try:
+        if other_c in self.unvisited_legit_cells:
             self.unvisited_legit_cells.remove(other_c)
-        except ValueError:
-            pass
-        try:
+        if c in self.unvisited_legit_cells:
             self.unvisited_legit_cells.remove(c)
-        except ValueError:
-            pass
         other_c.group = self.expeditions + 2
 
     def set_current(self, c):
@@ -350,7 +315,7 @@ class KruskalRandom(MazeAlgorithm):
         grid = self.grid
         unvisited_cells = grid.shuffled_cells()
         for c in unvisited_cells:
-            for n in c.get_biased_neighbors(self.bias):
+            for n in methods.get_biased_choices(c.neighbors, self.bias, k=len(c.neighbors)):
                 if not self.union_find.connected(c, n):
                     link_a, link_b = c.link(n)
                     self.union_find.union(link_a, link_b)
@@ -382,12 +347,9 @@ class Prim(MazeAlgorithm):
                 self.push_to_queue(neighbor)
             self.push_to_queue(cell)
 
-    def push_neighbors_to_queue(self, cell):
-        [self.push_to_queue(n) for n in cell.get_unlinked_neighbors()]
-
-    def push_to_queue(self, cell, priority=None):
+    def push_to_queue(self, cell):
         try:
-            self.q.push((cell, choice(cell.get_unlinked_neighbors())), priority if priority else (randrange(0, self.bias + 1)))
+            self.q.push((cell, choice(cell.get_unlinked_neighbors())), randrange(0, self.bias + 1))
         except IndexError:
             pass
 
@@ -397,7 +359,7 @@ class GrowingTree(MazeAlgorithm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.weights = 0.5 - self.bias / 2, 0.5 + self.bias / 2
+        self.bias = (self.bias + 1) / 2
 
         self.run()
 
@@ -405,16 +367,14 @@ class GrowingTree(MazeAlgorithm):
         active_cells = [self.grid.random_cell()]
 
         while active_cells:
-            cell = choices((self.last_element_in_list, choice), weights=self.weights)[0](active_cells)
-            try:
-                available_neighbor = choice(cell.get_unlinked_neighbors())
-                cell.link(available_neighbor)
+            cell = choice(list(reversed(active_cells))[0:int(len(active_cells) * self.bias) + 1])
+            unlinked_neighbors = cell.get_unlinked_neighbors()
+            if unlinked_neighbors:
+                available_neighbor = choice(unlinked_neighbors)
+                self.grid.link(cell, available_neighbor)
                 active_cells.append(available_neighbor)
-            except IndexError:
+            else:
                 active_cells.remove(cell)
-
-    def last_element_in_list(self, l):
-        return l[-1] if l else None
 
 
 class RecursiveDivision(MazeAlgorithm):
@@ -455,8 +415,8 @@ class RecursiveDivision(MazeAlgorithm):
 
         wall = HORIZONTAL if dy > dx else (VERTICAL if dx > dy else randrange(2))
 
-        xp = methods.get_biased_choice(range(mx, ax - (wall == VERTICAL)), self.bias)
-        yp = methods.get_biased_choice(range(my, ay - (wall == HORIZONTAL)), self.bias)
+        xp = methods.get_biased_choices(list(range(mx, ax - (wall == VERTICAL))), self.bias)[0]
+        yp = methods.get_biased_choices(list(range(my, ay - (wall == HORIZONTAL))), self.bias)[0]
 
         if wall == HORIZONTAL:
             nx, ny = ax, yp + 1
@@ -500,8 +460,8 @@ class RecursiveVoronoiDivision(MazeAlgorithm):
         self.run(all_cells)
 
     def run(self, cells):
-        # Interpretation of https://rosettacode.org/wiki/Voronoi_diagram#Python with two points.
-        # We could use actual sets for the data at the cost of determinism.
+        # Interpretation of https://rosettacode.org/wiki/Voronoi_diagram#Python with two points
+        # Could use actual sets for the data at the cost of determinism
         if len(cells) <= max(2, randrange(int(self.room_size * (1 - (self.room_size_deviation / 100))), self.room_size + 1)):
             return
 
@@ -706,15 +666,11 @@ class HuntAndKill(MazeAlgorithm):
                 break
 
     def link_to(self, c, other_c):
-        c.link(other_c)
-        try:
+        if other_c in self.unvisited_legit_cells:
             self.unvisited_legit_cells.remove(other_c)
-        except ValueError:
-            pass
-        try:
+        if c in self.unvisited_legit_cells:
             self.unvisited_legit_cells.remove(c)
-        except ValueError:
-            pass
+
         other_c.group = self.expeditions
 
     def set_current(self, c):

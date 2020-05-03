@@ -1,7 +1,7 @@
 import random
 
 
-def get_biased_choice(c_list, bias, relative_weight=5, k=1):
+def get_biased_choices(c_list, bias, relative_weight=5, k=1):
     """Return a sample of the list choosen with a bias
 
     c_list: Input list
@@ -13,8 +13,7 @@ def get_biased_choice(c_list, bias, relative_weight=5, k=1):
     try:
         if bias == 0:
             random.shuffle(c_list)
-            return c_list[0: k + 1] if k > 1 else c_list[0]
-        ret = random.choices(c_list, weights=[1 + relative_weight * abs(bias) * (ind if bias >= 0 else c_list_len - 1 - ind) for ind in range(c_list_len)], k=k)
-        return ret[0] if k == 1 else ret
+            return c_list[0:k]
+        return random.choices(c_list, weights=[1 + relative_weight * abs(bias) * (ind if bias >= 0 else c_list_len - 1 - ind) for ind in range(c_list_len)], k=k)
     except IndexError:
         return None
