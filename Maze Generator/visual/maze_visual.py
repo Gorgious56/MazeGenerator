@@ -27,12 +27,13 @@ class MazeVisual:
         grid_manager.GridManager.grid.new_cell_evt += lambda grid, cell: mesh_manager.MeshManager.on_new_cell(grid, cell)
         grid_manager.GridManager.grid.prepare_grid()
         grid_manager.GridManager.grid.init_cells_neighbors()
+        grid_manager.GridManager.grid.prepare_union_find()
 
         if not algorithm_manager.is_algo_incompatible(props):
             algorithm_manager.work(grid_manager.GridManager.grid, props)
             grid_manager.GridManager.grid.calc_state()
             grid_manager.GridManager.grid.sparse_dead_ends(props.sparse_dead_ends, props.seed)
-            grid_manager.GridManager.grid.braid_dead_ends(props.braid_dead_ends, props.seed)
+            grid_manager.GridManager.grid.braid_dead_ends(100 - props.keep_dead_ends, props.seed)
 
             object_manager.ObjectManager.get_or_create_and_link_objects(scene)
             object_manager.ObjectManager.update_wall_visibility(self.props, algorithm_manager.is_algo_weaved(self.props))

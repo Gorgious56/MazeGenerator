@@ -4,7 +4,6 @@ from mathutils import Vector
 from math import pi, floor, cos, sin
 from .cells import Cell, CellHex, CellOver, CellPolar, CellTriangle, CellUnder, CellOctogon
 from ..managers import space_rep_manager as sp_mgr
-# from ..managers.mesh_manager import VG_DISPLACE
 from . import constants as cst
 from ..managers.distance_manager import Distances
 from ..utils import event, union_find
@@ -225,34 +224,6 @@ class Grid:
             self.max_links_per_cell = max(links, self.max_links_per_cell)
             self.groups.add(c.group)
 
-    def braid_dead_ends(self, braid: int = 0, _seed: int = None) -> int:
-        """
-        This will link each dead-end to a neighboring cell
-        The method will favor other neighboring dead-ends to link to
-
-        braid : Amount between 0 (no braid) and 100 (all dead-ends are braided)
-
-        Returns the number of dead-ends after braiding
-        """
-        dead_ends_shuffle = self.dead_ends.copy()
-        if braid > 0:
-            braid /= 100
-            random.seed(_seed)
-
-            random.shuffle(dead_ends_shuffle)
-            stop_index = int(len(dead_ends_shuffle) * min(max(0, braid), 1))
-            for c in dead_ends_shuffle[0:stop_index]:
-                if len(c.links) == 1:
-                    unconnected_neighbors = [n for n in c.neighbors if n not in c.links and n.has_any_link()]
-                    if len(unconnected_neighbors) > 0:
-                        best = [n for n in unconnected_neighbors if len(n.links) < 2]
-                        if best:
-                            self.dead_ends.remove(best)
-                        else:
-                            best = unconnected_neighbors
-                        self.link(c, random.choice(best))
-                        self.dead_ends.remove(c)
-
     def sparse_dead_ends(self, sparse: int = 0, _seed: int = None) -> None:
         """
         This will sparse the maze by culling dead ends iteratively
@@ -265,20 +236,48 @@ class Grid:
         max_cells_to_cull = len(self.get_linked_cells()) * (sparse / 100) - 2
         culled_cells = 0
         while culled_cells < max_cells_to_cull:
-            dead_ends = self.get_dead_ends()
-            if not any(dead_ends):
+            self.dead_ends = [c for c in self.all_cells if c and len(c.links) == 1]
+            if not any(self.dead_ends):
                 return
-            random.shuffle(dead_ends)
-            for c in dead_ends:
+            random.shuffle(self.dead_ends)
+            for c in self.dead_ends:
                 try:
                     c.unlink(next(iter(c.links)))
+                    # self.dead_ends.remove(c)
                     culled_cells += 1
-                    if culled_cells >= max_cells_to_cull:                     
-                        self.dead_ends.remove(c)
+                    if culled_cells >= max_cells_to_cull:
                         return
                 except (StopIteration, AttributeError):
-                    self.dead_ends.remove(c)
+                    # self.dead_ends.remove(c)
                     pass
+
+    def braid_dead_ends(self, braid: int = 0, _seed: int = None) -> int:
+        """
+        This will link each dead-end to a neighboring cell
+        The method will favor other neighboring dead-ends to link to
+
+        braid : Amount between 0 (no braid) and 100 (all dead-ends are braided)
+
+        Returns the number of dead-ends after braiding
+        """
+        if braid > 0:
+            self.dead_ends = [c for c in self.all_cells if c and len(c.links) == 1]
+            braid /= 100
+            random.seed(_seed)
+            dead_ends_to_keep = int(len(self.dead_ends) * min(max(0, 1 - braid), 1))
+            random.shuffle(self.dead_ends)
+            while self.dead_ends and len(self.dead_ends) >= dead_ends_to_keep:
+                c = self.dead_ends[0]
+                neighbors_sorted_by_links = sorted([n for n in c.neighbors if n not in c.links and n.has_any_link()], key=lambda c: len(c.links))
+                if neighbors_sorted_by_links:
+                    best_neighbor = neighbors_sorted_by_links[0]
+                    self.link(c, best_neighbor)
+                    self.max_links_per_cell = max(len(c.links), len(best_neighbor.links), self.max_links_per_cell)
+                    self.dead_ends.remove(c)
+                    if best_neighbor in self.dead_ends:
+                        self.dead_ends.remove(best_neighbor)
+                else:
+                    self.dead_ends.remove(c)
 
     def shuffled_cells(self) -> List[Cell]:
         shuffled_cells = self.all_cells
@@ -409,23 +408,23 @@ class GridPolar(Grid):
             return
         if column == -1:
             if cell.row == 0:
-            return random.choice(cell.neighbors)
-        else:
-            return self[cell.row, cell.column - 1]
+                return random.choice(cell.neighbors)
+            else:
+                return self[cell.row, cell.column - 1]
         elif column == 1:
             if cell.row == 0:
-            return random.choice(cell.neighbors)
-        else:
-            return self[cell.row, cell.column + 1]
+                return random.choice(cell.neighbors)
+            else:
+                return self[cell.row, cell.column + 1]
         elif row == -1:
             if cell.row > 0:
                 return cell.neighbor(1)
         elif row == 1:            
             if cell.row == 0:
-            return random.choice(cell.neighbors)
-        else:
-            outward_neighbors = [c for c in cell._neighbors[3::] if c]
-            return random.choice(outward_neighbors) if outward_neighbors else None
+                return random.choice(cell.neighbors)
+            else:
+                outward_neighbors = [c for c in cell._neighbors[3::] if c]
+                return random.choice(outward_neighbors) if outward_neighbors else None
 
     def get_columns_this_row(self, row):
         return len(self.rows_polar[row])

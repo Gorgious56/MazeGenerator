@@ -95,14 +95,14 @@ def setup_modifiers_and_drivers(MV, OM, TM) -> None:
                 'offset': 0,
             }),
             ('DISPLACE', M_THICKNESS_DISP, {
-                VISIBILIY: ('cell_thickness_equalize', 'not var'),
+                VISIBILIY: ('maze_basement', 'not var'),
                 'direction': 'Z',
                 'vertex_group': cv.VG_THICKNESS,
                 'mid_level': 0,
                 'strength': (obj_cells, obj_walls, 'strength', M_THICKNESS_DISP, M_THICKNESS_DISP, 'var'),
             }),
             ('SHRINKWRAP', M_THICKNESS_SHRINKWRAP, {
-                VISIBILIY: ('cell_thickness_equalize', 'var'),
+                VISIBILIY: ('maze_basement', 'var'),
                 'vertex_group': cv.VG_THICKNESS,
                 'wrap_method': 'PROJECT',
                 'use_project_x': False,
@@ -191,14 +191,14 @@ def setup_modifiers_and_drivers(MV, OM, TM) -> None:
             #     'mask_constant': 0.97,
             # }),
             ('DISPLACE', M_THICKNESS_DISP, {
-                VISIBILIY: ('cell_thickness_equalize', 'not var'),
+                VISIBILIY: ('maze_basement', 'not var'),
                 'direction': 'Z',
                 'vertex_group': cv.VG_THICKNESS,
                 'mid_level': 0,
                 'strength': 0,
             }),
             ('SHRINKWRAP', M_THICKNESS_SHRINKWRAP, {
-                VISIBILIY: ('cell_thickness_equalize', 'var'),
+                VISIBILIY: ('maze_basement', 'var'),
                 'vertex_group': cv.VG_THICKNESS,
                 'wrap_method': 'PROJECT',
                 'use_project_x': False,
@@ -296,7 +296,7 @@ def setup_modifiers_and_drivers(MV, OM, TM) -> None:
                 'material_offset': ('cell_contour_black', None),
                 'thickness': 0,
                 # 'vertex_group': cv.VG_THICKNESS,
-                # 'thickness_vertex_group': ('cell_thickness_equalize', "not var"),
+                # 'thickness_vertex_group': ('maze_basement', "not var"),
                 # 'invert_vertex_group': True,
             }),
         )

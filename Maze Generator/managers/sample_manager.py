@@ -46,7 +46,7 @@ class SampleManager:
             ),
             (
                 mg_props,
-                'braid_dead_ends',
+                'keep_dead_ends',
                 np.arange(0, 100, 10),
                 11, 11,
             ),
