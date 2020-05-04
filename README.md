@@ -3,6 +3,8 @@ Blender add-on for generating Mazes, with options for different types of cells a
 
 Go to https://github.com/Gorgious56/MazeGenerator/releases for the latest release.
 
+Go to https://gorgious.artstation.com/ or https://imgur.com/gallery/U5yoODH for artworks created with this add-on.
+
 The Add-on is available in the right side panel of the 3D Viewport :
 
 <img src="Doc/img/Doc-0-Main.JPG">
@@ -23,7 +25,11 @@ Space representations : Plane, Cylinder, Moebius (double), Torus
 
 3D visualization : Stairs, Inflate
 
-<img src="Doc/img/Doc-3-2-Stairs-Rep.JPG" height="150"><img src="Doc/img/Doc-3-6-Inflate-Rep-2.JPG" height="150"><img src="Doc/img/Doc-3-6-Inflate-Rep.JPG" height="150">
+<img src="Doc/img/DOC-V-0.3.0-Stairs-Link.JPG" height="150"><img src="Doc/img/Doc-3-6-Inflate-Rep-2.JPG" height="150"><img src="Doc/img/Doc-3-6-Inflate-Rep.JPG" height="150">
+
+Basement :
+
+<img src="Doc/img/DOC-V-0.3.0-Basement.JPG" height="150">
 
 Seed:
 
