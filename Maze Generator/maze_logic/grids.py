@@ -7,7 +7,7 @@ from ..managers import space_rep_manager as sp_mgr
 # from ..managers.mesh_manager import VG_DISPLACE
 from . import constants as cst
 from ..managers.distance_manager import Distances
-from ..utils import event
+from ..utils import event, union_find
 
 
 class Grid:
@@ -38,6 +38,8 @@ class Grid:
 
         self.verts_indices = {}
         self.new_cell_evt = event.EventHandler(event.Event('New Cell'), self)
+
+        self._union_find = None
 
     def __delitem__(self, key):
         del self._cells[key[0] + key[1] * self.columns]
@@ -82,53 +84,17 @@ class Grid:
                     self[c, r, l] = self.CELL_TYPE(r, c, l) if self[c, r, l] is None else None
                     self.new_cell_evt(self[c, r, l])
 
-    def next_row(self, cell: Cell) -> Cell:
-        """
-        Returns the cell next row to the one passed as parameter
-        Returns None if either one of the cells doesn't exist
-        """
-        if cell:
-            return self[cell.column, cell.row + 1, cell.level]
+    def prepare_union_find(self) -> None:
+        self._union_find = union_find.UnionFind(self.all_cells)
 
-    def previous_row(self, cell: Cell) -> Cell:
-        """
-        Returns the cell in the previous row to the one passed as parameter
-        Returns None if either one of the cells doesn't exist
-        """
-        if cell:
-            return self[cell.column, cell.row - 1, cell.level]
+    def connected(self, cell_a, cell_b) -> bool:
+        return self._union_find.connected(cell_a, cell_b)
 
-    def next_column(self, cell: Cell) -> Cell:
-        """
-        Returns the cell in the next column to the one passed as parameter
-        Returns None if either one of the cells doesn't exist
-        """
-        if cell:
-            return self[cell.column + 1, cell.row, cell.level]
+    def find(self, cell):
+        return self._union_find.find(cell)
 
-    def previous_column(self, cell: Cell) -> Cell:
-        """
-        Returns the cell in the previous column to the one passed as parameter
-        Returns None if either one of the cells doesn't exist
-        """
-        if cell:
-            return self[cell.column - 1, cell.row, cell.level]
-
-    def next_level(self, cell: Cell) -> Cell:
-        """
-        Returns the cell in the next level to the one passed as parameter
-        Returns None if either one of the cells doesn't exist
-        """
-        if cell:
-            return self[cell.column, cell.row, cell.level + 1]
-
-    def previous_level(self, cell: Cell) -> Cell:
-        """
-        Returns the cell in the previous level to the one passed as parameter
-        Returns None if either one of the cells doesn't exist
-        """
-        if cell:
-            return self[cell.column, cell.row, cell.level - 1]
+    def delta_cell(self, cell: Cell, column: int = 0, row: int = 0, level: int = 0) -> Cell:
+        return self[cell.column + column, cell.row + row, cell.level + level]
 
     def get_columns_this_row(self, row):
         return self.columns
@@ -359,7 +325,10 @@ class Grid:
         self.longest_path = longest_path
 
     def link(self, cell_a, cell_b, bidirectional=True):
-        return cell_a.link(cell_b, bidirectional)
+        linked_cells = cell_a.link(cell_b, bidirectional)
+        if linked_cells and all(linked_cells):
+            self._union_find.union(linked_cells[0], linked_cells[1])
+        return linked_cells
 
     def unlink(self, cell_a, cell_b):
         cell_a.unlink(cell_b)
@@ -435,39 +404,28 @@ class GridPolar(Grid):
         except IndexError:
             pass
 
-    def previous_column(self, cell):
+    def delta_cell(self, cell: Cell, column: int = 0, row: int = 0, level: int = 0) -> Cell:
         if not cell:
             return
-        elif cell.row == 0:
+        if column == -1:
+            if cell.row == 0:
             return random.choice(cell.neighbors)
         else:
             return self[cell.row, cell.column - 1]
-
-    def next_column(self, cell):
-        if not cell:
-            return
-        elif cell.row == 0:
+        elif column == 1:
+            if cell.row == 0:
             return random.choice(cell.neighbors)
         else:
             return self[cell.row, cell.column + 1]
-
-    def next_row(self, cell):
-        if not cell:
-            return
-        elif cell.row == 0:
+        elif row == -1:
+            if cell.row > 0:
+                return cell.neighbor(1)
+        elif row == 1:            
+            if cell.row == 0:
             return random.choice(cell.neighbors)
         else:
             outward_neighbors = [c for c in cell._neighbors[3::] if c]
             return random.choice(outward_neighbors) if outward_neighbors else None
-
-    def previous_row(self, cell):
-        if not cell or cell.row == 0:
-            return
-        else:
-            return cell.neighbor(1)
-
-    def next_level(self, cell):
-        return None
 
     def get_columns_this_row(self, row):
         return len(self.rows_polar[row])
@@ -499,8 +457,8 @@ class GridPolar(Grid):
             row, col = c.row, c.column
             if row > 0:
                 row_length = self.row_length(c.row)
-                c.set_neighbor(cst.POL_CCW, self.next_column(c))
-                c.set_neighbor(cst.POL_CW, self.previous_column(c))
+                c.set_neighbor(cst.POL_CCW, self.delta_cell(c, column=1))
+                c.set_neighbor(cst.POL_CW, self.delta_cell(c, column=-1))
 
                 ratio = row_length / self.row_length(c.row - 1)
                 parent = self[row - 1, floor(col // ratio)]
@@ -575,9 +533,9 @@ class GridTriangle(Grid):
     def init_cells_neighbors(self) -> None:
         for c in self.each_cell():
             if c.is_upright():
-                c.set_neighbor(0, self.next_column(c))
-                c.set_neighbor(1, self.previous_column(c))
-                c.set_neighbor(2, self.previous_row(c))
+                c.set_neighbor(0, self.delta_cell(c, row=1))
+                c.set_neighbor(1, self.delta_cell(c, column=-1))
+                c.set_neighbor(2, self.delta_cell(c, row=-1))
 
     def _get_offset(self) -> Vector:
         return Vector((-self.columns / 4, -self.rows / 3, 0))
@@ -638,5 +596,7 @@ class GridWeave(Grid):
 
         Returns the resulting 'CellUnder'
         """
-        self._cells.append(CellUnder(cell_over))
-        return self._cells[-1]
+        new_cell = CellUnder(cell_over)
+        self._cells.append(new_cell)
+        self._union_find.data[new_cell] = new_cell
+        return new_cell

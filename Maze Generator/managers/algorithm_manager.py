@@ -39,19 +39,16 @@ class MazeAlgorithm(object):
                 self.add_crossing(pp)
 
     def color_cells_by_tree_root(self):
-        try:
-            union_find = getattr(self, 'union_find')
-            links = []
-            for c in self.grid.all_cells:
-                link = union_find.find(c)
-                if link:
-                    try:
-                        c.group = links.index(link)
-                    except ValueError:
-                        links.append(link)
-                        c.group = len(links) - 1
-        except AttributeError:
-            print('No Union Find Algorithm declared for this algorithm')
+        union_find = self.grid._union_find
+        links = []
+        for c in self.grid.all_cells:
+            link = union_find.find(c)
+            if link:
+                try:
+                    c.group = links.index(link)
+                except ValueError:
+                    links.append(link)
+                    c.group = len(links) - 1
 
     def add_crossing(self, cell):
         grid = self.grid
@@ -63,30 +60,20 @@ class MazeAlgorithm(object):
             east = cell.neighbor(cst.EAST)
             if random() > 0.5:  # Vertical underway
                 grid.link(cell, west)
-                self.union_find.union(cell, west)
                 grid.link(cell, east)
-                self.union_find.union(cell, east)
 
                 new_cell_under = self.grid.tunnel_under(cell)
-                self.union_find.data[new_cell_under] = new_cell_under
 
                 grid.link(north, north.neighbor(cell.get_neighbor_return(cst.NORTH)))
-                self.union_find.union(north, north.neighbor(cell.get_neighbor_return(cst.NORTH)))
                 grid.link(south, south.neighbor(cell.get_neighbor_return(cst.SOUTH)))
-                self.union_find.union(south, south.neighbor(cell.get_neighbor_return(cst.SOUTH)))
             else:
                 grid.link(cell, north)
-                self.union_find.union(cell, north)
                 grid.link(cell, south)
-                self.union_find.union(cell, south)
 
                 new_cell_under = self.grid.tunnel_under(cell)
-                self.union_find.data[new_cell_under] = new_cell_under
 
                 grid.link(west, west.neighbor(cell.get_neighbor_return(cst.WEST)))
-                self.union_find.union(west, west.neighbor(cell.get_neighbor_return(cst.WEST)))
                 grid.link(east, east.neighbor(cell.get_neighbor_return(cst.EAST)))
-                self.union_find.union(east, east.neighbor(cell.get_neighbor_return(cst.EAST)))
             return True
         return False
 
@@ -103,7 +90,6 @@ class BinaryTree(MazeAlgorithm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.union_find = UnionFind(self.grid.all_cells)
         self.run()
         self.color_cells_by_tree_root()
 
@@ -112,30 +98,29 @@ class BinaryTree(MazeAlgorithm):
         bias = self.bias
         for c in grid.all_cells:
             neighbors = []
-            east_neighbor = grid.next_column(c)
+            east_neighbor = grid.delta_cell(c, column=1)
             columns_this_row = grid.get_columns_this_row(c.row)
             if east_neighbor and east_neighbor in c.neighbors and c.column < columns_this_row - 1:
                 neighbors.append(east_neighbor)
             if not east_neighbor or c.row < grid.rows - 1:
-                next_row = grid.next_row(c)
+                next_row = grid.delta_cell(c, row=1)
                 if next_row in c.neighbors:
                     neighbors.append(next_row)
                 elif c.column == columns_this_row - 1:
-                    prev_column = grid.previous_column(c)
+                    prev_column = grid.delta_cell(c, column=-1)
                     if prev_column:
                         grid.link(c, prev_column)
                         c = prev_column
-                        neighbors = [grid.next_row(c)]
+                        neighbors = [grid.delta_cell(c, row=1)]
             if grid.levels > 1 and c.row == self.grid.rows - 1:
-                next_level = grid.next_level(c)
+                next_level = grid.delta_cell(c, level=1)
                 if next_level in c.neighbors:
                     neighbors.append(next_level)
             if not neighbors:
                 continue
             link_neighbor = methods.get_biased_choices(neighbors, bias, 5)[0]
-            if not self.union_find.connected(c, link_neighbor):
+            if not grid.connected(c, link_neighbor):
                 grid.link(c, link_neighbor)
-                self.union_find.union(c, link_neighbor)
 
 
 class Sidewinder(MazeAlgorithm):
@@ -152,8 +137,6 @@ class Sidewinder(MazeAlgorithm):
         super().__init__(*args, **kwargs)
         self.bias = (self.bias + 1) / 2
 
-        self.union_find = UnionFind(self.grid.all_cells)
-
         self.run()
         self.color_cells_by_tree_root()
 
@@ -163,12 +146,12 @@ class Sidewinder(MazeAlgorithm):
             run = []
             for c in row:
                 run.append(c)
-                east_neighbor = grid.next_column(c)
+                east_neighbor = grid.delta_cell(c, column=1)
                 link_north = False
-                if not east_neighbor or c.column == grid.get_columns_this_row(c.row) - 1 or (grid.next_row(c) and self.must_close_run()):
+                if not east_neighbor or c.column == grid.get_columns_this_row(c.row) - 1 or (grid.delta_cell(c, row=1) and self.must_close_run()):
                     shuffle(run)
                     for member in run:
-                        next_row = grid.next_row(member)
+                        next_row = grid.delta_cell(member, row=1)
                         if next_row and next_row in member.neighbors:
                             grid.link(member, next_row)
                             run = []
@@ -178,7 +161,7 @@ class Sidewinder(MazeAlgorithm):
                     if east_neighbor:
                         grid.link(c, east_neighbor)
                     else:
-                        grid.link(c, grid.previous_column(c))
+                        grid.link(c, grid.delta_cell(c, column=-1))
 
     def must_close_run(self):
         return self.bias > random()
@@ -198,24 +181,20 @@ class Eller(MazeAlgorithm):
         super().__init__(*args, **kwargs)
         self.bias = (self.bias + 1) / 2
 
-        self.union_find = UnionFind(self.grid.all_cells)
-
         self.run()
 
         self.color_cells_by_tree_root()
 
     def run(self):
-        uf = self.union_find
         grid = self.grid
         for row in grid.each_row():
             sets_this_row = {}
             for c in row:
-                next_col = grid.next_column(c)
-                if next_col and ((c.row == grid.rows - 1 or self.bias < random()) and not uf.connected(c, next_col)):
+                next_col = grid.delta_cell(c, column=1)
+                if next_col and ((c.row == grid.rows - 1 or self.bias < random()) and not grid.connected(c, next_col)):
                     grid.link(c, next_col)
-                    uf.union(c, next_col)
             for c in row:
-                this_set = uf.find(c)
+                this_set = grid.find(c)
                 if this_set in sets_this_row:
                     sets_this_row[this_set].append(c)
                 else:
@@ -224,17 +203,15 @@ class Eller(MazeAlgorithm):
             for tree, cells in sets_this_row.items():
                 ch_len = min(len(cells), randrange(1, ceil(self.bias * len(cells) + 2)))
                 for c in choices(cells, k=ch_len):
-                    neigh = grid.next_row(c)
+                    neigh = grid.delta_cell(c, row=1)
                     if neigh not in c.neighbors:
-                        other_col = grid.next_column(c)
+                        other_col = grid.delta_cell(c, column=1)
                         if not other_col:
-                            other_col = grid.previous_column(c)
-                        grid.link(other_col, grid.next_row(other_col))
-                        uf.union(other_col, grid.next_row(other_col))
+                            other_col = grid.delta_cell(c, column=-1)
+                        grid.link(other_col, grid.delta_cell(other_col, row=1))
                         neigh = other_col
                     if neigh:
                         grid.link(c, neigh)
-                        uf.union(c, neigh)
 
 
 class CrossStitch(MazeAlgorithm):
@@ -307,8 +284,6 @@ class KruskalRandom(MazeAlgorithm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.union_find = UnionFind(self.grid.all_cells)
-
         self.add_template_passages()
 
         self.run()
@@ -319,9 +294,8 @@ class KruskalRandom(MazeAlgorithm):
         unvisited_cells = grid.shuffled_cells()
         for c in unvisited_cells:
             for n in methods.get_biased_choices(c.neighbors, self.bias, k=len(c.neighbors)):
-                if not self.union_find.connected(c, n):
-                    link_a, link_b = grid.link(c, n)  # Keep this because of the weave maze
-                    self.union_find.union(link_a, link_b)
+                if not grid.connected(c, n):
+                    grid.link(c, n)  # Keep this because of the weave maze
 
 
 class Prim(MazeAlgorithm):
@@ -331,8 +305,6 @@ class Prim(MazeAlgorithm):
         super().__init__(*args, **kwargs)
 
         self.bias = round((1 - abs(self.bias)) * 10)
-
-        self.union_find = UnionFind(self.grid.all_cells)
 
         self.q = PriorityQueue()
         self.run()
@@ -344,9 +316,8 @@ class Prim(MazeAlgorithm):
 
         while not self.q.is_empty():
             cell, neighbor = self.q.pop()
-            if not self.union_find.connected(cell, neighbor):
+            if not self.grid.connected(cell, neighbor):
                 self.grid.link(cell, neighbor)
-                self.union_find.union(cell, neighbor)
                 self.push_to_queue(neighbor)
             self.push_to_queue(cell)
 
@@ -388,8 +359,6 @@ class RecursiveDivision(MazeAlgorithm):
     def __init__(self, grid, props=None, *args, **kwargs):
         super().__init__(grid=grid, props=props, *args, **kwargs)
         self.bias = (self.bias + 1) / 2
-
-        self.union_find = UnionFind(self.grid.all_cells)
 
         self.run()
 
@@ -437,9 +406,8 @@ class RecursiveDivision(MazeAlgorithm):
     def link(self, cell, neighbor_number):
         if cell:
             n = cell.neighbor(neighbor_number)
-            if n and not self.union_find.connected(cell, n):
+            if n and not self.grid.connected(cell, n):
                 self.grid.link(cell, n)
-                self.union_find.union(cell, n)
                 return True
         return False
 
