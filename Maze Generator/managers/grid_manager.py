@@ -1,5 +1,5 @@
 from ..maze_logic import grids
-from ..managers.cell_type_manager import POLAR, TRIANGLE, HEXAGON
+from ..managers import cell_type_manager as ct
 from ..managers import space_rep_manager as sp_rep
 from ..managers import algorithm_manager
 
@@ -12,12 +12,14 @@ class GridManager:
 
         grid = None
         maze_dimension = int(props.maze_space_dimension)
-        if props.cell_type == POLAR:
+        if props.cell_type == ct.POLAR:
             grid = grids.GridPolar
-        elif props.cell_type == HEXAGON:
+        elif props.cell_type == ct.HEXAGON:
             grid = grids.GridHex
-        elif props.cell_type == TRIANGLE:
+        elif props.cell_type == ct.TRIANGLE:
             grid = grids.GridTriangle
+        elif props.cell_type == ct.OCTOGON:
+            grid = grids.GridOctogon
         else:
             if props.maze_weave:
                 self.grid = grids.GridWeave(

@@ -55,7 +55,7 @@ class MaterialManager:
         nodes = mat.node_tree.nodes
         if not already_created or props.auto_overwrite:
             nodes.clear()
-            mat.blend_method = 'BLEND'
+            mat.blend_method = 'HASHED'
 
         random.seed(props.seed_color)
         get_or_create_node(

@@ -46,7 +46,7 @@ class MeshManager:
         mesh_cells = obj_cells.data
         mesh_walls = obj_walls.data
 
-        cells_corners, cells_faces, stairs_vertex_group, walls_edges = MeshManager.get_mesh_info(grid)
+        cells_corners, cells_faces, stairs_vertex_group, walls_edges = MeshManager.get_mesh_info(grid, props.cell_inset)
 
         mesh_cells.clear_geometry()
         mesh_cells.from_pydata(
@@ -133,7 +133,7 @@ class MeshManager:
         MeshManager.verts_indices[cell] = range(MeshManager.cells, MeshManager.cells + cell.corners)
         MeshManager.cells += cell.corners
 
-    def get_mesh_info(grid):
+    def get_mesh_info(grid, inset):
         all_cells = grid.all_cells
         verts = [None] * MeshManager.cells
 
@@ -151,7 +151,7 @@ class MeshManager:
             if c.has_any_link():
                 faces.append(verts_indices)
                 this_distance = grid.distances[c]
-                cells_data[verts_indices] = (((this_distance) / max_distance) if this_distance else -1, 0 if c in longest_path else 1, c.group, len(c.links))
+                cells_data[verts_indices] = ((this_distance / max_distance) if this_distance else -1, 0 if c in longest_path else 1, c.group, len(c.links))
             half_neighbors = c.get_half_neighbors()
             for direction, w in enumerate(c.get_wall_mask()):
                 if w and direction < len(verts_indices):
@@ -164,7 +164,8 @@ class MeshManager:
                         second_idx = c.get_neighbor_return(direction)
 
                         faces.append((verts_indices[first_idx], neighbor_indices[(second_idx + 1) % n.corners], neighbor_indices[second_idx], verts_indices[(first_idx + 1) % c.corners]))
-                        walls_edges.append((verts_indices[first_idx], neighbor_indices[(second_idx + 1) % n.corners]))
-                        walls_edges.append((verts_indices[(first_idx + 1) % c.corners], neighbor_indices[second_idx]))
+                        if inset:
+                            walls_edges.append((verts_indices[first_idx], neighbor_indices[(second_idx + 1) % n.corners]))
+                            walls_edges.append((verts_indices[(first_idx + 1) % c.corners], neighbor_indices[second_idx]))
 
         return verts, faces, cells_data, walls_edges

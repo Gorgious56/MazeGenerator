@@ -2,7 +2,7 @@ import random
 from typing import Iterable, Tuple, List, Generator
 from mathutils import Vector
 from math import pi, floor, cos, sin
-from .cells import Cell, CellHex, CellOver, CellPolar, CellTriangle, CellUnder
+from .cells import Cell, CellHex, CellOver, CellPolar, CellTriangle, CellUnder, CellOctogon
 from ..managers import space_rep_manager as sp_mgr
 # from ..managers.mesh_manager import VG_DISPLACE
 from . import constants as cst
@@ -144,9 +144,9 @@ class Grid:
                         c.neighbor(cst.SOUTH).set_neighbor(cst.NORTH, c)
         else:
             for c in self.all_cells:
-                c.set_neighbor(cst.NORTH, self.next_row(c))
-                c.set_neighbor(cst.EAST, self.next_column(c))
-                c.set_neighbor(cst.UP, self.next_level(c))
+                c.set_neighbor(cst.NORTH, self.delta_cell(c, row=1))
+                c.set_neighbor(cst.EAST, self.delta_cell(c, column=1))
+                c.set_neighbor(cst.UP, self.delta_cell(c, level=1))
 
     def mask_ring(self, center_row: int, center_col: int, radius: float) -> None:
         for r in range(self.rows):
@@ -289,12 +289,12 @@ class Grid:
         # return Vector((cell.column + cell.level * (self.columns + 1), cell.row, 0)) + self.offset
         return Vector((cell.column + cell.level * (self.columns + 1), cell.row, 0))
 
-    def get_cell_positions(self, cell):
+    def get_cell_positions(self, cell, relative_size=1):
         """
         1 0
         2 3
         """
-        size = self.cell_size
+        size = self.cell_size * relative_size
         center = self.get_cell_center(cell)
         return center + Vector(((size / 2), (size / 2), 0)), center + Vector(((-size / 2), (size / 2), 0)), center + Vector(((-size / 2), (-size / 2), 0)), center + Vector(((size / 2), (-size / 2), 0))
 
@@ -567,6 +567,52 @@ class GridTriangle(Grid):
         west = Vector((-half_width, base_y, 0)) + center
         east = Vector((half_width, base_y, 0)) + center
         return (east, north_or_south, west) if cell.is_upright() else (west, north_or_south, east)
+
+
+class GridOctogon(Grid):
+    def prepare_grid(self) -> None:
+        if self.mask:
+            [self.mask_patch(mask_patch[0], mask_patch[1], mask_patch[2], mask_patch[3],) for mask_patch in self.mask]
+
+        for l in range(self.levels):
+            for c in range(self.columns):
+                for r in range(self.rows):
+                    if self[c, r, l] is None:
+                        if (r + c) % 2 == 0:
+                            new_cell = CellOctogon(r, c, l)
+                        else:
+                            new_cell = Cell(r, c, l)
+                            new_cell._NEIGHBORS_RETURN = [4, 6, 0, 2]
+                        self[c, r, l] = new_cell
+                        self.new_cell_evt(new_cell)
+
+    def init_cells_neighbors(self) -> None:
+        for c in self.all_cells:
+            if type(c) is Cell:
+                c.set_neighbor(0, self.delta_cell(c, 0, 1, 0))
+                c.set_neighbor(3, self.delta_cell(c, 1, 0, 0))
+            else:
+                pass
+                c.set_neighbor(0, self.delta_cell(c, 0, 1, 0))
+                c.set_neighbor(7, self.delta_cell(c, 1, 1, 0))
+                c.set_neighbor(6, self.delta_cell(c, 1, 0, 0))
+                c.set_neighbor(5, self.delta_cell(c, 1, -1, 0))
+
+    def get_cell_positions(self, cell):
+        if type(cell) is Cell:
+            return super().get_cell_positions(cell, 0.5)
+        else:
+            c = self.get_cell_center(cell)
+            size = self.cell_size
+            s_q = size * 0.25
+            s_tq = size * 0.75
+            return Vector((s_q, s_tq, 0)) + c, Vector((-s_q, s_tq, 0)) + c, Vector((-s_tq, s_q, 0)) + c, \
+                Vector((-s_tq, -s_q, 0)) + c, Vector((-s_q, -s_tq, 0)) + c, Vector((s_q, -s_tq, 0)) + c, \
+                Vector((s_tq, -s_q, 0)) + c, Vector((s_tq, s_q, 0)) + c
+
+    def _get_offset(self) -> Vector:
+        return Vector(((1 - self.columns) / 2, (1 - self.rows) / 2, 0))
+
 
 
 class GridWeave(Grid):

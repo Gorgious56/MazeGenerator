@@ -66,6 +66,8 @@ class ParametersPanel(bpy.types.Panel):
             cell_enum_icon = 'OUTLINER_OB_MESH'
         elif mg_props.cell_type == cell_mgr.HEXAGON:
             cell_enum_icon = 'SEQ_CHROMA_SCOPE'
+        elif mg_props.cell_type == cell_mgr.OCTOGON:
+            cell_enum_icon = 'MESH_ICOSPHERE'
 
         layout.prop_menu_enum(mg_props, 'cell_type', icon=cell_enum_icon)
         layout.prop(mg_props, 'maze_algorithm', icon='HAND', text='Solver')
@@ -125,7 +127,7 @@ class ParametersPanel(bpy.types.Panel):
             return
         row.prop(cell_mask_mod, 'threshold', text='Steps')
 
-        layout.prop(mg_props, 'braid_dead_ends', slider=True, text='Open Dead Ends')
+        layout.prop(mg_props, 'keep_dead_ends', slider=True, text='Dead Ends')
         layout.prop(mg_props, 'sparse_dead_ends')
 
         box = layout.box()
@@ -195,7 +197,7 @@ class CellsPanel(bpy.types.Panel):
         row = box.row(align=True)
         row.prop(cell_thickness_mod, 'strength', text='Thickness')
         if cell_stairs.strength != 0:
-            row.prop(mg_props, 'cell_thickness_equalize', toggle=True)
+            row.prop(mg_props, 'maze_basement', text='Basement', toggle=True)
         row = box.row(align=True)
         row.prop(cell_subdiv_mod, 'levels', text='Subdiv')
         row.prop(mg_props, 'cell_decimate', slider=True, text='Decimate', icon='MOD_DECIM')
@@ -227,8 +229,8 @@ class CellsPanel(bpy.types.Panel):
 
         if (cell_wire_mod.thickness > 0 or cell_bevel_mod.width > 0) and mg_props.cell_inset < 0.1:
             box.label(text='Set Inset > 0,1', icon='ERROR')
-        if cell_bevel_mod.width > 0 and cell_thickness_mod.strength == 0:
-            box.label(text='Set Cell Thickness != 0', icon='ERROR')
+        if cell_bevel_mod.width > 0 and (cell_thickness_mod.strength == 0 and not mg_props.maze_basement):
+            box.label(text='Set Cell Thickness != 0 or Toggle Basement', icon='ERROR')
 
 
 class WallsPanel(bpy.types.Panel):

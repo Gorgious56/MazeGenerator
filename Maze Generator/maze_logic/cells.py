@@ -200,7 +200,6 @@ class CellPolar(Cell):
                 cell.set_neighbor(self.get_neighbor_return(index), self, bidirectional=False)
 
     def get_neighbor_return(self, index):
-
         ret = self._NEIGHBORS_RETURN[index]
         return ret if type(ret) is int else ret(self)
 
@@ -229,6 +228,19 @@ class CellTriangle(Cell):
 
     def get_half_neighbors(self):
         return (0, 1, 2) if self.is_upright() else []
+
+
+class CellOctogon(Cell):
+    _NEIGHBORS_RETURN = (2, 5, 3, 7, 0, 1, 1, 3)
+    _CORNERS = 8
+
+    def __init__(self, row, col, lvl):
+        super().__init__(row, col, lvl)
+        # If Upright : NE, NW, S else : SW, SE, N
+        self._neighbors = [None] * 8
+
+    def get_half_neighbors(self):
+        return 0, 1, 2, 3
 
 
 class CellOver(Cell):
