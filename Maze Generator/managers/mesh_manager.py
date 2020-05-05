@@ -25,22 +25,20 @@ VERTEX_GROUPS = VG_STAIRS, VG_THICKNESS, VG_LONGEST_PATH
 
 
 class MeshManager:
-    vertex_groups_cells = {}
-    vertex_group_walls = {}
-    verts_indices = {}
     cells = 0
 
     def create_vertex_groups(cells, walls):
         # Replace this with the correct method to check if a vertex group exists (I didn't find it).
         # Since we will have only a few at most the impact is negligible.
         for vg_name in VERTEX_GROUPS:
-            for obj, vertex_groups in zip((cells, walls), (MeshManager.vertex_groups_cells, MeshManager.vertex_group_walls)):
+            for obj in (cells, walls):
+                vg_exists = False
                 for _vg in obj.vertex_groups:
                     if _vg.name == vg_name:
-                        vertex_groups[vg_name] = _vg
+                        vg_exists = True
                         break
-                if vg_name not in vertex_groups:
-                    vertex_groups[vg_name] = obj.vertex_groups.new(name=vg_name)
+                if not vg_exists:
+                    obj.vertex_groups.new(name=vg_name)
 
     def build_objects(props, grid, obj_cells, obj_walls) -> None:
         mesh_cells = obj_cells.data
@@ -74,7 +72,6 @@ class MeshManager:
 
         random.seed(props.seed_color)
 
-        # rand = random.random
         groups = grid.groups
         group_colors = {}
         max_groups = max(max(grid.groups), 1)
@@ -126,11 +123,10 @@ class MeshManager:
             p.use_smooth = smooth
 
     def reset():
-        MeshManager.verts_indices = {}
         MeshManager.cells = 0
 
     def on_new_cell(grid, cell):
-        MeshManager.verts_indices[cell] = range(MeshManager.cells, MeshManager.cells + cell.corners)
+        cell.first_vert_index = MeshManager.cells
         MeshManager.cells += cell.corners
 
     def get_mesh_info(grid, inset):
@@ -143,7 +139,7 @@ class MeshManager:
         max_distance = grid.distances.max[1]
         longest_path = grid.longest_path
         for c in all_cells:
-            verts_indices = MeshManager.verts_indices[c]
+            verts_indices = range(c.first_vert_index, c.first_vert_index + c.corners)
             corners_positions = grid.get_cell_positions(c)
 
             for i in range(len(corners_positions)):
@@ -159,7 +155,7 @@ class MeshManager:
                 elif not w and direction in half_neighbors:
                     n = c.get_neighbor_towards(direction)
                     if n:
-                        neighbor_indices = MeshManager.verts_indices[n]
+                        neighbor_indices = range(n.first_vert_index, n.first_vert_index + n.corners)
                         first_idx = direction
                         second_idx = c.get_neighbor_return(direction)
 

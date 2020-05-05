@@ -3,7 +3,7 @@ import bpy.types as bpy_types
 import math
 from . import space_rep_manager as sp_rep
 from . import mesh_manager as cv
-from .cell_type_manager import SQUARE, TRIANGLE, HEXAGON
+from .cell_type_manager import SQUARE, TRIANGLE, HEXAGON, OCTOGON
 
 M_WELD = 'MG_WELD'
 M_WELD_2 = 'MG_WELD_2'
@@ -139,10 +139,6 @@ def setup_modifiers_and_drivers(MV, OM, TM) -> None:
                 'object': obj_torus,
                 'deform_axis': 'POS_Y',
             }),
-            ('WELD', M_CYLINDER_WELD, {
-                VISIBILIY: ('maze_space_dimension', sp_rep.REP_BOX + " > int(var) > " + sp_rep.REP_REGULAR),
-                'merge_threshold': 0.1,
-            }),
             ('DISPLACE', M_TEXTURE_DISP, {
                 VISIBILIY: (obj_cells, obj_walls, 'strength', M_TEXTURE_DISP, M_TEXTURE_DISP, 'var != 0'),
                 'strength': (obj_cells, obj_walls, 'strength', M_TEXTURE_DISP, M_TEXTURE_DISP, 'var'),
@@ -228,12 +224,6 @@ def setup_modifiers_and_drivers(MV, OM, TM) -> None:
                 'object': obj_torus,
                 'deform_axis': 'POS_Y',
             }),
-            ('WELD', M_CYLINDER_WELD, {
-                VISIBILIY: ('maze_space_dimension', f'int(var) in ({sp_rep.REP_CYLINDER}, {sp_rep.REP_MEOBIUS}, {sp_rep.REP_TORUS})'),
-                'merge_threshold': 0.05,
-                'vertex_group': cv.VG_DISPLACE,
-                'invert_vertex_group': True
-            }),
             ('DISPLACE', M_TEXTURE_DISP, {
                 VISIBILIY: (obj_cells, obj_cells, 'strength', M_TEXTURE_DISP, M_TEXTURE_DISP, 'var != 0'),
                 'texture': tex_disp,
@@ -275,7 +265,6 @@ def setup_modifiers_and_drivers(MV, OM, TM) -> None:
                 'material': ('cell_contour_black', '1 if var else 0'),
                 'profile': ('cell_contour_black', '1 if var else 0.5'),
                 'angle_limit': 0.75,
-                # 'use_clamp_overlap': False,
                 'width': 0,
                 'miter_inner': ('cell_contour_black', '2 if var else 0'),
                 'miter_outer': ('cell_contour_black', '2 if var else 0'),
@@ -291,13 +280,9 @@ def setup_modifiers_and_drivers(MV, OM, TM) -> None:
                     ),
                     'cell_wireframe != 0 and cell_inset > 0.1',
                 ),
-                # VISIBILIY: (obj_cells, obj_cells, 'thickness', M_WIREFRAME, M_WIREFRAME, 'var != 0'),
                 'use_replace': False,
                 'material_offset': ('cell_contour_black', None),
                 'thickness': 0,
-                # 'vertex_group': cv.VG_THICKNESS,
-                # 'thickness_vertex_group': ('maze_basement', "not var"),
-                # 'invert_vertex_group': True,
             }),
         )
     }
@@ -337,7 +322,7 @@ def setup_modifiers_and_drivers(MV, OM, TM) -> None:
                 target.data_path = 'mg_props.maze_columns' if i == 0 else 'mg_props.maze_rows_or_radius'
 
                 exp = 'var * 0.314'
-                if MV.props.cell_type == SQUARE:
+                if MV.props.cell_type == SQUARE or MV.props.cell_type == OCTOGON:
                     exp = 'var * 0.15915'
                 elif MV.props.cell_type == TRIANGLE:
                     if i == 0:

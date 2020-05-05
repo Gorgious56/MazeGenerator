@@ -89,7 +89,7 @@ class ParametersPanel(bpy.types.Panel):
 
         if mg_props.cell_type == cell_mgr.POLAR and mg_props.maze_space_dimension in (sp_rep.REP_CYLINDER, sp_rep.REP_MEOBIUS, sp_rep.REP_TORUS, sp_rep.REP_BOX):
             layout.label(text='Only Regular and Stairs for Polar cells', icon='ERROR')
-        elif mg_props.cell_type == cell_mgr.TRIANGLE or mg_props.cell_type == cell_mgr.HEXAGON:
+        elif mg_props.cell_type in (cell_mgr.TRIANGLE, cell_mgr.HEXAGON, cell_mgr.OCTOGON):
             if mg_props.maze_space_dimension in (sp_rep.REP_CYLINDER, sp_rep.REP_MEOBIUS, sp_rep.REP_TORUS):
                 layout.label(text='Needs PAIR Columns (2, 4, 6, ...)', icon='ERROR')
             if mg_props.maze_space_dimension == sp_rep.REP_MEOBIUS and mg_props.maze_columns <= 5 * mg_props.maze_rows_or_radius:

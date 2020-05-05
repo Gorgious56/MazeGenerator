@@ -95,7 +95,7 @@ class MaterialManager:
 
         get_or_create_node(
             nodes, 'cell_math_compare_node', 'ShaderNodeMath', (-1000, 200),
-            inputs={1: 0},
+            inputs={1: -0.01},
             attributes={'operation': 'COMPARE'})
 
         links = mat.node_tree.links
