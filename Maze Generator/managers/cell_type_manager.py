@@ -3,6 +3,7 @@ TRIANGLE = '1'
 SQUARE = '2'
 HEXAGON = '3'
 OCTOGON = '4'
+DODECAGON = '5'
 
 DEFAULT_CELL_TYPE = SQUARE
 
@@ -13,4 +14,5 @@ def generate_cell_type_enum():
             (SQUARE, 'Square', ''),
             (HEXAGON, 'Hexagon', ''),
             (OCTOGON, 'Octogon', ''),
+            (DODECAGON, 'Dodecagon', ''),
             ]

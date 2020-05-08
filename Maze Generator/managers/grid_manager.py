@@ -20,6 +20,8 @@ class GridManager:
             grid = grids.GridTriangle
         elif props.cell_type == ct.OCTOGON:
             grid = grids.GridOctogon
+        elif props.cell_type == ct.DODECAGON:
+            grid = grids.GridDodecagon
         else:
             if props.maze_weave:
                 self.grid = grids.GridWeave(
