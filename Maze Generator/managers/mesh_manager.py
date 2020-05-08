@@ -28,8 +28,7 @@ class MeshManager:
     cells = 0
 
     def create_vertex_groups(cells, walls):
-        # Replace this with the correct method to check if a vertex group exists (I didn't find it).
-        # Since we will have only a few at most the impact is negligible.
+        # Replace this with the correct method to check if a vertex group exists
         for vg_name in VERTEX_GROUPS:
             for obj in (cells, walls):
                 vg_exists = False
@@ -125,13 +124,9 @@ class MeshManager:
     def reset():
         MeshManager.cells = 0
 
-    def on_new_cell(grid, cell):
-        cell.first_vert_index = MeshManager.cells
-        MeshManager.cells += cell.corners
-
     def get_mesh_info(grid, inset):
         all_cells = grid.all_cells
-        verts = [None] * MeshManager.cells
+        verts = grid.verts
 
         cells_data = {}
         faces = []
@@ -140,15 +135,11 @@ class MeshManager:
         longest_path = grid.longest_path
         for c in all_cells:
             verts_indices = range(c.first_vert_index, c.first_vert_index + c.corners)
-            corners_positions = grid.get_cell_positions(c)
-
-            for i in range(len(corners_positions)):
-                verts[verts_indices[i]] = corners_positions[i]
-            if c.has_any_link():
-                faces.append(verts_indices)
-                this_distance = grid.distances[c]
-                cells_data[verts_indices] = ((this_distance / max_distance) if this_distance else -1, 0 if c in longest_path else 1, c.group, len(c.links))
-            half_neighbors = c.get_half_neighbors()
+            # if c.has_any_link():
+            faces.append(verts_indices)
+            this_distance = grid.distances[c]
+            cells_data[verts_indices] = ((this_distance / max_distance) if this_distance else -1, 0 if c in longest_path else 1, c.group, len(c.links))
+            half_neighbors = c.half_neighbors
             for direction, w in enumerate(c.get_wall_mask()):
                 if w and direction < len(verts_indices):
                     walls_edges.append((verts_indices[direction], verts_indices[(direction + 1) % c.corners]))
@@ -163,5 +154,5 @@ class MeshManager:
                         if inset:
                             walls_edges.append((verts_indices[first_idx], neighbor_indices[(second_idx + 1) % n.corners]))
                             walls_edges.append((verts_indices[(first_idx + 1) % c.corners], neighbor_indices[second_idx]))
-
+        # print(verts)
         return verts, faces, cells_data, walls_edges

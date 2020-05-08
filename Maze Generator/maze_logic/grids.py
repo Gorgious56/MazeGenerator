@@ -2,7 +2,7 @@ import random
 from typing import Iterable, Tuple, List, Generator
 from mathutils import Vector
 from math import pi, floor, cos, sin
-from .cells import Cell, CellHex, CellOver, CellPolar, CellTriangle, CellUnder, CellOctogon
+from .cells import Cell, CellOver, CellPolar, CellUnder
 from ..managers import space_rep_manager as sp_mgr
 from . import constants as cst
 from ..managers.distance_manager import Distances
@@ -10,9 +10,8 @@ from ..utils import event, union_find
 
 
 class Grid:
-    CELL_TYPE = Cell
 
-    def __init__(self, rows: int = 2, columns: int = 2, levels: int = 1, cell_size: int = 1, space_rep: int = 0, mask: Iterable[Tuple[int]] = None) -> None:
+    def __init__(self, rows: int = 2, columns: int = 2, levels: int = 1, cell_size: float = 1.0, space_rep: int = 0, mask: Iterable[Tuple[int]] = None) -> None:
         self.rows: int = rows
         self.columns = columns
         self.levels = levels
@@ -39,6 +38,7 @@ class Grid:
         self.new_cell_evt = event.EventHandler(event.Event('New Cell'), self)
 
         self._union_find = None
+        self.verts = []
 
     def __delitem__(self, key):
         del self._cells[key[0] + key[1] * self.columns]
@@ -73,15 +73,30 @@ class Grid:
     def _get_offset(self) -> Vector:
         return Vector(((1 - self.columns) / 2, (1 - self.rows) / 2, 0))
 
-    def prepare_grid(self) -> None:
+    def mask_cells(self) -> None:
         if self.mask:
             [self.mask_patch(mask_patch[0], mask_patch[1], mask_patch[2], mask_patch[3],) for mask_patch in self.mask]
 
+    def create_cell(self, row, column, level) -> Cell:
+        new_cell = Cell(row, column, level) if self[column, row, level] is None else None
+        center = Vector((column + level * (self.columns + 1), row, 0))
+
+        size = self.cell_size
+        new_cell.first_vert_index = len(self.verts)
+        self.verts.extend((
+            center + Vector((size / 2, size / 2, 0)),
+            center + Vector((-size / 2, size / 2, 0)),
+            center + Vector((-size / 2, -size / 2, 0)),
+            center + Vector((size / 2, -size / 2, 0))))
+        return new_cell
+
+    def prepare_grid(self) -> None:
         for l in range(self.levels):
             for c in range(self.columns):
                 for r in range(self.rows):
-                    self[c, r, l] = self.CELL_TYPE(r, c, l) if self[c, r, l] is None else None
-                    self.new_cell_evt(self[c, r, l])
+                    new_cell = self.create_cell(r, c, l)
+                    self[c, r, l] = new_cell
+                    self.new_cell_evt(new_cell)
 
     def prepare_union_find(self) -> None:
         self._union_find = union_find.UnionFind(self.all_cells)
@@ -284,19 +299,6 @@ class Grid:
         random.shuffle(shuffled_cells)
         return shuffled_cells
 
-    def get_cell_center(self, cell: Cell) -> Vector:
-        # return Vector((cell.column + cell.level * (self.columns + 1), cell.row, 0)) + self.offset
-        return Vector((cell.column + cell.level * (self.columns + 1), cell.row, 0))
-
-    def get_cell_positions(self, cell, relative_size=1):
-        """
-        1 0
-        2 3
-        """
-        size = self.cell_size * relative_size
-        center = self.get_cell_center(cell)
-        return center + Vector(((size / 2), (size / 2), 0)), center + Vector(((-size / 2), (size / 2), 0)), center + Vector(((-size / 2), (-size / 2), 0)), center + Vector(((size / 2), (-size / 2), 0))
-
     def calc_distances(self, props):
         distances = Distances(self.get_random_linked_cell(_seed=props.seed))
         distances.get_distances()
@@ -306,20 +308,20 @@ class Grid:
         goal, max_distance = distances.max
 
         longest_path = distances.path_to(goal).path
-
-        # Avoid flickering when the algorithm randomly chooses start and end cells.
-        start = longest_path[0]
-        start = (start.row, start.column, start.level)
-        last_start = props.maze_last_start_cell
-        last_start = (last_start[0], last_start[1], last_start[2])
-        if start != last_start:
-            goal = longest_path[-1]
-            goal = (goal.row, goal.column, goal.level)
-            if goal == last_start:
-                distances.reverse()
-            else:
-                props.maze_last_start_cell = start
-        # End.
+        if longest_path and longest_path[0] is not None:
+            # Avoid flickering when the algorithm randomly chooses start and end cells.
+            start = longest_path[0]
+            start = (start.row, start.column, start.level)
+            last_start = props.maze_last_start_cell
+            last_start = (last_start[0], last_start[1], last_start[2])
+            if start != last_start:
+                goal = longest_path[-1]
+                goal = (goal.row, goal.column, goal.level)
+                if goal == last_start:
+                    distances.reverse()
+                else:
+                    props.maze_last_start_cell = start
+            # End.
         self.distances = distances
         self.longest_path = longest_path
 
@@ -334,11 +336,6 @@ class Grid:
 
 
 class GridHex(Grid):
-    CELL_TYPE = CellHex
-
-    def _get_offset(self) -> Vector:
-        return Vector((-self.columns / 3 - self.columns / 2, 1 - self.rows * (3 ** 0.5) / 2, 0))
-
     def init_cells_neighbors(self) -> None:
         for c in self.each_cell():
             row, col = c.row, c.column
@@ -350,22 +347,31 @@ class GridHex(Grid):
             # Neighbor 2 : NW
             c.set_neighbor(2, self[col - 1, north_diagonal])
 
-    def get_cell_center(self, c):
-        return Vector([1 + 3 * c.column / 2, - (3 ** 0.5) * ((1 + c.column % 2) / 2 - c.row), 0])
+    def _get_offset(self) -> Vector:
+        return Vector((-self.columns / 3 - self.columns / 2, 1 - self.rows * (3 ** 0.5) / 2, 0))
 
-    def get_cell_positions(self, cell):
-        size = self.cell_size
-        center = self.get_cell_center(cell)
-        a_size = size / 2
-        b_size = size * (3 ** 0.5) / 2
+    def create_cell(self, row, column, level) -> Cell:
+        if self[column, row, level] is None:
+            new_cell = Cell(
+                row, column, level,
+                neighbors_return=(3, 4, 5, 0, 1, 2),
+                corners=6,
+                half_neighbors=(0, 1, 2))
 
-        east = Vector((size, 0, 0)) + center
-        north_east = Vector((a_size, b_size, 0)) + center
-        north_west = Vector((-a_size, b_size, 0)) + center
-        west = Vector((- size, 0, 0)) + center
-        south_west = Vector((-a_size, -b_size, 0)) + center
-        south_east = Vector((a_size, -b_size, 0)) + center
-        return east, north_east, north_west, west, south_west, south_east
+            center = Vector((1 + 3 * column / 2, - (3 ** 0.5) * ((1 + column % 2) / 2 - row), 0))
+            size = self.cell_size
+            new_cell.first_vert_index = len(self.verts)
+            a_size = size / 2
+            b_size = size * (3 ** 0.5) / 2
+
+            east = Vector((size, 0, 0)) + center
+            north_east = Vector((a_size, b_size, 0)) + center
+            north_west = Vector((-a_size, b_size, 0)) + center
+            west = Vector((- size, 0, 0)) + center
+            south_west = Vector((-a_size, -b_size, 0)) + center
+            south_east = Vector((a_size, -b_size, 0)) + center
+            self.verts.extend((east, north_east, north_west, west, south_west, south_east))
+            return new_cell
 
 
 class GridPolar(Grid):
@@ -527,75 +533,97 @@ class GridPolar(Grid):
 
 
 class GridTriangle(Grid):
-    CELL_TYPE = CellTriangle
-
     def init_cells_neighbors(self) -> None:
         for c in self.each_cell():
-            if c.is_upright():
-                c.set_neighbor(0, self.delta_cell(c, row=1))
+            if (c.row + c.column) % 2 == 0:
+                c.set_neighbor(0, self.delta_cell(c, column=1))
                 c.set_neighbor(1, self.delta_cell(c, column=-1))
                 c.set_neighbor(2, self.delta_cell(c, row=-1))
 
     def _get_offset(self) -> Vector:
         return Vector((-self.columns / 4, -self.rows / 3, 0))
 
-    def get_cell_center(self, c):
-        return Vector((c.column * 0.5, c.row * (3 ** 0.5) / 2, 0))
+    def create_cell(self, row, column, level) -> Cell:
+        if self[column, row, level] is None:
+            up_right = (row + column) % 2 == 0
+            new_cell = Cell(
+                row, column, level,
+                neighbors_return=(0, 1, 2),
+                corners=3,
+                half_neighbors=(0, 1, 2) if up_right else [])
 
-    def get_cell_positions(self, cell):
-        """
-         2      IF UPRIGHT ELSE   2 1
-        0 1                        0
-        """
-        size = self.cell_size
-        center = self.get_cell_center(cell)
+            center = Vector((column * 0.5, row * cst.SQRT3_OVER2, 0))
+            size = self.cell_size
+            new_cell.first_vert_index = len(self.verts)
 
-        half_width = size / 2
+            half_width = size / 2
+            height = size * (3 ** 0.5) / 2
+            half_height = height / 2
 
-        height = size * (3 ** 0.5) / 2
-        half_height = height / 2
+            if up_right:
+                base_y = - half_height
+                apex_y = half_height
+                self.verts.extend((Vector((half_width, base_y, 0)) + center, Vector((0, apex_y, 0)) + center, Vector((-half_width, base_y, 0)) + center))
+            else:
+                base_y = half_height
+                apex_y = - half_height
+                self.verts.extend((Vector((-half_width, base_y, 0)) + center, Vector((0, apex_y, 0)) + center, Vector((half_width, base_y, 0)) + center))
 
-        if cell.is_upright():
-            base_y = - half_height
-            apex_y = half_height
-        else:
-            base_y = half_height
-            apex_y = - half_height
-
-        north_or_south = Vector((0, apex_y, 0)) + center
-        west = Vector((-half_width, base_y, 0)) + center
-        east = Vector((half_width, base_y, 0)) + center
-        return (east, north_or_south, west) if cell.is_upright() else (west, north_or_south, east)
+            return new_cell
 
 
 class GridOctogon(Grid):
-    def prepare_grid(self) -> None:
-        if self.mask:
-            [self.mask_patch(mask_patch[0], mask_patch[1], mask_patch[2], mask_patch[3],) for mask_patch in self.mask]
+    def create_cell(self, row, column, level) -> Cell:
+        if self[column, row, level] is None:
+            size = self.cell_size
+            if (row + column) % 2 == 0:
+                new_cell = Cell(
+                    row, column, level,
+                    neighbors_return=(2, 5, 3, 7, 0, 1, 1, 3),
+                    corners=8,
+                    half_neighbors=(0, 1, 2, 3))
+                center = Vector((column + level * (self.columns + 1), row, 0))
+                new_cell.first_vert_index = len(self.verts)
 
-        for l in range(self.levels):
-            for c in range(self.columns):
-                for r in range(self.rows):
-                    if self[c, r, l] is None:
-                        if (r + c) % 2 == 0:
-                            new_cell = CellOctogon(r, c, l)
-                        else:
-                            new_cell = Cell(r, c, l)
-                            new_cell._NEIGHBORS_RETURN = [4, 6, 0, 2]
-                        self[c, r, l] = new_cell
-                        self.new_cell_evt(new_cell)
+                s_q = size * 0.25
+                s_tq = size * 0.75
+                self.verts.extend((
+                    Vector((s_q, s_tq, 0)) + center,
+                    Vector((-s_q, s_tq, 0)) + center,
+                    Vector((-s_tq, s_q, 0)) + center,
+                    Vector((-s_tq, -s_q, 0)) + center,
+                    Vector((-s_q, -s_tq, 0)) + center,
+                    Vector((s_q, -s_tq, 0)) + center,
+                    Vector((s_tq, -s_q, 0)) + center,
+                    Vector((s_tq, s_q, 0)) + center))
+            else:
+                new_cell = Cell(
+                    row, column, level,
+                    neighbors_return=(4, 6, 0, 2),
+                    corners=4,
+                    half_neighbors=(0, 1))
+                center = Vector((column + level * (self.columns + 1), row, 0))
+
+                new_cell.first_vert_index = len(self.verts)
+                self.verts.extend((
+                    center + Vector(((size / 4), (size / 4), 0)),
+                    center + Vector(((-size / 4), (size / 4), 0)),
+                    center + Vector(((-size / 4), (-size / 4), 0)),
+                    center + Vector(((size / 4), (-size / 4), 0))))
+            return new_cell
 
     def init_cells_neighbors(self) -> None:
         for c in self.all_cells:
-            if type(c) is Cell:
-                c.set_neighbor(0, self.delta_cell(c, 0, 1, 0))
-                c.set_neighbor(3, self.delta_cell(c, 1, 0, 0))
-            else:
-                pass
+            if (c.row + c.column) % 2 == 0:
                 c.set_neighbor(0, self.delta_cell(c, 0, 1, 0))
                 c.set_neighbor(7, self.delta_cell(c, 1, 1, 0))
                 c.set_neighbor(6, self.delta_cell(c, 1, 0, 0))
                 c.set_neighbor(5, self.delta_cell(c, 1, -1, 0))
+            else:
+                c.set_neighbor(0, self.delta_cell(c, 0, 1, 0))
+                c.set_neighbor(3, self.delta_cell(c, 1, 0, 0))
+
+
 class GridDodecagon(Grid):
     def _get_offset(self) -> Vector:
         return Vector((-0.5 - self.columns, - (self.rows // 3) * 7 / 8, 0))
@@ -621,7 +649,7 @@ class GridDodecagon(Grid):
                 center = Vector(((2 if row % 2 == 0 else 1) + column * 2, 7 / 4 * (((row - 2) / 3) + 1), 0))
                 new_cell.first_vert_index = len(self.verts)
                 self.verts.extend((Vector((-size / 8, 0, 0)) + center, Vector((0, -size / 4, 0)) + center, Vector((size / 8, 0, 0)) + center))
-        else:
+            else:
                 new_cell = Cell(
                     row, column, level,
                     neighbors_return=(6, 2, 8, 1, 10, 0, 0, 2, 2, 1, 4, 0),
@@ -677,9 +705,6 @@ class GridWeave(Grid):
         super().__init__(*args, **kwargs)
 
     def prepare_grid(self):
-        if self.mask:
-            [self.mask_patch(mask_patch[0], mask_patch[1], mask_patch[2], mask_patch[3],) for mask_patch in self.mask]
-
         if self.use_kruskal:
             CellOver.get_neighbors = lambda: Cell.neighbors
         else:

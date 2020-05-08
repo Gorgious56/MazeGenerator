@@ -1,6 +1,7 @@
 import random
 from ..utils import event
 from . import constants as cst
+from ..managers import cell_type_manager as ct_mgr
 
 
 class Cell(object):
@@ -9,19 +10,20 @@ class Cell(object):
     column : Horizontal axis position in the grid
     row: Vertical axis position in the grid
     """
-    _NEIGHBORS_RETURN = [cst.SOUTH, cst.EAST, cst.NORTH, cst.WEST, cst.DOWN, cst.UP]
-    _CORNERS = 4
-
-    def __init__(self, row, col, level=0):
+    def __init__(self, row, col, level=0, neighbors_return=None, corners=4, half_neighbors=None):
         self.row = row
         self.column = col
         self.level = level
 
         self.group = 0
 
-        self._neighbors = [None] * 6
-
         self.links = {}
+
+        self.neighbors_return = (cst.SOUTH, cst.EAST, cst.NORTH, cst.WEST, cst.DOWN, cst.UP) if neighbors_return is None else neighbors_return
+        self.corners = corners
+        self.half_neighbors = (0, 1) if half_neighbors is None else half_neighbors
+
+        self._neighbors = [None] * len(self.neighbors_return)
 
     def __str__(self):
         return 'Cell(r' + str(self.row) + ';c' + str(self.column) + ')'
@@ -38,13 +40,6 @@ class Cell(object):
 
     def get_neighbor_towards(self, direction):
         return self.neighbor(direction) if 0 <= direction < len(self._neighbors) else None
-
-    @property
-    def corners(self):
-        return self._CORNERS
-
-    def get_half_neighbors(self):
-        return 0, 1
 
     def link(self, other_cell, bidirectional=True):
         if other_cell:
@@ -92,7 +87,8 @@ class Cell(object):
                 cell.set_neighbor(self.get_neighbor_return(index), self, bidirectional=False)
 
     def get_neighbor_return(self, index):
-        return self._NEIGHBORS_RETURN[index]
+        return self.neighbors_return[index]
+        # return self._NEIGHBORS_RETURN[index]
 
     def get_unlinked_neighbors(self):
         return [c for c in self.neighbors if not c.has_any_link()]
@@ -156,18 +152,6 @@ class Cell(object):
             return None, -1
 
 
-class CellHex(Cell):
-    _NEIGHBORS_RETURN = [3, 4, 5, 0, 1, 2]
-    _CORNERS = 6
-
-    def __init__(self, row, col, lvl):
-        super().__init__(row, col, lvl)
-        self._neighbors = [None] * 6
-
-    def get_half_neighbors(self):
-        return 0, 1, 2
-
-
 class CellPolar(Cell):
     _NEIGHBORS_RETURN = [2, lambda c: c.neighbor(1).get_neighbor_direction(c), 0, 1, 1]
 
@@ -212,35 +196,6 @@ class CellPolar(Cell):
 
     def has_outward_neighbor(self):
         return any(self._neighbors[(3 if self.row > 0 else 0)::])
-
-
-class CellTriangle(Cell):
-    _NEIGHBORS_RETURN = (0, 1, 2)
-    _CORNERS = 3
-
-    def __init__(self, row, col, lvl):
-        super().__init__(row, col, lvl)
-        # If Upright : NE, NW, S else : SW, SE, N
-        self._neighbors = [None] * 3
-
-    def is_upright(self):
-        return (self.row + self.column) % 2 == 0
-
-    def get_half_neighbors(self):
-        return (0, 1, 2) if self.is_upright() else []
-
-
-class CellOctogon(Cell):
-    _NEIGHBORS_RETURN = (2, 5, 3, 7, 0, 1, 1, 3)
-    _CORNERS = 8
-
-    def __init__(self, row, col, lvl):
-        super().__init__(row, col, lvl)
-        # If Upright : NE, NW, S else : SW, SE, N
-        self._neighbors = [None] * 8
-
-    def get_half_neighbors(self):
-        return 0, 1, 2, 3
 
 
 class CellOver(Cell):

@@ -24,7 +24,7 @@ class MazeVisual:
         mesh_manager.MeshManager.reset()
 
         grid_manager.GridManager.generate_grid(self.props)
-        grid_manager.GridManager.grid.new_cell_evt += lambda grid, cell: mesh_manager.MeshManager.on_new_cell(grid, cell)
+        grid_manager.GridManager.grid.mask_cells()
         grid_manager.GridManager.grid.prepare_grid()
         grid_manager.GridManager.grid.init_cells_neighbors()
         grid_manager.GridManager.grid.prepare_union_find()
