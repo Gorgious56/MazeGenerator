@@ -13,7 +13,14 @@ class GridManager:
         grid = None
         maze_dimension = int(props.maze_space_dimension)
         if props.cell_type == ct.POLAR:
-            grid = grids.GridPolar
+            self.grid = grids.GridPolar(
+                rows=props.maze_rows_or_radius,
+                columns=0,
+                levels=props.maze_levels if maze_dimension == int(sp_rep.REP_REGULAR) else 1,
+                cell_size=1 - props.cell_inset,
+                space_rep=maze_dimension,
+                branch_polar=props.maze_polar_branch)
+            return
         elif props.cell_type == ct.HEXAGON:
             grid = grids.GridHex
         elif props.cell_type == ct.TRIANGLE:

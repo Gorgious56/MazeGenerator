@@ -102,7 +102,7 @@ def setup_modifiers_and_drivers(MV, OM, TM) -> None:
                 'strength': (obj_cells, obj_walls, 'strength', M_THICKNESS_DISP, M_THICKNESS_DISP, 'var'),
             }),
             ('SHRINKWRAP', M_THICKNESS_SHRINKWRAP, {
-                VISIBILIY: ('maze_basement', 'var'),
+                VISIBILIY: (obj_cells, obj_walls, 'show_viewport', M_THICKNESS_SHRINKWRAP, M_THICKNESS_SHRINKWRAP, 'var'),
                 'vertex_group': cv.VG_THICKNESS,
                 'wrap_method': 'PROJECT',
                 'use_project_x': False,
@@ -174,7 +174,17 @@ def setup_modifiers_and_drivers(MV, OM, TM) -> None:
             #     'invert_vertex_group': False,
             # }),
             ('SOLIDIFY', M_THICKNESS_SOLID, {
-                VISIBILIY: (obj_cells, obj_cells, 'thickness', M_THICKNESS_SOLID, M_THICKNESS_SOLID, 'var != 0'),
+                VISIBILIY:
+                (
+                    obj_cells,
+                    M_THICKNESS_SOLID,
+                    (
+                        ('sw_visibility', 'OBJECT', obj_cells, 'modifiers["' + M_THICKNESS_DISP + '"].show_viewport'),
+                        ('disp_visibility', 'OBJECT', obj_cells, 'modifiers["' + M_THICKNESS_SHRINKWRAP + '"].show_viewport'),
+                    ),
+                    'sw_visibility or disp_visibility',
+                ),
+                # VISIBILIY: (obj_cells, obj_cells, 'thickness', M_THICKNESS_SOLID, M_THICKNESS_SOLID, 'var != 0'),
                 'thickness': .000000001,
                 'shell_vertex_group': cv.VG_THICKNESS
             }),
@@ -194,7 +204,17 @@ def setup_modifiers_and_drivers(MV, OM, TM) -> None:
                 'strength': 0,
             }),
             ('SHRINKWRAP', M_THICKNESS_SHRINKWRAP, {
-                VISIBILIY: ('maze_basement', 'var'),
+                VISIBILIY:
+                (
+                    obj_cells,
+                    M_THICKNESS_SHRINKWRAP,
+                    (
+                        ('maze_basement', 'SCENE', scene, 'mg_props.maze_basement'),
+                        ('stairs', 'OBJECT', obj_cells, 'modifiers["' + M_STAIRS + '"].strength'),
+                    ),
+                    'maze_basement and stairs != 0',
+                ),
+                # VISIBILIY: ('maze_basement', 'var'),
                 'vertex_group': cv.VG_THICKNESS,
                 'wrap_method': 'PROJECT',
                 'use_project_x': False,

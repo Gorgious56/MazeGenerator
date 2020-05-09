@@ -375,39 +375,58 @@ class GridHex(Grid):
 
 
 class GridPolar(Grid):
-    CELL_TYPE = CellPolar
-
-    def __init__(self, rows, columns, levels, cell_size=1, space_rep=0, *args, **kwargs):
-        self.rows_polar = []
-        self.doubling_rows = []
+    def __init__(self, rows, columns, levels, cell_size=1, space_rep=0, branch_polar=1, *args, **kwargs):
+        # self.rows_polar = []
         cell_size = max(0, cell_size)
-        super().__init__(rows=rows, columns=1, levels=levels, space_rep='1', cell_size=cell_size, *args, **kwargs)
+        super().__init__(rows=rows, columns=0, levels=levels, space_rep='1', cell_size=cell_size, init_cells=False, *args, **kwargs)
+
+        self.doubling_rows = []
+        self._cells = [None]
+        self.row_begin_index = [0]
+
+        row_height = 1 / self.rows
+        self.branch = branch_polar
+
+        for r in range(1, self.rows):
+            self.row_begin_index.append(len(self._cells))
+            radius = r / self.rows
+            circumference = 2 * pi * radius
+
+            previous_columns = self.row_begin_index[-1] - self.row_begin_index[-2]
+
+            columns = previous_columns * round(circumference * self.branch / previous_columns / row_height)  # Prev count * ratio. Place multiplier here
+            if columns != previous_columns:
+                self.doubling_rows.append(r - 1)
+            self._cells.extend([None] * columns)
 
     def __delitem__(self, key):
         del self[key[0], key[1]]
 
     def __getitem__(self, key):
         key = list(key)
-        try:
-            row = self.rows_polar[key[0]]
-            if key[1] == len(row):
-                key[1] = 0
-            elif key[1] == -1:
-                key[1] = len(row) - 1
-            return row[key[1]]
-        except IndexError:
-            return None
+        if 0 <= key[1] < self.rows:
+            if key[1] == self.rows - 1:
+                row = self._cells[self.row_begin_index[key[1]]::]
+            else:
+                row = self._cells[self.row_begin_index[key[1]]:self.row_begin_index[key[1] + 1]]
+            if key[0] == len(row):
+                key[0] = 0
+            elif key[0] == -1:
+                key[0] = len(row) - 1
+            return row[key[0]]
 
     def __setitem__(self, key, value):
-        try:
-            row = self.rows_polar[key[0]]
-            if key[1] == len(row):
-                key[1] = 0
-            elif key[1] == -1:
-                key[1] = len(row) - 1
-            row[key[1]] = value
-        except IndexError:
-            pass
+        key = list(key)
+        if 0 <= key[1] < self.rows:
+            if key[1] == self.rows - 1:
+                row = self._cells[self.row_begin_index[key[1]]::]
+            else:
+                row = self._cells[self.row_begin_index[key[1]]:self.row_begin_index[key[1] + 1]]
+            if key[0] == len(row):
+                key[0] = 0
+            elif key[0] == -1:
+                key[0] = len(row) - 1
+            self._cells[self.row_begin_index[key[1]] + key[0]] = value
 
     def delta_cell(self, cell: Cell, column: int = 0, row: int = 0, level: int = 0) -> Cell:
         if not cell:
@@ -416,12 +435,12 @@ class GridPolar(Grid):
             if cell.row == 0:
                 return random.choice(cell.neighbors)
             else:
-                return self[cell.row, cell.column - 1]
+                return self[cell.column - 1, cell.row]
         elif column == 1:
             if cell.row == 0:
                 return random.choice(cell.neighbors)
             else:
-                return self[cell.row, cell.column + 1]
+                return self[cell.column + 1, cell.row]
         elif row == -1:
             if cell.row > 0:
                 return cell.neighbor(1)
@@ -433,27 +452,14 @@ class GridPolar(Grid):
                 return random.choice(outward_neighbors) if outward_neighbors else None
 
     def get_columns_this_row(self, row):
-        return len(self.rows_polar[row])
+        return self.row_begin_index[row + 1] - self.row_begin_index[row] if row < self.rows - 1 else len(self._cells) - self.row_begin_index[row]
 
-    def prepare_grid(self):
-        rows = [None] * self.rows
-        row_height = 1 / self.rows
-        rows[0] = [CellPolar(0, 0)]
-
-        for r in range(1, self.rows):
-            radius = r / self.rows
-            circumference = 2 * pi * radius
-
-            previous_count = len(rows[r - 1])
-            estimated_cell_width = circumference / previous_count
-            ratio = round(estimated_cell_width / row_height)  # Place multiplier here
-
-            cells = previous_count * ratio
-            if cells != previous_count:
-                self.doubling_rows.append(r - 1)
-            rows[r] = [CellPolar(r, col) for col in range(cells)]
-
-        self.rows_polar = rows
+    def prepare_grid(self) -> None:
+        for l in range(self.levels):
+            for r in range(self.rows):
+                for c in range(self.get_columns_this_row(r)):
+                    new_cell = self.create_cell(r, c, l)
+                    self[c, r, l] = new_cell
 
     def init_cells_neighbors(self) -> None:
         # 0>ccw - 1>in - 2>cw - 3...>outward
@@ -461,75 +467,75 @@ class GridPolar(Grid):
         for c in all_cells:
             row, col = c.row, c.column
             if row > 0:
-                row_length = self.row_length(c.row)
-                c.set_neighbor(cst.POL_CCW, self.delta_cell(c, column=1))
-                c.set_neighbor(cst.POL_CW, self.delta_cell(c, column=-1))
+                row_length = self.get_columns_this_row(c.row)
+                c.set_neighbor(0, self.delta_cell(c, column=1), 2)
 
-                ratio = row_length / self.row_length(c.row - 1)
-                parent = self[row - 1, floor(col // ratio)]
-
-                c.set_neighbor(cst.POL_IN, parent)
+                ratio = row_length / self.get_columns_this_row(c.row - 1)
+                inward = self[floor(col // ratio), row - 1]
+                c.set_neighbor(cst.POL_IN, inward, add_as_new=True)
 
         for cell in all_cells:
+            cell.first_vert_index = len(self.verts)
+            self.verts.extend(self.get_cell_positions(cell))
             self.new_cell_evt(cell)
 
     def each_row(self) -> Generator[List[Cell], None, None]:
         """
         Travel the grid row by row, starting at index 0
         """
-        for r in self.rows_polar:
-            yield r
+        for i in range(len(self.row_begin_index)):
+            if i < self.rows - 1:
+                yield self._cells[self.row_begin_index[i]:self.row_begin_index[i + 1]]
+            else:
+                yield self._cells[self.row_begin_index[i]::]
 
-    def each_cell(self) -> Generator[Cell, None, None]:
-        for r in self.each_row():
-            for c in r:
-                if c:
-                    yield c
-
-    @property
-    def all_cells(self):
-        cells = []
-        # return [c for c in row for row in self.each_row() if c]
-        for r in self.each_row():
-            for c in r:
-                if c:
-                    cells.append(c)
-        return cells
-
-    def random_cell(self, _seed=None):
-        if _seed:
-            random.seed(_seed)
-        return random.choice([c for c in random.choice(self.rows_polar)])
-
-    def row_length(self, row):
-        return len(self.rows_polar[row])
+    def get_position(self, radius, angle):
+        return Vector((radius * cos(angle), radius * sin(angle), 0))
 
     def get_cell_positions(self, cell):
         cs = self.cell_size
-        cell_corners = cell.corners
         if cell.row == 0:
-            a_size = cs / 2
-            b_size = cs * (3 ** 0.5) / 2
-            return Vector((cs, 0, 0)), Vector((a_size, b_size, 0)), Vector((-a_size, b_size, 0)), Vector((-cs, 0, 0)), Vector((-a_size, -b_size, 0)), Vector((a_size, -b_size, 0))
+            t = 0
+            corners = self.get_columns_this_row(1)
+            dt = 2 * pi / corners
+            positions = []
+            for c in range(corners):
+                positions.append(self.get_position(cs, t))
+                t += dt
+            return positions
 
-        def get_position(radius, angle):
-            return Vector((radius * cos(angle), radius * sin(angle), 0))
-
-        row_length = self.row_length(cell.row)
+        row_length = self.get_columns_this_row(cell.row)
         t = 2 * pi / row_length
         r_in = cell.row + 0.5 - cs / 2
         r_out = r_in + cs
         t_cw = (cell.column + 0.5 - cs / 2) * t
         t_ccw = t_cw + cs * t
 
-        r_in_cw = get_position(r_in, t_cw)
-        r_out_cw = get_position(r_out, t_cw)
-        r_in_ccw = get_position(r_in, t_ccw)
-        r_out_ccw = get_position(r_out, t_ccw)
-        return (r_out_ccw, r_in_ccw, r_in_cw, r_out_cw, get_position(r_out, (2 * cell.column + 1) * 2 * pi / self.row_length(cell.row + 1))) if cell_corners == 5 else (r_out_ccw, r_in_ccw, r_in_cw, r_out_cw)
+        r_in_cw = self.get_position(r_in, t_cw)
+        r_out_cw = self.get_position(r_out, t_cw)
+        r_in_ccw = self.get_position(r_in, t_ccw)
+        r_out_ccw = self.get_position(r_out, t_ccw)
+        if cell.corners == 5:
+            return (r_out_ccw, r_in_ccw, r_in_cw, r_out_cw, self.get_position(r_out, (2 * cell.column + 1) * 2 * pi / self.get_columns_this_row(cell.row + 1)))
+        else:
+            return (r_out_ccw, r_in_ccw, r_in_cw, r_out_cw)
 
     def _get_offset(self) -> Vector:
         return Vector((0, 0, 0))
+
+    def create_cell(self, row, column, level) -> Cell:
+        if self[column, row, level] is None:
+            if row == 0:
+                new_cell = Cell(
+                    row, column, level,
+                    corners=0,
+                    half_neighbors=[])
+            else:
+                new_cell = Cell(
+                    row, column, level,
+                    corners=4,
+                    half_neighbors=(0, 1))
+            return new_cell
 
 
 class GridTriangle(Grid):
