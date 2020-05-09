@@ -1,8 +1,9 @@
 import random
+import numpy as np
 from typing import Iterable, Tuple, List, Generator
 from mathutils import Vector
 from math import pi, floor, cos, sin
-from .cells import Cell, CellOver, CellPolar, CellUnder
+from .cells import Cell, CellOver, CellUnder
 from ..managers import space_rep_manager as sp_mgr
 from . import constants as cst
 from ..managers.distance_manager import Distances
@@ -11,12 +12,12 @@ from ..utils import event, union_find
 
 class Grid:
 
-    def __init__(self, rows: int = 2, columns: int = 2, levels: int = 1, cell_size: float = 1.0, space_rep: int = 0, mask: Iterable[Tuple[int]] = None) -> None:
+    def __init__(self, rows: int = 2, columns: int = 2, levels: int = 1, cell_size: float = 1.0, space_rep: int = 0, mask: Iterable[Tuple[int]] = None, init_cells=True) -> None:
         self.rows: int = rows
         self.columns = columns
         self.levels = levels
-
-        self._cells = [None] * (rows * columns * levels)
+        if init_cells:
+            self._cells = [None] * (rows * columns * levels)
         self.size = rows * columns * levels
         self.size_2D = rows * columns
         self.masked_cells = 0  # This container is used in some algorithms.
@@ -34,7 +35,7 @@ class Grid:
 
         self.cell_size = cell_size
 
-        self.verts_indices = {}
+        # self.verts_indices = {}
         self.new_cell_evt = event.EventHandler(event.Event('New Cell'), self)
 
         self._union_find = None
@@ -78,17 +79,22 @@ class Grid:
             [self.mask_patch(mask_patch[0], mask_patch[1], mask_patch[2], mask_patch[3],) for mask_patch in self.mask]
 
     def create_cell(self, row, column, level) -> Cell:
-        new_cell = Cell(row, column, level) if self[column, row, level] is None else None
-        center = Vector((column + level * (self.columns + 1), row, 0))
-
         size = self.cell_size
-        new_cell.first_vert_index = len(self.verts)
-        self.verts.extend((
-            center + Vector((size / 2, size / 2, 0)),
-            center + Vector((-size / 2, size / 2, 0)),
-            center + Vector((-size / 2, -size / 2, 0)),
-            center + Vector((size / 2, -size / 2, 0))))
-        return new_cell
+        if self[column, row, level] is None:
+            new_cell = Cell(
+                row, column, level,
+                # neighbors_return=(cst.SOUTH, cst.EAST, cst.NORTH, cst.WEST),
+                half_neighbors=(0, 1),
+            )
+            center = Vector((column + level * (self.columns + 1), row, 0))
+
+            new_cell.first_vert_index = len(self.verts)
+            self.verts.extend((
+                center + Vector((size / 2, size / 2, 0)),
+                center + Vector((-size / 2, size / 2, 0)),
+                center + Vector((-size / 2, -size / 2, 0)),
+                center + Vector((size / 2, -size / 2, 0))))
+            return new_cell
 
     def prepare_grid(self) -> None:
         for l in range(self.levels):
@@ -122,45 +128,45 @@ class Grid:
                 # North :
                 if row == 2 * rows - 1:
                     if col < rows:
-                        c.set_neighbor(cst.NORTH, self[rows, 3 * rows - col - 1, level])
-                        c.neighbor(cst.NORTH).set_neighbor(cst.WEST, c)
+                        c.set_neighbor(cst.NORTH, self[rows, 3 * rows - col - 1, level], cst.SOUTH)
+                        c.neighbor(cst.NORTH).set_neighbor(cst.WEST, c, cst.EAST)
                     elif rows + cols <= col < 2 * rows + cols:
-                        c.set_neighbor(cst.NORTH, self[rows + cols - 1, rows - cols + col, level])
-                        c.neighbor(cst.NORTH).set_neighbor(cst.EAST, c)
+                        c.set_neighbor(cst.NORTH, self[rows + cols - 1, rows - cols + col, level], cst.SOUTH)
+                        c.neighbor(cst.NORTH).set_neighbor(cst.EAST, c, cst.SOUTH)
                     elif col >= 2 * rows + cols:
-                        c.set_neighbor(cst.NORTH, self[3 * rows + 2 * cols - 1 - col, 3 * rows - 1, level])
-                        c.neighbor(cst.NORTH).set_neighbor(cst.NORTH, c)
+                        c.set_neighbor(cst.NORTH, self[3 * rows + 2 * cols - 1 - col, 3 * rows - 1, level], cst.SOUTH)
+                        c.neighbor(cst.NORTH).set_neighbor(cst.NORTH, c, cst.SOUTH)
                     else:
-                        c.set_neighbor(cst.NORTH, self[col, row + 1, level])
-                        c.neighbor(cst.NORTH).set_neighbor(cst.SOUTH, c)
+                        c.set_neighbor(cst.NORTH, self[col, row + 1, level], cst.SOUTH)
+                        c.neighbor(cst.NORTH).set_neighbor(cst.SOUTH, c, cst.NORTH)
                 elif not c.neighbor(cst.NORTH):
-                    c.set_neighbor(cst.NORTH, self[col, row + 1, level])
+                    c.set_neighbor(cst.NORTH, self[col, row + 1, level], cst.SOUTH)
                     if c.neighbor(cst.NORTH):
-                        c.neighbor(cst.NORTH).set_neighbor(cst.SOUTH, c)
+                        c.neighbor(cst.NORTH).set_neighbor(cst.SOUTH, c, cst.NORTH)
                 # West :
                 if not c.neighbor(cst.WEST):
-                    c.set_neighbor(cst.WEST, self[col - 1, row, level])
+                    c.set_neighbor(cst.WEST, self[col - 1, row, level], cst.EAST)
                     if c.neighbor(cst.WEST):
-                        c.neighbor(cst.WEST).set_neighbor(cst.EAST, c)
+                        c.neighbor(cst.WEST).set_neighbor(cst.EAST, c, cst.WEST)
                 # South :
                 if row == rows:
                     if col < rows:
-                        c.set_neighbor(cst.SOUTH, self[rows, col, level])
-                        c.neighbor(cst.SOUTH).set_neighbor(cst.WEST, c)
+                        c.set_neighbor(cst.SOUTH, self[rows, col, level], cst.NORTH)
+                        c.neighbor(cst.SOUTH).set_neighbor(cst.WEST, c, cst.EAST)
                     elif rows + cols <= col < 2 * rows + cols:
-                        c.set_neighbor(cst.SOUTH, self[rows + cols - 1, 2 * rows + cols - 1 - col, level])
-                        c.neighbor(cst.SOUTH).set_neighbor(cst.EAST, c)
+                        c.set_neighbor(cst.SOUTH, self[rows + cols - 1, 2 * rows + cols - 1 - col, level], cst.NORTH)
+                        c.neighbor(cst.SOUTH).set_neighbor(cst.EAST, c, cst.WEST)
                     elif col >= 2 * rows + cols:
-                        c.set_neighbor(cst.SOUTH, self[3 * rows + 2 * cols - 1 - col, 0, level])
-                        c.neighbor(cst.SOUTH).set_neighbor(cst.SOUTH, c)
+                        c.set_neighbor(cst.SOUTH, self[3 * rows + 2 * cols - 1 - col, 0, level], cst.NORTH)
+                        c.neighbor(cst.SOUTH).set_neighbor(cst.SOUTH, c, cst.NORTH)
                     else:
-                        c.set_neighbor(cst.SOUTH, self[col, row - 1, level])
-                        c.neighbor(cst.SOUTH).set_neighbor(cst.NORTH, c)
+                        c.set_neighbor(cst.SOUTH, self[col, row - 1, level], cst.NORTH)
+                        c.neighbor(cst.SOUTH).set_neighbor(cst.NORTH, c, cst.SOUTH)
         else:
             for c in self.all_cells:
-                c.set_neighbor(cst.NORTH, self.delta_cell(c, row=1))
-                c.set_neighbor(cst.EAST, self.delta_cell(c, column=1))
-                c.set_neighbor(cst.UP, self.delta_cell(c, level=1))
+                c.set_neighbor(cst.NORTH, self.delta_cell(c, row=1), cst.SOUTH)
+                c.set_neighbor(cst.EAST, self.delta_cell(c, column=1), cst.WEST)
+                c.set_neighbor(cst.UP, self.delta_cell(c, level=1), cst.DOWN)
 
     def mask_ring(self, center_row: int, center_col: int, radius: float) -> None:
         for r in range(self.rows):
@@ -181,7 +187,7 @@ class Grid:
         if c is not None:
             self.masked_cells += 1
             for i, n in enumerate(c.get_neighbors()):
-                n.neighbors[c.neighbors_return[i]] = None
+                n.neighbors[c.get_neighbor_return(i)] = None
                 c.unlink(n)
 
     def random_cell(self, _seed: int = None) -> Cell:
@@ -341,11 +347,11 @@ class GridHex(Grid):
             row, col = c.row, c.column
             north_diagonal = row + (1 if col % 2 == 0 else 0)
             # Neighbor 0 : NE
-            c.set_neighbor(0, self[col + 1, north_diagonal])
+            c.set_neighbor(0, self[col + 1, north_diagonal], 3)
             # Neighbor 1 : N
-            c.set_neighbor(1, self[col, row + 1])
+            c.set_neighbor(1, self[col, row + 1], 4)
             # Neighbor 2 : NW
-            c.set_neighbor(2, self[col - 1, north_diagonal])
+            c.set_neighbor(2, self[col - 1, north_diagonal], 5)
 
     def _get_offset(self) -> Vector:
         return Vector((-self.columns / 3 - self.columns / 2, 1 - self.rows * (3 ** 0.5) / 2, 0))
@@ -354,7 +360,6 @@ class GridHex(Grid):
         if self[column, row, level] is None:
             new_cell = Cell(
                 row, column, level,
-                neighbors_return=(3, 4, 5, 0, 1, 2),
                 corners=6,
                 half_neighbors=(0, 1, 2))
 
@@ -444,7 +449,7 @@ class GridPolar(Grid):
         elif row == -1:
             if cell.row > 0:
                 return cell.neighbor(1)
-        elif row == 1:            
+        elif row == 1:
             if cell.row == 0:
                 return random.choice(cell.neighbors)
             else:
@@ -542,9 +547,9 @@ class GridTriangle(Grid):
     def init_cells_neighbors(self) -> None:
         for c in self.each_cell():
             if (c.row + c.column) % 2 == 0:
-                c.set_neighbor(0, self.delta_cell(c, column=1))
-                c.set_neighbor(1, self.delta_cell(c, column=-1))
-                c.set_neighbor(2, self.delta_cell(c, row=-1))
+                c.set_neighbor(0, self.delta_cell(c, column=1), 0)
+                c.set_neighbor(1, self.delta_cell(c, column=-1), 1)
+                c.set_neighbor(2, self.delta_cell(c, row=-1), 2)
 
     def _get_offset(self) -> Vector:
         return Vector((-self.columns / 4, -self.rows / 3, 0))
@@ -554,7 +559,6 @@ class GridTriangle(Grid):
             up_right = (row + column) % 2 == 0
             new_cell = Cell(
                 row, column, level,
-                neighbors_return=(0, 1, 2),
                 corners=3,
                 half_neighbors=(0, 1, 2) if up_right else [])
 
@@ -581,14 +585,13 @@ class GridTriangle(Grid):
 class GridOctogon(Grid):
     def create_cell(self, row, column, level) -> Cell:
         if self[column, row, level] is None:
-            size = self.cell_size
+            size = self.cell_size * 2
             if (row + column) % 2 == 0:
                 new_cell = Cell(
                     row, column, level,
-                    neighbors_return=(2, 5, 3, 7, 0, 1, 1, 3),
                     corners=8,
                     half_neighbors=(0, 1, 2, 3))
-                center = Vector((column + level * (self.columns + 1), row, 0))
+                center = Vector((column + level * (self.columns + 1), row, 0)) * 2
                 new_cell.first_vert_index = len(self.verts)
 
                 s_q = size * 0.25
@@ -605,10 +608,9 @@ class GridOctogon(Grid):
             else:
                 new_cell = Cell(
                     row, column, level,
-                    neighbors_return=(4, 6, 0, 2),
                     corners=4,
                     half_neighbors=(0, 1))
-                center = Vector((column + level * (self.columns + 1), row, 0))
+                center = Vector((column + level * (self.columns + 1), row , 0)) * 2
 
                 new_cell.first_vert_index = len(self.verts)
                 self.verts.extend((
@@ -618,16 +620,19 @@ class GridOctogon(Grid):
                     center + Vector(((size / 4), (-size / 4), 0))))
             return new_cell
 
+    def _get_offset(self):
+        return super()._get_offset() * 2
+
     def init_cells_neighbors(self) -> None:
         for c in self.all_cells:
             if (c.row + c.column) % 2 == 0:
-                c.set_neighbor(0, self.delta_cell(c, 0, 1, 0))
-                c.set_neighbor(7, self.delta_cell(c, 1, 1, 0))
-                c.set_neighbor(6, self.delta_cell(c, 1, 0, 0))
-                c.set_neighbor(5, self.delta_cell(c, 1, -1, 0))
+                c.set_neighbor(0, self.delta_cell(c, 0, 1, 0), 2)
+                c.set_neighbor(7, self.delta_cell(c, 1, 1, 0), 3)
+                c.set_neighbor(6, self.delta_cell(c, 1, 0, 0), 1)
+                c.set_neighbor(5, self.delta_cell(c, 1, -1, 0), 1)
             else:
-                c.set_neighbor(0, self.delta_cell(c, 0, 1, 0))
-                c.set_neighbor(3, self.delta_cell(c, 1, 0, 0))
+                c.set_neighbor(0, self.delta_cell(c, 0, 1, 0), 4)
+                c.set_neighbor(3, self.delta_cell(c, 1, 0, 0), 2)
 
 
 class GridDodecagon(Grid):
@@ -640,7 +645,6 @@ class GridDodecagon(Grid):
             if row % 3 == 0:  # Up triangle
                 new_cell = Cell(
                     row, column, level,
-                    neighbors_return=(5, 9, 1),
                     corners=3,
                     half_neighbors=(1,))
                 center = Vector(((2 if row % 2 == 0 else 1) + column * 2, 7 / 4 * (row / 3) + 1 / 4, 0))
@@ -649,7 +653,6 @@ class GridDodecagon(Grid):
             elif (row - 2) % 3 == 0:  # Down trianlge
                 new_cell = Cell(
                     row, column, level,
-                    neighbors_return=(11, 3, 7),
                     corners=3,
                     half_neighbors=(0, 2))
                 center = Vector(((2 if row % 2 == 0 else 1) + column * 2, 7 / 4 * (((row - 2) / 3) + 1), 0))
@@ -658,7 +661,6 @@ class GridDodecagon(Grid):
             else:
                 new_cell = Cell(
                     row, column, level,
-                    neighbors_return=(6, 2, 8, 1, 10, 0, 0, 2, 2, 1, 4, 0),
                     corners=12,
                     half_neighbors=(0, 1, 2, 3, 4, 5))
                 center = Vector(((2 if row % 2 == 0 else 1) + column * 2, 1 + ((row - 1) * 7 / 4 / 3), 0))
@@ -685,23 +687,23 @@ class GridDodecagon(Grid):
     def init_cells_neighbors(self) -> None:
         for c in self.all_cells:
             if (c.row - 1) % 3 == 0:
-                c.set_neighbor(1, self.delta_cell(c, 0, 2, 0))
-                c.set_neighbor(7, self.delta_cell(c, 0, -2, 0))
-                c.set_neighbor(4, self.delta_cell(c, -1, 0, 0))
+                c.set_neighbor(1, self.delta_cell(c, 0, 2, 0), 2)
+                c.set_neighbor(7, self.delta_cell(c, 0, -2, 0), 2)
+                c.set_neighbor(4, self.delta_cell(c, -1, 0, 0), 10)
                 if (c.row - 1) % 2 == 0:
-                    c.set_neighbor(0, self.delta_cell(c, 0, 3, 0))
-                    c.set_neighbor(2, self.delta_cell(c, -1, 3, 0))
-                    c.set_neighbor(3, self.delta_cell(c, -1, 1, 0))
-                    c.set_neighbor(5, self.delta_cell(c, -1, -1, 0))
-                    c.set_neighbor(9, self.delta_cell(c, 0, -1, 0))
-                    c.set_neighbor(11, self.delta_cell(c, 0, 1, 0))
+                    c.set_neighbor(0, self.delta_cell(c, 0, 3, 0), 6)
+                    c.set_neighbor(2, self.delta_cell(c, -1, 3, 0), 8)
+                    c.set_neighbor(3, self.delta_cell(c, -1, 1, 0), 1)
+                    c.set_neighbor(5, self.delta_cell(c, -1, -1, 0), 0)
+                    c.set_neighbor(9, self.delta_cell(c, 0, -1, 0), 1)
+                    c.set_neighbor(11, self.delta_cell(c, 0, 1, 0), 0)
                 else:
-                    c.set_neighbor(0, self.delta_cell(c, 1, 3, 0))
-                    c.set_neighbor(2, self.delta_cell(c, 0, 3, 0))
-                    c.set_neighbor(3, self.delta_cell(c, 0, 1, 0))
-                    c.set_neighbor(5, self.delta_cell(c, 0, -1, 0))
-                    c.set_neighbor(9, self.delta_cell(c, 1, -1, 0))
-                    c.set_neighbor(11, self.delta_cell(c, 1, 1, 0))
+                    c.set_neighbor(0, self.delta_cell(c, 1, 3, 0), 6)
+                    c.set_neighbor(2, self.delta_cell(c, 0, 3, 0), 8)
+                    c.set_neighbor(3, self.delta_cell(c, 0, 1, 0), 1)
+                    c.set_neighbor(5, self.delta_cell(c, 0, -1, 0), 0)
+                    c.set_neighbor(9, self.delta_cell(c, 1, -1, 0), 1)
+                    c.set_neighbor(11, self.delta_cell(c, 1, 1, 0), 0)
 
 
 class GridWeave(Grid):
