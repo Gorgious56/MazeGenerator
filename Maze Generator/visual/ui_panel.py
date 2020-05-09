@@ -116,7 +116,10 @@ class ParametersPanel(bpy.types.Panel):
             sub.operator('maze.tweak_maze_size', text='', icon='ADD').tweak_size = increase
             return row
 
-        maze_size_ui('maze_columns', [-1, 0, 0], [1, 0, 0], 'Columns').enabled = mg_props.cell_type != cell_mgr.POLAR
+        if mg_props.cell_type != cell_mgr.POLAR:
+            maze_size_ui('maze_columns', [-1, 0, 0], [1, 0, 0], 'Columns')
+        else:
+            layout.prop(mg_props, 'maze_polar_branch', text='Branch amount')
         row = maze_size_ui('maze_rows_or_radius', [0, -1, 0], [0, 1, 0], 'Rows').enabled = True
         row = maze_size_ui('maze_levels', [0, 0, -1], [0, 0, 1], 'Levels').enabled = mg_props.maze_space_dimension == sp_rep.REP_REGULAR and mg_props.cell_type == cell_mgr.SQUARE
         row = layout.row()
