@@ -59,7 +59,18 @@ def tweak_maze_weave(self, context: bpy.types.Context) -> None:
     generate_maze(self, context)
 
 
+def update_prop(self, value, prop_name):
+    if hasattr(self, prop_name):
+        setattr(self, prop_name, value)
+
+
 class MGProperties(PropertyGroup):
+    show_gizmos: BoolProperty(
+        name="Show Gizmos",
+        default=True,
+        description="Check this to display the interactive gizmos",
+    )
+
     auto_update: BoolProperty(
         name='Auto Update',
         default=True,
@@ -136,7 +147,17 @@ class MGProperties(PropertyGroup):
         default=10,
         min=2,
         soft_max=100,
-        update=generate_maze
+        update=generate_maze,
+    )
+
+    maze_rows_or_radius_gizmo: FloatProperty(
+        name="Rows",
+        description="Choose the size along the X axis",
+        default=10,
+        min=2,
+        soft_max=100,
+        get=lambda self: self.maze_rows_or_radius / 2,
+        set=lambda self, value: update_prop(self, value * 2, "maze_rows_or_radius"),
     )
 
     maze_columns: IntProperty(
@@ -146,6 +167,16 @@ class MGProperties(PropertyGroup):
         min=2,
         soft_max=100,
         update=generate_maze
+    )
+
+    maze_columns_gizmo: FloatProperty(
+        name="Columns",
+        description="Choose the size along the X axis",
+        default=10,
+        min=2,
+        soft_max=100,
+        get=lambda self: self.maze_columns / 2,
+        set=lambda self, value: update_prop(self, value * 2, "maze_columns"),
     )
 
     maze_levels: IntProperty(

@@ -1,7 +1,7 @@
-from bpy . utils import register_class, unregister_class
-from . import auto_load
+from bpy.utils import register_class, unregister_class
+from .import auto_load
 from .operators import op_generate_maze, op_tweak_maze_size, op_sample_mazes
-from . visual import ui_panel
+from .visual import ui_panel, gizmos
 
 bl_info = {
     "name": "Maze Generator",
@@ -27,7 +27,8 @@ classes = (
     ui_panel.CellsPanel,
     ui_panel.WallsPanel,
     ui_panel.DisplayPanel,
-    ui_panel.InfoPanel
+    ui_panel.InfoPanel,
+    gizmos.MazeWidgetGroup,
     )
 
 

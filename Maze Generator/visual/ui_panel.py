@@ -32,6 +32,7 @@ class MazeGeneratorPanel(bpy.types.Panel):
             sub = row.row(align=True)
             sub.prop(mg_props, 'auto_update', toggle=True, icon='FILE_REFRESH', text='')
             sub.prop(mg_props, 'auto_overwrite', toggle=True, icon='TRASH', text='')
+            sub.prop(mg_props, 'show_gizmos', toggle=True, icon='VIEW_PAN', text='')
         else:
             row.operator("maze.refresh", icon='FILE_REFRESH', text='Refresh')
 
@@ -120,6 +121,7 @@ class ParametersPanel(bpy.types.Panel):
             maze_size_ui('maze_columns', [-1, 0, 0], [1, 0, 0], 'Columns')
         else:
             layout.prop(mg_props, 'maze_polar_branch', text='Branch amount')
+
         row = maze_size_ui('maze_rows_or_radius', [0, -1, 0], [0, 1, 0], 'Rows').enabled = True
         row = maze_size_ui('maze_levels', [0, 0, -1], [0, 0, 1], 'Levels').enabled = mg_props.maze_space_dimension == sp_rep.REP_REGULAR and mg_props.cell_type == cell_mgr.SQUARE
         row = layout.row()
