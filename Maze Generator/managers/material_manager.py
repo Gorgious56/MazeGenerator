@@ -13,6 +13,12 @@ def get_or_create_node(
         inputs: dict = None,  # Index (integer or string), value
         outputs: dict = None,  # Index (integer or string), value
         attributes: dict = None) -> None:
+    """
+    Gets the node with the specified name from the nodes
+    Or Creates it if it doesnt exist
+    Then updates the inputs, outputs and attributes if necessary
+    Then adds it to the MaterialManager for easy access
+    """
     node = nodes.get(node_attr_name)
     if not node:
         node = nodes.new(type=_type)

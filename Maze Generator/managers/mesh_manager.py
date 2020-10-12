@@ -145,14 +145,16 @@ class MeshManager:
                     walls_edges.append((verts_indices[direction], verts_indices[(direction + 1) % c.corners]))
                 elif not w and direction in half_neighbors:
                     n = c.get_neighbor_towards(direction)
-                    if n:
-                        neighbor_indices = range(n.first_vert_index, n.first_vert_index + n.corners)
-                        first_idx = direction
-                        second_idx = c.get_neighbor_return(direction)
+                    if not n:
+                        continue
+                    neighbor_indices = range(n.first_vert_index, n.first_vert_index + n.corners)
+                    first_idx = direction
+                    second_idx = c.get_neighbor_return(direction)
 
-                        faces.append((verts_indices[first_idx], neighbor_indices[(second_idx + 1) % n.corners], neighbor_indices[second_idx], verts_indices[(first_idx + 1) % c.corners]))
-                        if inset:
-                            walls_edges.append((verts_indices[first_idx], neighbor_indices[(second_idx + 1) % n.corners]))
-                            walls_edges.append((verts_indices[(first_idx + 1) % c.corners], neighbor_indices[second_idx]))
+                    faces.append((verts_indices[first_idx], neighbor_indices[(second_idx + 1) % n.corners], neighbor_indices[second_idx], verts_indices[(first_idx + 1) % c.corners]))
+                    if not inset:
+                        continue
+                    walls_edges.append((verts_indices[first_idx], neighbor_indices[(second_idx + 1) % n.corners]))
+                    walls_edges.append((verts_indices[(first_idx + 1) % c.corners], neighbor_indices[second_idx]))
         # print(verts)
         return verts, faces, cells_data, walls_edges

@@ -1,7 +1,9 @@
+import sys
+import inspect
 from bpy.utils import register_class, unregister_class
-from .import auto_load
-from .operators import op_generate_maze, op_tweak_maze_size, op_sample_mazes
+from . import auto_load
 from .visual import ui_panel, gizmos
+from .operators import op_sample_mazes, op_generate_maze, op_tweak_maze_size
 
 bl_info = {
     "name": "Maze Generator",
@@ -17,19 +19,21 @@ bl_info = {
 
 auto_load.init()
 
-classes = (
-    op_generate_maze.GenerateMazeOperator,
-    op_generate_maze.RefreshMazeOperator,
-    op_tweak_maze_size.TweakMazeSizeOperator,
-    op_sample_mazes.SampleMazesOperator,
-    ui_panel.MazeGeneratorPanel,
-    ui_panel.ParametersPanel,
-    ui_panel.CellsPanel,
-    ui_panel.WallsPanel,
-    ui_panel.DisplayPanel,
-    ui_panel.InfoPanel,
-    gizmos.MazeWidgetGroup,
-    )
+classes = []
+
+
+def batch_add_classes(module, sort_by=None, sort_reverse=False):
+    new_classes = inspect.getmembers(sys.modules[module.__name__], lambda member: inspect.isclass(member) and member.__module__ == module.__name__)
+    if sort_by:
+        new_classes.sort(key=sort_by, reverse=sort_reverse)
+    classes.extend([cl[1] for cl in new_classes])
+
+
+batch_add_classes(module=ui_panel, sort_by=lambda cl: cl[1].order)
+batch_add_classes(module=op_generate_maze)
+batch_add_classes(module=op_tweak_maze_size)
+batch_add_classes(module=op_sample_mazes)
+batch_add_classes(module=gizmos)
 
 
 def register():

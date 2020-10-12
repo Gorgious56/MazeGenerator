@@ -1,7 +1,7 @@
 from ..managers.object_manager import ObjectManager as om
 from ..managers import modifier_manager as mm
 from mathutils import Matrix
-from math import pi
+from math import pi, radians
 
 from bpy.types import (
     GizmoGroup,
@@ -24,8 +24,9 @@ class MazeWidgetGroup(GizmoGroup):
             setattr(self, "my_widgets", {})
         getattr(self, "my_widgets")[widget] = {'rotation': rotation}
 
-    def setup_widget(self, data, prop_name, color=(1, 0, 0), rotation=Matrix.Rotation(0, 4, "X")):
+    def setup_widget(self, data, prop_name, color=(1, 0, 0), rot_axis="X", rot_angle=0):
         new_widget = self.gizmos.new("GIZMO_GT_arrow_3d")
+        # new_widget.offset = getattr(data, prop_name)
         new_widget.target_set_prop("offset", data, prop_name)
         new_widget.draw_style = 'BOX'
 
@@ -34,21 +35,19 @@ class MazeWidgetGroup(GizmoGroup):
 
         new_widget.color_highlight = color[0] + 0.4, color[1] + 0.4, color[2] + 0.4
         new_widget.alpha_highlight = 0.5
-        self.register_widget(new_widget, rotation)
+        self.register_widget(new_widget, Matrix.Rotation(radians(rot_angle), 4, rot_axis))
 
     def setup(self, context):
         mg_props = context.scene.mg_props
-        self.setup_widget(mg_props, "maze_columns_gizmo", color=(1, 0, 0), rotation=Matrix.Rotation(pi / 2, 4, "Y"))
-        self.setup_widget(mg_props, "maze_rows_or_radius_gizmo", color=(0, 1, 0), rotation=Matrix.Rotation(-pi / 2, 4, "X"))
+        self.setup_widget(mg_props, "maze_columns_gizmo", color=(1, 0, 0), rot_axis='Y', rot_angle=90)
+        self.setup_widget(mg_props, "maze_rows_or_radius_gizmo", color=(0, 1, 0), rot_axis='X', rot_angle=-90)
         self.setup_widget(om.obj_cells.modifiers[mm.M_STAIRS], "strength", color=(0, 0, 1))
-        self.setup_widget(om.obj_cells.modifiers[mm.M_THICKNESS_DISP], "strength", color=(0, 0, 1), rotation=Matrix.Rotation(pi, 4, "X"))
+        # self.setup_widget(om.obj_cells.modifiers[mm.M_THICKNESS_DISP], "strength", color=(0, 0, 1), rot_axis='X', rot_angle=180)
 
     def refresh(self, context):
-        mg_props = context.scene.mg_props
         if hasattr(self, "my_widgets"):
             widgets = getattr(self, "my_widgets")
             for widget, attributes in widgets.items():
                 rotation = attributes['rotation']
-                scale = Matrix.Scale(0.5, 4)
                 widget.matrix_basis = om.obj_cells.matrix_world.normalized() @ rotation
         # mpr = getattr(self, "column_widget")

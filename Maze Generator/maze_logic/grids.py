@@ -1,5 +1,4 @@
 import random
-import numpy as np
 from typing import Iterable, Tuple, List, Generator
 from mathutils import Vector
 from math import pi, floor, cos, sin

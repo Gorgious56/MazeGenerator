@@ -15,6 +15,7 @@ class MazeGeneratorPanel(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = 'MG'
+    order = 0
 
     def draw(self, context):
         layout = self.layout
@@ -44,6 +45,7 @@ class ParametersPanel(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = 'MG'
+    order = 1
 
     @classmethod
     def poll(cls, context):
@@ -122,6 +124,10 @@ class ParametersPanel(bpy.types.Panel):
         else:
             layout.prop(mg_props, 'maze_polar_branch', text='Branch amount')
 
+        row = layout.row()
+        row.prop(mg_props, "maze_columns")
+        row.active = False
+
         row = maze_size_ui('maze_rows_or_radius', [0, -1, 0], [0, 1, 0], 'Rows').enabled = True
         row = maze_size_ui('maze_levels', [0, 0, -1], [0, 0, 1], 'Levels').enabled = mg_props.maze_space_dimension == sp_rep.REP_REGULAR and mg_props.cell_type == cell_mgr.SQUARE
         row = layout.row()
@@ -167,6 +173,7 @@ class CellsPanel(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = 'MG'
+    order = 2
 
     @classmethod
     def poll(cls, context):
@@ -245,6 +252,7 @@ class WallsPanel(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = 'MG'
+    order = 3
     # bl_options = {"DEFAULT_CLOSED"}
 
     @classmethod
@@ -282,6 +290,7 @@ class DisplayPanel(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = 'MG'
+    order = 4
 
     @classmethod
     def poll(cls, context):
@@ -318,6 +327,43 @@ class DisplayPanel(bpy.types.Panel):
         box.prop(material_manager.MaterialManager.cell_hsv_node.inputs[2], 'default_value', text='Value Shift', slider=True)
 
 
+class PathPanel(bpy.types.Panel):
+    bl_idname = "MAZE_GENERATOR_PT_PathPanel"
+    bl_label = "Path"
+    bl_parent_id = 'MAZE_GENERATOR_PT_MainPanel'
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = 'MG'
+    order = 5
+
+    @classmethod
+    def poll(cls, context):
+        return ObjectManager.obj_cells or ObjectManager.obj_walls
+
+    def draw_header(self, context):
+        self.layout.label(text='', icon='OUTLINER_DATA_GREASEPENCIL')
+
+    def draw(self, context):
+        layout = self.layout
+
+        scene = context.scene
+        mg_props = scene.mg_props
+
+        layout.prop(mg_props, "maze_random_path")
+
+        row = layout.row()
+        row.prop(mg_props, "maze_outside_path")
+        row.enabled = mg_props.maze_random_path
+
+        row = layout.row()
+        row.prop(mg_props, "maze_force_start", text="Start")
+        row.enabled = not mg_props.maze_random_path
+
+        row = layout.row()
+        row.prop(mg_props, "maze_force_end", text="End")
+        row.enabled = not mg_props.maze_random_path
+
+
 class InfoPanel(bpy.types.Panel):
     bl_idname = "MAZE_GENERATOR_PT_InfoPanel"
     bl_label = "Info"
@@ -325,7 +371,12 @@ class InfoPanel(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = 'MG'
+    order = 6
     # bl_options = {"DEFAULT_CLOSED"}
+
+    @classmethod
+    def poll(cls, context):
+        return ObjectManager.obj_cells or ObjectManager.obj_walls
 
     def draw_header(self, context):
         self.layout.label(text='', icon='INFO')

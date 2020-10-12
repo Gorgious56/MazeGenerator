@@ -196,6 +196,27 @@ class MGProperties(PropertyGroup):
         update=generate_maze
     )
 
+    maze_random_path: BoolProperty(
+        name="Random Path",
+        default=True,
+    )
+
+    maze_outside_path: BoolProperty(
+        name="Force Outside Path",
+        description="Force the maze solution to start and end on the outside of the maze",
+        default=False,
+    )
+
+    maze_force_start: IntVectorProperty(
+        name="Start Maze Here",
+        size=2,
+    )
+
+    maze_force_end: IntVectorProperty(
+        name="End Maze Here",
+        size=2,
+    )
+
     maze_bias: FloatProperty(
         name="Bias",
         description="Add a bias to the algorithm in a certain direction",
