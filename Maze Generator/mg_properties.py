@@ -7,7 +7,9 @@ from .managers.space_rep_manager import generate_space_rep_enum, REP_REGULAR
 from .managers.mesh_manager import generate_cell_visual_enum, DEFAULT_CELL_VISUAL_TYPE
 from .visual.maze_visual import MazeVisual
 from .managers.object_manager import ObjectManager
-from .managers import mesh_manager, material_manager, modifier_manager
+from .managers import mesh_manager, modifier_manager
+
+from .shading.materials import MaterialsPropertyGroup
 
 
 def generate_maze(self, context) -> None:
@@ -65,6 +67,10 @@ def update_prop(self, value, prop_name):
 
 
 class MGProperties(PropertyGroup):
+    materials: PointerProperty(
+        type=MaterialsPropertyGroup
+    )
+
     show_gizmos: BoolProperty(
         name="Show Gizmos",
         default=True,
@@ -75,14 +81,16 @@ class MGProperties(PropertyGroup):
         name='Auto Update',
         default=True,
         description='Generate a new maze each time a parameter is modified. This will hurt performance when generating big mazes',
-        update=lambda self, context: generate_maze(self, context) if self.auto_update else None
+        update=lambda self, context: generate_maze(
+            self, context) if self.auto_update else None
     )
 
     auto_overwrite: BoolProperty(
         name="Auto Overwrite",
         description="Caution : Enabling this WILL overwrite the materials, modifiers and drivers",
         default=False,
-        update=lambda self, context: generate_maze(self, context) if self.auto_overwrite else None
+        update=lambda self, context: generate_maze(
+            self, context) if self.auto_overwrite else None
     )
 
     maze_algorithm: EnumProperty(
@@ -105,7 +113,8 @@ class MGProperties(PropertyGroup):
         name='Smooth Shade Cells',
         description='Enforce smooth shading everytime the maze is generated',
         default=False,
-        update=lambda self, context: mesh_manager.MeshManager.update_smooth(self, ObjectManager.obj_cells.data, ObjectManager.obj_walls.data)
+        update=lambda self, context: mesh_manager.MeshManager.update_smooth(
+            self, ObjectManager.obj_cells.data, ObjectManager.obj_walls.data)
     )
 
     cell_decimate: IntProperty(
@@ -157,7 +166,8 @@ class MGProperties(PropertyGroup):
         min=2,
         soft_max=100,
         get=lambda self: self.maze_rows_or_radius / 2,
-        set=lambda self, value: update_prop(self, value * 2, "maze_rows_or_radius"),
+        set=lambda self, value: update_prop(
+            self, value * 2, "maze_rows_or_radius"),
     )
 
     maze_columns: IntProperty(
