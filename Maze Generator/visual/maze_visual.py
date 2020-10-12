@@ -1,5 +1,5 @@
 import bpy
-from ..managers import algorithm_manager, texture_manager, material_manager, mesh_manager, object_manager, grid_manager, modifier_manager
+from ..shading.objects import manager as mat_creator
 
 
 class MazeVisual:
@@ -11,9 +11,7 @@ class MazeVisual:
         MazeVisual.props = scene.mg_props
         object_manager.ObjectManager.get_or_create_and_link_objects(scene)
         texture_manager.TextureManager.generate_textures(bpy.data.textures)
-        material_manager.MaterialManager.set_materials(MazeVisual.props, scene)
-        mesh_manager.MeshManager.create_vertex_groups(object_manager.ObjectManager.obj_cells, object_manager.ObjectManager.obj_walls)
-        modifier_manager.setup_modifiers_and_drivers(MazeVisual, object_manager.ObjectManager, texture_manager.TextureManager)
+        # material_manager.MaterialManager.set_materials(MazeVisual.props, scene)
 
     def generate_maze(scene: bpy.types.Scene) -> None:
         self = MazeVisual
@@ -46,4 +44,4 @@ class MazeVisual:
 
             modifier_manager.setup_modifiers_and_drivers(MazeVisual, object_manager.ObjectManager, texture_manager.TextureManager)
 
-            material_manager.MaterialManager.set_materials(props, self.scene)
+            mat_creator.create_materials(props, object_manager.ObjectManager.obj_cells, object_manager.ObjectManager.obj_walls)
