@@ -6,7 +6,8 @@ This module handles automatic generation of mazes with parameters variation
 import time
 import bpy
 import numpy as np
-from . import cell_type_manager, modifier_manager
+from ..maze_logic import cells
+from ..managers import modifier_manager
 from ..maze_logic.algorithms import manager as algorithm_manager
 
 
@@ -38,7 +39,7 @@ class SampleManager:
             (
                 mg_props,
                 'cell_type',
-                (cell_type_manager.HEXAGON, cell_type_manager.POLAR, cell_type_manager.SQUARE, cell_type_manager.TRIANGLE),
+                (cells.HEXAGON, cells.POLAR, cells.SQUARE, cells.TRIANGLE),
                 20, 17,
             ),
             (

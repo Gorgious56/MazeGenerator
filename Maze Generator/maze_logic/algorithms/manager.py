@@ -2,7 +2,7 @@
 Algorithm manager methods and properties
 """
 
-from ...managers.cell_type_manager import POLAR, SQUARE
+from ..cells import POLAR, SQUARE
 from ...managers import space_rep_manager as sp_mgr
 
 # Algorithms :

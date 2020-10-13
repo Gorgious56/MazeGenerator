@@ -13,7 +13,7 @@ from bpy.props import (
     IntVectorProperty
 )
 from .maze_logic.algorithms.manager import generate_algo_enum, is_algo_weaved, DEFAULT_ALGO
-from .managers.cell_type_manager import generate_cell_type_enum, DEFAULT_CELL_TYPE
+from .maze_logic.cells import generate_cell_type_enum, DEFAULT_CELL_TYPE
 from .managers.space_rep_manager import generate_space_rep_enum, REP_REGULAR
 from .managers.mesh_manager import generate_cell_visual_enum, DEFAULT_CELL_VISUAL_TYPE
 from .managers import mesh_manager, modifier_manager

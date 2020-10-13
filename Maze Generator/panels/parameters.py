@@ -4,7 +4,7 @@ Parameters Panel
 
 
 import bpy
-from ..managers import cell_type_manager as cell_mgr
+from ..maze_logic import cells as cell_mgr
 from ..maze_logic.algorithms.manager import algorithm_class_from_name, KruskalRandom, is_algo_incompatible
 from ..managers import space_rep_manager as sp_rep
 from ..managers import modifier_manager as mod_mgr

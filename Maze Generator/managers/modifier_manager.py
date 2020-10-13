@@ -3,7 +3,7 @@ import bpy.types as bpy_types
 import math
 from . import space_rep_manager as sp_rep
 from . import mesh_manager as cv
-from .cell_type_manager import SQUARE, TRIANGLE, HEXAGON, OCTOGON
+from ..maze_logic.cells import SQUARE, TRIANGLE, HEXAGON, OCTOGON
 
 M_WELD = 'MG_WELD'
 M_WELD_2 = 'MG_WELD_2'

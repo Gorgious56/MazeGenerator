@@ -1,4 +1,4 @@
-from . cell_type_manager import POLAR
+from ..maze_logic.cells import POLAR
 
 REP_REGULAR = '0'
 REP_CYLINDER = '1'
