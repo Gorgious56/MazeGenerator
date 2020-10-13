@@ -3,7 +3,6 @@ Walls Panel
 """
 import bpy
 from ..managers import modifier_manager as mod_mgr
-from ..visual.maze_visual import MazeVisual
 
 
 class WallsPanel(bpy.types.Panel):
@@ -30,8 +29,6 @@ class WallsPanel(bpy.types.Panel):
                          text='', icon='HIDE_ON' if wall_hide else 'HIDE_OFF')
 
     def draw(self, context):
-        if not MazeVisual.scene:
-            return
         layout = self.layout
 
         mg_props = context.scene.mg_props

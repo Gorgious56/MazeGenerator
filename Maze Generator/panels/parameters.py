@@ -4,7 +4,6 @@ Parameters Panel
 
 
 import bpy
-from ..visual.maze_visual import MazeVisual
 from ..managers import cell_type_manager as cell_mgr
 from ..maze_logic.algorithms.manager import algorithm_class_from_name, KruskalRandom, is_algo_incompatible
 from ..managers import space_rep_manager as sp_rep
@@ -22,11 +21,6 @@ class ParametersPanel(bpy.types.Panel):
     bl_region_type = 'UI'
     bl_category = 'MG'
     order = 1
-
-    # @classmethod
-    # def poll(cls, context):
-    #     objects = context.scene.mg_props.objects
-    #     return objects.cells or objects.walls
 
     def draw_header(self, context):
         self.layout.label(text='', icon='PREFERENCES')

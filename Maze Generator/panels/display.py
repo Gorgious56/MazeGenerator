@@ -4,7 +4,6 @@ Display Panel
 
 import bpy
 from ..managers import modifier_manager as mod_mgr
-from ..visual.maze_visual import MazeVisual
 from ..shading.nodes import node_from_mat
 from ..shading.objects import cells
 
@@ -30,8 +29,6 @@ class DisplayPanel(bpy.types.Panel):
         self.layout.label(text='', icon='BRUSH_DATA')
 
     def draw(self, context):
-        if not MazeVisual.scene:
-            return
         layout = self.layout
         mg_props = context.scene.mg_props
 

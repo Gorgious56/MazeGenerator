@@ -2,8 +2,8 @@
 Main Panel
 """
 
+
 import bpy
-from ..visual.maze_visual import MazeVisual
 
 
 class MazeGeneratorPanel(bpy.types.Panel):
@@ -25,17 +25,16 @@ class MazeGeneratorPanel(bpy.types.Panel):
 
         row = layout.row(align=True)
         row.scale_y = 2
-        # if MazeVisual.scene:
         sub = row.row(align=True)
         sub.operator("maze.generate", icon='VIEW_ORTHO')
         sub.scale_x = 10.0
 
         sub = row.row(align=True)
         sub.prop(mg_props, 'auto_update', toggle=True,
-                    icon='FILE_REFRESH', text='')
+                 icon='FILE_REFRESH', text='')
         sub.prop(mg_props, 'auto_overwrite',
-                    toggle=True, icon='TRASH', text='')
+                 toggle=True, icon='TRASH', text='')
         sub.prop(mg_props, 'show_gizmos', toggle=True,
-                    icon='VIEW_PAN', text='')
+                 icon='VIEW_PAN', text='')
         # else:
         #     row.operator("maze.refresh", icon='FILE_REFRESH', text='Refresh')
