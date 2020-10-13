@@ -3,10 +3,11 @@ This module should be deprecated soon enough
 """
 
 import bpy
-from ..managers import mesh_manager, object_manager, grid_manager, modifier_manager
+from ..managers import mesh_manager, grid_manager, modifier_manager
 from ..maze_logic.algorithms import manager as algorithm_manager
 from ..shading.objects import manager as mat_creator
 from ..shading import textures as texture_manager
+from ..blender_logic.objects import get_or_create_and_link_objects, update_wall_visibility
 
 
 class MazeVisual:
@@ -16,15 +17,17 @@ class MazeVisual:
     scene = None
     props = None
 
+    @staticmethod
     def refresh_maze(scene: bpy.types.Scene) -> None:
+        props = scene.mg_props
         MazeVisual.scene = scene
         MazeVisual.props = scene.mg_props
-        object_manager.ObjectManager.get_or_create_and_link_objects(scene)
+        get_or_create_and_link_objects(scene)
         mesh_manager.MeshManager.create_vertex_groups(
-            object_manager.ObjectManager.obj_cells, object_manager.ObjectManager.obj_walls)
-        modifier_manager.setup_modifiers_and_drivers(
-            MazeVisual, object_manager.ObjectManager, MazeVisual.props.textures.displacement)
+            props.objects.cells, props.objects.walls)
+        modifier_manager.setup_modifiers_and_drivers(scene, props)
 
+    @staticmethod
     def generate_maze(scene: bpy.types.Scene) -> None:
         self = MazeVisual
         self.scene = scene
@@ -47,19 +50,18 @@ class MazeVisual:
             grid_manager.GridManager.grid.braid_dead_ends(
                 100 - props.keep_dead_ends, props.seed)
 
-            object_manager.ObjectManager.get_or_create_and_link_objects(scene)
-            object_manager.ObjectManager.update_wall_visibility(
+            get_or_create_and_link_objects(scene)
+            update_wall_visibility(
                 props, algorithm_manager.is_algo_weaved(props))
 
             texture_manager.generate_textures(bpy.data.textures, props)
 
             grid_manager.GridManager.grid.calc_distances(props)
             mesh_manager.MeshManager.create_vertex_groups(
-                object_manager.ObjectManager.obj_cells, object_manager.ObjectManager.obj_walls)
+                props.objects.cells, props.objects.walls)
             mesh_manager.MeshManager.build_objects(
-                props, grid_manager.GridManager.grid, object_manager.ObjectManager.obj_cells, object_manager.ObjectManager.obj_walls)
+                props, grid_manager.GridManager.grid)
 
-            modifier_manager.setup_modifiers_and_drivers(
-                MazeVisual, object_manager.ObjectManager, props.textures.displacement)
+            modifier_manager.setup_modifiers_and_drivers(scene, props)
 
-            mat_creator.create_materials(props, object_manager.ObjectManager.obj_cells, object_manager.ObjectManager.obj_walls)
+            mat_creator.create_materials(props)

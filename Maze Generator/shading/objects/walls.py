@@ -6,7 +6,8 @@ Contains methods to access and modify the walls object material
 import bpy
 
 
-def set_wall_material(props, obj_walls) -> None:
+def set_wall_material(props) -> None:
+    obj_walls = props.objects.walls
     try:
         mat = obj_walls.material_slots[0].material
         if not props.auto_overwrite:

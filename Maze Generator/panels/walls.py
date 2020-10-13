@@ -3,7 +3,6 @@ Walls Panel
 """
 import bpy
 from ..managers import modifier_manager as mod_mgr
-from ..managers.object_manager import ObjectManager
 from ..visual.maze_visual import MazeVisual
 
 
@@ -22,7 +21,7 @@ class WallsPanel(bpy.types.Panel):
 
     @classmethod
     def poll(cls, context):
-        return ObjectManager.obj_walls
+        return context.scene.mg_props.objects.walls
 
     def draw_header(self, context):
         self.layout.label(text='Walls', icon='SNAP_EDGE')
@@ -37,16 +36,18 @@ class WallsPanel(bpy.types.Panel):
 
         mg_props = context.scene.mg_props
 
-        try:
-            wall_solid_mod = ObjectManager.obj_walls.modifiers[mod_mgr.M_SOLID]
-            wall_screw_mod = ObjectManager.obj_walls.modifiers[mod_mgr.M_SCREW]
-            wall_bevel_mod = ObjectManager.obj_walls.modifiers[mod_mgr.M_BEVEL]
-        except ReferenceError:
-            return
-        row = layout.row(align=True)
-        layout.prop(wall_bevel_mod, 'width', text='Bevel')
-        row.prop(wall_screw_mod, 'screw_offset', text='Height')
-        row.prop(wall_solid_mod, 'thickness')
+        obj_walls = mg_props.objects.walls
+        if obj_walls:
+            try: # TODO get rid of try/except
+                wall_solid_mod = obj_walls.modifiers[mod_mgr.M_SOLID]
+                wall_screw_mod = obj_walls.modifiers[mod_mgr.M_SCREW]
+                wall_bevel_mod = obj_walls.modifiers[mod_mgr.M_BEVEL]
+                row = layout.row(align=True)
+                layout.prop(wall_bevel_mod, 'width', text='Bevel')
+                row.prop(wall_screw_mod, 'screw_offset', text='Height')
+                row.prop(wall_solid_mod, 'thickness')
+            except ReferenceError:
+                pass
         
         wall_mat = mg_props.materials.wall
         if wall_mat:

@@ -4,7 +4,6 @@ Display Panel
 
 import bpy
 from ..managers import modifier_manager as mod_mgr
-from ..managers.object_manager import ObjectManager
 from ..visual.maze_visual import MazeVisual
 from ..shading.nodes import node_from_mat
 from ..shading.objects import cells
@@ -22,9 +21,10 @@ class DisplayPanel(bpy.types.Panel):
     bl_category = 'MG'
     order = 4
 
-    @classmethod
-    def poll(cls, context):
-        return ObjectManager.obj_cells or ObjectManager.obj_walls
+    # @classmethod
+    # def poll(cls, context):
+    #     objects = context.scene.mg_props.objects
+    #     return objects.cells or objects.walls
 
     def draw_header(self, context):
         self.layout.label(text='', icon='BRUSH_DATA')
@@ -41,7 +41,7 @@ class DisplayPanel(bpy.types.Panel):
         row.prop(mg_props, 'show_longest_path',
                  text='Longest Path', toggle=True)
         try:
-            longest_path_mask_mod = ObjectManager.obj_cells.modifiers[mod_mgr.M_MASK_LONGEST_PATH]
+            longest_path_mask_mod = mg_props.objects.cells.modifiers[mod_mgr.M_MASK_LONGEST_PATH]
             row_2 = row.row()
             row_2.prop(longest_path_mask_mod, 'show_viewport',
                        text='Hide Rest', toggle=True)

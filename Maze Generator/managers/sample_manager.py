@@ -1,12 +1,20 @@
-import bpy
-from .import object_manager
-import numpy as np
+"""
+This module handles automatic generation of mazes with parameters variation
+"""
+
+
 import time
+import bpy
+import numpy as np
 from . import cell_type_manager, modifier_manager
 from ..maze_logic.algorithms import manager as algorithm_manager
 
 
 class SampleManager:
+    """
+    This class handles automatic generation of mazes with parameters variation
+    """
+    @staticmethod
     def sample(context):
         mg_props = context.scene.mg_props
 
@@ -16,7 +24,7 @@ class SampleManager:
 
         mg_props.maze_columns = mg_props.maze_rows = 10
 
-        obj_cells = object_manager.ObjectManager.obj_cells
+        obj_cells = mg_props.objects.cells
         current_x = 0
         current_y = 0
 
@@ -92,7 +100,7 @@ class SampleManager:
             for step_value in values:
                 current_x += dx
                 setattr(obj_from, attr, step_value)
-                for obj in (object_manager.ObjectManager.obj_cells, object_manager.ObjectManager.obj_walls):
+                for obj in (mg_props.objects.cells, mg_props.objects.walls):
                     obj.select_set(True)
                     bpy.ops.object.duplicate()
                     bpy.context.view_layer.objects.active = bpy.context.selected_objects[0]

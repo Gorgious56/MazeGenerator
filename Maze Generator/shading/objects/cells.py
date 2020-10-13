@@ -2,18 +2,20 @@
 Contains methods to access and modify the cells object material
 """
 
+
 import random
 import bpy
 from ..nodes import create_node, node_from_mat
 from ...managers import mesh_manager
-    
-
-def set_cell_materials(props, obj_cells):
-    __set_cell_material(props, obj_cells)
-    __set_cell_contour_material(props, obj_cells)
 
 
-def __set_cell_material(props, obj_cells) -> None:
+def set_cell_materials(props):
+    __set_cell_material(props)
+    __set_cell_contour_material(props)
+
+
+def __set_cell_material(props) -> None:
+    obj_cells = props.objects.cells
     try:
         mat = obj_cells.material_slots[0].material
         if not props.auto_overwrite:
@@ -28,7 +30,8 @@ def __set_cell_material(props, obj_cells) -> None:
     __link_cell_nodes(props)
 
 
-def __set_cell_contour_material(props, obj_cells) -> None:
+def __set_cell_contour_material(props) -> None:
+    obj_cells = props.objects.cells
     try:
         mat = obj_cells.material_slots[1].material
         if not props.auto_overwrite:

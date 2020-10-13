@@ -37,14 +37,14 @@ M_MASK_BRIDGE = 'MG_MASK_BRIDGE'
 VISIBILIY = 'VISIBILITY'
 
 
-def setup_modifiers_and_drivers(MV, OM, tex_disp) -> None:
-    ow = MV.props.auto_overwrite or not any(ModifierManager.drivers)
-    obj_walls = OM.obj_walls
-    obj_cells = OM.obj_cells
-    obj_cylinder = OM.obj_cylinder
-    obj_torus = OM.obj_torus
-    obj_thickness_shrinkwrap = OM.obj_thickness_shrinkwrap
-    scene = MV.scene
+def setup_modifiers_and_drivers(scene, props) -> None:
+    ow = props.auto_overwrite or not any(ModifierManager.drivers)
+    obj_walls = props.objects.walls
+    obj_cells = props.objects.cells
+    obj_cylinder = props.objects.cylinder
+    obj_torus = props.objects.torus
+    obj_thickness_shrinkwrap = props.objects.thickness_shrinkwrap
+    tex_disp = props.textures.displacement
     mod_dic = {
         obj_walls: (
             ('MASK', M_MASK_LONGEST_PATH, {
@@ -127,7 +127,7 @@ def setup_modifiers_and_drivers(MV, OM, tex_disp) -> None:
             }),
             ('SIMPLE_DEFORM', M_MOEBIUS, {
                 VISIBILIY: ('maze_space_dimension', 'int(var) == ' + sp_rep.REP_MEOBIUS),
-                'angle': 2 * math.pi + (1 / 16 if MV.props.cell_type == TRIANGLE else 0),
+                'angle': 2 * math.pi + (1 / 16 if props.cell_type == TRIANGLE else 0),
             }),
             ('CURVE', M_CYLINDER, {
                 VISIBILIY: ('maze_space_dimension', f'int(var) in ({sp_rep.REP_CYLINDER}, {sp_rep.REP_MEOBIUS}, {sp_rep.REP_TORUS})'),
@@ -232,7 +232,7 @@ def setup_modifiers_and_drivers(MV, OM, tex_disp) -> None:
             # }),
             ('SIMPLE_DEFORM', M_MOEBIUS, {
                 VISIBILIY: ('maze_space_dimension', "int(var) == " + sp_rep.REP_MEOBIUS),
-                'angle': 2 * math.pi + (1 / 18 if MV.props.cell_type == TRIANGLE else 0),
+                'angle': 2 * math.pi + (1 / 18 if props.cell_type == TRIANGLE else 0),
             }),
             ('CURVE', M_CYLINDER, {
                 VISIBILIY: ('maze_space_dimension', f'int(var) in ({sp_rep.REP_CYLINDER}, {sp_rep.REP_MEOBIUS}, {sp_rep.REP_TORUS})'),
@@ -341,14 +341,14 @@ def setup_modifiers_and_drivers(MV, OM, tex_disp) -> None:
                 target.data_path = 'mg_props.maze_columns' if i == 0 else 'mg_props.maze_rows_or_radius'
 
                 exp = 'var * 0.314'
-                if MV.props.cell_type == SQUARE or MV.props.cell_type == OCTOGON:
+                if props.cell_type == SQUARE or props.cell_type == OCTOGON:
                     exp = 'var * 0.15915'
-                elif MV.props.cell_type == TRIANGLE:
+                elif props.cell_type == TRIANGLE:
                     if i == 0:
                         exp = 'var * 0.07963'
                     else:
                         exp = 'var * 0.13791'
-                elif MV.props.cell_type == HEXAGON:
+                elif props.cell_type == HEXAGON:
                     if i == 0:
                         exp = 'var * 0.2388'
                     else:

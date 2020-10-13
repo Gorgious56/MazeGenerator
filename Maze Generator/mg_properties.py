@@ -1,16 +1,28 @@
+"""
+All the add-on properties and callbacks are stored here
+"""
+
 import bpy.ops
 from bpy.types import PropertyGroup, Scene
-from bpy.props import IntProperty, BoolProperty, EnumProperty, FloatProperty, PointerProperty, IntVectorProperty
+from bpy.props import (
+    IntProperty, 
+    BoolProperty, 
+    EnumProperty, 
+    FloatProperty, 
+    PointerProperty, 
+    IntVectorProperty
+)
 from .maze_logic.algorithms.manager import generate_algo_enum, is_algo_weaved, DEFAULT_ALGO
 from .managers.cell_type_manager import generate_cell_type_enum, DEFAULT_CELL_TYPE
 from .managers.space_rep_manager import generate_space_rep_enum, REP_REGULAR
 from .managers.mesh_manager import generate_cell_visual_enum, DEFAULT_CELL_VISUAL_TYPE
-from .visual.maze_visual import MazeVisual
-from .managers.object_manager import ObjectManager
 from .managers import mesh_manager, modifier_manager
 
-from .shading.objects import manager as material_manager
+from .blender_logic.objects import update_wall_visibility, ObjectsPropertyGroup
+from .blender_logic.meshes import MeshesPropertyGroup
+from .blender_logic.collections import CollectionsPropertyGroup
 
+from .shading.objects import manager as material_manager
 from .shading.materials import MaterialsPropertyGroup
 from .shading.textures import TexturesPropertyGroup
 
@@ -25,14 +37,14 @@ def update_inset(self, context) -> None:
 
 
 def update_paint(self, context: bpy.types.Context) -> None:
-    material_manager.create_materials(self, ObjectManager.obj_cells, ObjectManager.obj_walls)
+    material_manager.create_materials(self)
     if not self.show_longest_path:
-        ObjectManager.obj_cells.modifiers[modifier_manager.M_MASK_LONGEST_PATH].show_viewport = False
+        self.objects.cells.modifiers[modifier_manager.M_MASK_LONGEST_PATH].show_viewport = False
 
 
-def update_modifiers(self, context) -> None:
-    MazeVisual.generate_modifiers()
-    MazeVisual.generate_drivers()
+# def update_modifiers(self, context) -> None:
+#     MazeVisual.generate_modifiers()
+#     MazeVisual.generate_drivers()
 
 
 def update_cell_type(self, context: bpy.types.Context) -> None:
@@ -56,7 +68,7 @@ def toggle_maze_weave(self, context) -> None:
 
 
 def update_objects_visibility(self, context) -> None:
-    ObjectManager.update_wall_visibility(self, is_algo_weaved(self))
+    update_wall_visibility(self, is_algo_weaved(self))
 
 
 def tweak_maze_weave(self, context: bpy.types.Context) -> None:
@@ -73,6 +85,18 @@ class MGProperties(PropertyGroup):
     """
     Main properties group to store the add-on properties
     """
+    meshes: PointerProperty(
+        type=MeshesPropertyGroup
+    )
+
+    collections: PointerProperty(
+        type=CollectionsPropertyGroup
+    )
+
+    objects: PointerProperty(
+        type=ObjectsPropertyGroup
+    )
+
     materials: PointerProperty(
         type=MaterialsPropertyGroup
     )

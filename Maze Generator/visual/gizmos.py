@@ -7,7 +7,6 @@ from mathutils import Matrix
 from bpy.types import (
     GizmoGroup,
 )
-from ..managers.object_manager import ObjectManager as om
 from ..managers import modifier_manager as mm
 
 
@@ -23,7 +22,7 @@ class MazeWidgetGroup(GizmoGroup):
 
     @classmethod
     def poll(cls, context):
-        return om.obj_cells and context.scene.mg_props.show_gizmos
+        return context.scene.mg_props.objects.cells and context.scene.mg_props.show_gizmos
 
     def register_widget(self, widget, rotation):
         if not hasattr(self, "my_widgets"):
@@ -52,7 +51,7 @@ class MazeWidgetGroup(GizmoGroup):
         self.setup_widget(mg_props, "maze_rows_or_radius_gizmo",
                           color=(0, 1, 0), rot_axis='X', rot_angle=-90)
         self.setup_widget(
-            om.obj_cells.modifiers[mm.M_STAIRS], "strength", color=(0, 0, 1))
+            mg_props.objects.cells.modifiers[mm.M_STAIRS], "strength", color=(0, 0, 1))
         # self.setup_widget(om.obj_cells.modifiers[mm.M_THICKNESS_DISP], "strength", color=(0, 0, 1), rot_axis='X', rot_angle=180)
 
     def refresh(self, context):
@@ -60,5 +59,5 @@ class MazeWidgetGroup(GizmoGroup):
             widgets = getattr(self, "my_widgets")
             for widget, attributes in widgets.items():
                 rotation = attributes['rotation']
-                widget.matrix_basis = om.obj_cells.matrix_world.normalized() @ rotation
+                widget.matrix_basis = context.scene.mg_props.objects.cells.matrix_world.normalized() @ rotation
         # mpr = getattr(self, "column_widget")

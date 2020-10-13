@@ -27,6 +27,7 @@ VERTEX_GROUPS = VG_STAIRS, VG_THICKNESS, VG_LONGEST_PATH
 class MeshManager:
     cells = 0
 
+    @staticmethod
     def create_vertex_groups(cells, walls):
         # Replace this with the correct method to check if a vertex group exists
         for vg_name in VERTEX_GROUPS:
@@ -39,11 +40,13 @@ class MeshManager:
                 if not vg_exists:
                     obj.vertex_groups.new(name=vg_name)
 
-    def build_objects(props, grid, obj_cells, obj_walls) -> None:
-        mesh_cells = obj_cells.data
-        mesh_walls = obj_walls.data
+    @staticmethod
+    def build_objects(props, grid) -> None:
+        mesh_cells = props.objects.cells.data
+        mesh_walls = props.objects.walls.data
 
-        cells_corners, cells_faces, stairs_vertex_group, walls_edges = MeshManager.get_mesh_info(grid, props.cell_inset)
+        cells_corners, cells_faces, stairs_vertex_group, walls_edges = MeshManager.get_mesh_info(
+            grid, props.cell_inset)
 
         mesh_cells.clear_geometry()
         mesh_cells.from_pydata(
@@ -114,6 +117,7 @@ class MeshManager:
             mesh.use_auto_smooth = True
             mesh.auto_smooth_angle = 0.5
 
+    @staticmethod
     def update_smooth(props, mesh_cells, mesh_walls) -> None:
         smooth = props.cell_use_smooth
         for p in mesh_cells.polygons:
@@ -121,9 +125,11 @@ class MeshManager:
         for p in mesh_walls.polygons:
             p.use_smooth = smooth
 
+    @staticmethod
     def reset():
         MeshManager.cells = 0
 
+    @staticmethod
     def get_mesh_info(grid, inset):
         all_cells = grid.all_cells
         verts = grid.verts
@@ -134,27 +140,34 @@ class MeshManager:
         max_distance = grid.distances.max[1]
         longest_path = grid.longest_path
         for c in all_cells:
-            verts_indices = range(c.first_vert_index, c.first_vert_index + c.corners)
+            verts_indices = range(c.first_vert_index,
+                                  c.first_vert_index + c.corners)
             # if c.has_any_link():
             faces.append(verts_indices)
             this_distance = grid.distances[c]
-            cells_data[verts_indices] = ((this_distance / max_distance) if this_distance else -1, 0 if c in longest_path else 1, c.group, len(c.links))
+            cells_data[verts_indices] = (
+                (this_distance / max_distance) if this_distance else -1, 0 if c in longest_path else 1, c.group, len(c.links))
             half_neighbors = c.half_neighbors
             for direction, w in enumerate(c.get_wall_mask()):
                 if w and direction < len(verts_indices):
-                    walls_edges.append((verts_indices[direction], verts_indices[(direction + 1) % c.corners]))
+                    walls_edges.append(
+                        (verts_indices[direction], verts_indices[(direction + 1) % c.corners]))
                 elif not w and direction in half_neighbors:
                     n = c.get_neighbor_towards(direction)
                     if not n:
                         continue
-                    neighbor_indices = range(n.first_vert_index, n.first_vert_index + n.corners)
+                    neighbor_indices = range(
+                        n.first_vert_index, n.first_vert_index + n.corners)
                     first_idx = direction
                     second_idx = c.get_neighbor_return(direction)
 
-                    faces.append((verts_indices[first_idx], neighbor_indices[(second_idx + 1) % n.corners], neighbor_indices[second_idx], verts_indices[(first_idx + 1) % c.corners]))
+                    faces.append((verts_indices[first_idx], neighbor_indices[(
+                        second_idx + 1) % n.corners], neighbor_indices[second_idx], verts_indices[(first_idx + 1) % c.corners]))
                     if not inset:
                         continue
-                    walls_edges.append((verts_indices[first_idx], neighbor_indices[(second_idx + 1) % n.corners]))
-                    walls_edges.append((verts_indices[(first_idx + 1) % c.corners], neighbor_indices[second_idx]))
+                    walls_edges.append(
+                        (verts_indices[first_idx], neighbor_indices[(second_idx + 1) % n.corners]))
+                    walls_edges.append(
+                        (verts_indices[(first_idx + 1) % c.corners], neighbor_indices[second_idx]))
         # print(verts)
         return verts, faces, cells_data, walls_edges

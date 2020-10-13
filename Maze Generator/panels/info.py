@@ -3,7 +3,6 @@ Info Panel
 """
 
 import bpy
-from ..managers.object_manager import ObjectManager
 from ..managers.grid_manager import GridManager
 
 
@@ -22,7 +21,8 @@ class InfoPanel(bpy.types.Panel):
 
     @classmethod
     def poll(cls, context):
-        return ObjectManager.obj_cells or ObjectManager.obj_walls
+        objects = context.scene.mg_props.objects
+        return objects.cells or objects.walls
 
     def draw_header(self, context):
         self.layout.label(text='', icon='INFO')

@@ -5,7 +5,6 @@ Parameters Panel
 
 import bpy
 from ..visual.maze_visual import MazeVisual
-from ..managers.object_manager import ObjectManager
 from ..managers import cell_type_manager as cell_mgr
 from ..maze_logic.algorithms.manager import algorithm_class_from_name, KruskalRandom, is_algo_incompatible
 from ..managers import space_rep_manager as sp_rep
@@ -24,16 +23,15 @@ class ParametersPanel(bpy.types.Panel):
     bl_category = 'MG'
     order = 1
 
-    @classmethod
-    def poll(cls, context):
-        return ObjectManager.obj_cells or ObjectManager.obj_walls
+    # @classmethod
+    # def poll(cls, context):
+    #     objects = context.scene.mg_props.objects
+    #     return objects.cells or objects.walls
 
     def draw_header(self, context):
         self.layout.label(text='', icon='PREFERENCES')
 
     def draw(self, context):
-        if not MazeVisual.scene:
-            return
         layout = self.layout
 
         scene = context.scene
@@ -116,11 +114,13 @@ class ParametersPanel(bpy.types.Panel):
             0, 0, -1], [0, 0, 1], 'Levels').enabled = mg_props.maze_space_dimension == sp_rep.REP_REGULAR and mg_props.cell_type == cell_mgr.SQUARE
         row = layout.row()
         row.prop(mg_props, 'seed')
-        try:
-            cell_mask_mod = ObjectManager.obj_cells.modifiers[mod_mgr.M_MASK]
-        except (ReferenceError, KeyError):
-            return
-        row.prop(cell_mask_mod, 'threshold', text='Steps')
+        obj_cells = mg_props.objects.cells
+        if obj_cells:
+            try:
+                cell_mask_mod = obj_cells.modifiers[mod_mgr.M_MASK]
+                row.prop(cell_mask_mod, 'threshold', text='Steps')
+            except (ReferenceError, KeyError):
+                pass
 
         layout.prop(mg_props, 'keep_dead_ends', slider=True, text='Dead Ends')
         layout.prop(mg_props, 'sparse_dead_ends')
@@ -140,15 +140,16 @@ class ParametersPanel(bpy.types.Panel):
         box.prop_menu_enum(mg_props, 'maze_space_dimension',
                            icon=space_enum_icon)
 
-        try:
-            row = box.row(align=True)
-            row.prop(
-                ObjectManager.obj_cells.modifiers[mod_mgr.M_STAIRS], 'strength', text='Stairs')
+        if obj_cells:
+            try:
+                row = box.row(align=True)
+                row.prop(
+                    obj_cells.modifiers[mod_mgr.M_STAIRS], 'strength', text='Stairs')
 
-            row = box.row(align=True)
-            row.prop(
-                ObjectManager.obj_cells.modifiers["MG_TEX_DISP"], 'strength', text='Inflate', slider=True)
-            row.prop(mg_props.textures.displacement,
-                     'noise_scale', text='Scale', slider=True)
-        except ReferenceError:
-            pass
+                row = box.row(align=True)
+                row.prop(
+                    obj_cells.modifiers["MG_TEX_DISP"], 'strength', text='Inflate', slider=True)
+                row.prop(mg_props.textures.displacement,
+                        'noise_scale', text='Scale', slider=True)
+            except ReferenceError:
+                pass

@@ -4,7 +4,6 @@ Path Panel
 
 
 import bpy
-from ..managers.object_manager import ObjectManager
 
 
 class PathPanel(bpy.types.Panel):
@@ -21,7 +20,8 @@ class PathPanel(bpy.types.Panel):
 
     @classmethod
     def poll(cls, context):
-        return ObjectManager.obj_cells or ObjectManager.obj_walls
+        objects = context.scene.mg_props.objects
+        return objects.cells or objects.walls
 
     def draw_header(self, context):
         self.layout.label(text='', icon='OUTLINER_DATA_GREASEPENCIL')

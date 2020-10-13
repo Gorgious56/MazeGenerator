@@ -17,7 +17,7 @@ def generate_textures(textures, props) -> None:
 
 class TexturesPropertyGroup(bpy.types.PropertyGroup):
     """
-    Property group storing pointers to the materials
+    Property group storing pointers to the textures
     """
     displacement: bpy.props.PointerProperty(
         name="Displacement",
