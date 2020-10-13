@@ -37,14 +37,16 @@ class DisplayPanel(bpy.types.Panel):
         row = box.row(align=True)
         row.prop(mg_props, 'show_longest_path',
                  text='Longest Path', toggle=True)
-        try:
-            longest_path_mask_mod = mg_props.objects.cells.modifiers[mod_mgr.M_MASK_LONGEST_PATH]
-            row_2 = row.row()
-            row_2.prop(longest_path_mask_mod, 'show_viewport',
-                       text='Hide Rest', toggle=True)
-            row_2.enabled = mg_props.show_longest_path
-        except ReferenceError:
-            pass
+        obj_cells = mg_props.objects.cells
+        if obj_cells:
+            try:  # TODO get rid of try/except
+                longest_path_mask_mod = obj_cells.modifiers[mod_mgr.M_MASK_LONGEST_PATH]
+                row_2 = row.row()
+                row_2.prop(longest_path_mask_mod, 'show_viewport',
+                           text='Hide Rest', toggle=True)
+                row_2.enabled = mg_props.show_longest_path
+            except ReferenceError:
+                pass
         cell_mat = mg_props.materials.cell
         if mg_props.paint_style == 'UNIFORM':
             cell_rgb_node = node_from_mat(cell_mat, cells.NodeNames.rgb)
@@ -57,7 +59,7 @@ class DisplayPanel(bpy.types.Panel):
                 cell_mat, cells.NodeNames.cr_distance)
             if cell_color_ramp_node:
                 row.box().template_color_ramp(cell_color_ramp_node,
-                                          property="color_ramp", expand=True)
+                                              property="color_ramp", expand=True)
 
         cell_hsv_node = node_from_mat(cell_mat, cells.NodeNames.hsv)
         if cell_hsv_node:

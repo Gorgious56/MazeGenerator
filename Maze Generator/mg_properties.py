@@ -85,6 +85,8 @@ class MGProperties(PropertyGroup):
     """
     Main properties group to store the add-on properties
     """
+    grid = None
+
     meshes: PointerProperty(
         type=MeshesPropertyGroup
     )
