@@ -7,7 +7,7 @@ import bpy
 from ..visual.maze_visual import MazeVisual
 from ..managers.object_manager import ObjectManager
 from ..managers import cell_type_manager as cell_mgr
-from ..managers.algorithm_manager import ALGORITHM_FROM_NAME, KruskalRandom, is_algo_incompatible
+from ..maze_logic.algorithms.manager import algorithm_class_from_name, KruskalRandom, is_algo_incompatible
 from ..managers import space_rep_manager as sp_rep
 from ..managers import modifier_manager as mod_mgr
 from ..managers import texture_manager
@@ -58,7 +58,7 @@ class ParametersPanel(bpy.types.Panel):
             layout.label(text=algo_incompatibility, icon='ERROR')
         else:
             box = layout.box()
-            for setting in ALGORITHM_FROM_NAME[mg_props.maze_algorithm].settings:
+            for setting in algorithm_class_from_name(mg_props.maze_algorithm).settings:
                 if setting == 'maze_weave':
                     continue
                     if mg_props.maze_algorithm == KruskalRandom.name:

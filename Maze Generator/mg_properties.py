@@ -1,7 +1,7 @@
 import bpy.ops
 from bpy.types import PropertyGroup, Scene
 from bpy.props import IntProperty, BoolProperty, EnumProperty, FloatProperty, PointerProperty, IntVectorProperty
-from .managers.algorithm_manager import generate_algo_enum, is_algo_weaved, DEFAULT_ALGO
+from .maze_logic.algorithms.manager import generate_algo_enum, is_algo_weaved, DEFAULT_ALGO
 from .managers.cell_type_manager import generate_cell_type_enum, DEFAULT_CELL_TYPE
 from .managers.space_rep_manager import generate_space_rep_enum, REP_REGULAR
 from .managers.mesh_manager import generate_cell_visual_enum, DEFAULT_CELL_VISUAL_TYPE

@@ -3,7 +3,8 @@ This module should be deprecated soon enough
 """
 
 import bpy
-from ..managers import algorithm_manager, texture_manager, mesh_manager, object_manager, grid_manager, modifier_manager
+from ..managers import texture_manager, mesh_manager, object_manager, grid_manager, modifier_manager
+from ..maze_logic.algorithms import manager as algorithm_manager
 from ..shading.objects import manager as mat_creator
 
 
