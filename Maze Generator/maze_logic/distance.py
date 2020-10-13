@@ -1,7 +1,15 @@
-from ..maze_logic import cells
+"""
+This module handles distance calculations inside the maze
+"""
+
+
+from . import cells
 
 
 class Distances:
+    """
+    This class handles distance calculations inside the maze
+    """
     def __init__(self, root):
         self.root = root
         self.cells = {}

@@ -1,16 +1,22 @@
+"""
+Handles data access and modifications relative to a maze's grid
+"""
+
 import random
 from typing import Iterable, Tuple, List, Generator
-from mathutils import Vector
 from math import pi, floor, cos, sin
+from mathutils import Vector
 from .cells import Cell, CellOver, CellUnder
-from ..managers import space_rep_manager as sp_mgr
 from . import constants as cst
-from ..managers.distance_manager import Distances
+from .distance import Distances
+from ..managers import space_rep_manager as sp_mgr
 from ..utils import event, union_find
 
 
 class Grid:
-
+    """
+    Handles data access and modifications relative to a maze's grid
+    """
     def __init__(self, rows: int = 2, columns: int = 2, levels: int = 1, cell_size: float = 1.0, space_rep: int = 0, mask: Iterable[Tuple[int]] = None, init_cells=True) -> None:
         self.rows: int = rows
         self.columns = columns
