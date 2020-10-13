@@ -1,7 +1,7 @@
 from ..maze_logic import grids
 from ..managers import cell_type_manager as ct
 from ..managers import space_rep_manager as sp_rep
-from ..managers import algorithm_manager
+from ..maze_logic.algorithms import manager as algorithm_manager
 
 
 class GridManager:

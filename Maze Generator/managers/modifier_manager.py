@@ -37,14 +37,13 @@ M_MASK_BRIDGE = 'MG_MASK_BRIDGE'
 VISIBILIY = 'VISIBILITY'
 
 
-def setup_modifiers_and_drivers(MV, OM, TM) -> None:
+def setup_modifiers_and_drivers(MV, OM, tex_disp) -> None:
     ow = MV.props.auto_overwrite or not any(ModifierManager.drivers)
     obj_walls = OM.obj_walls
     obj_cells = OM.obj_cells
     obj_cylinder = OM.obj_cylinder
     obj_torus = OM.obj_torus
     obj_thickness_shrinkwrap = OM.obj_thickness_shrinkwrap
-    tex_disp = TM.tex_disp
     scene = MV.scene
     mod_dic = {
         obj_walls: (

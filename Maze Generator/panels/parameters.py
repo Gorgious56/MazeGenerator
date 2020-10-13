@@ -10,7 +10,6 @@ from ..managers import cell_type_manager as cell_mgr
 from ..maze_logic.algorithms.manager import algorithm_class_from_name, KruskalRandom, is_algo_incompatible
 from ..managers import space_rep_manager as sp_rep
 from ..managers import modifier_manager as mod_mgr
-from ..managers import texture_manager
 
 
 class ParametersPanel(bpy.types.Panel):
@@ -149,7 +148,7 @@ class ParametersPanel(bpy.types.Panel):
             row = box.row(align=True)
             row.prop(
                 ObjectManager.obj_cells.modifiers["MG_TEX_DISP"], 'strength', text='Inflate', slider=True)
-            row.prop(texture_manager.TextureManager.tex_disp,
+            row.prop(mg_props.textures.displacement,
                      'noise_scale', text='Scale', slider=True)
         except ReferenceError:
             pass

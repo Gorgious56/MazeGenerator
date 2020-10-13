@@ -9,7 +9,10 @@ from .visual.maze_visual import MazeVisual
 from .managers.object_manager import ObjectManager
 from .managers import mesh_manager, modifier_manager
 
+from .shading.objects import manager as material_manager
+
 from .shading.materials import MaterialsPropertyGroup
+from .shading.textures import TexturesPropertyGroup
 
 
 def generate_maze(self, context) -> None:
@@ -22,7 +25,7 @@ def update_inset(self, context) -> None:
 
 
 def update_paint(self, context: bpy.types.Context) -> None:
-    material_manager.MaterialManager.set_materials(self, context.scene)
+    material_manager.create_materials(self, ObjectManager.obj_cells, ObjectManager.obj_walls)
     if not self.show_longest_path:
         ObjectManager.obj_cells.modifiers[modifier_manager.M_MASK_LONGEST_PATH].show_viewport = False
 
@@ -67,8 +70,15 @@ def update_prop(self, value, prop_name):
 
 
 class MGProperties(PropertyGroup):
+    """
+    Main properties group to store the add-on properties
+    """
     materials: PointerProperty(
         type=MaterialsPropertyGroup
+    )
+
+    textures: PointerProperty(
+        type=TexturesPropertyGroup,
     )
 
     show_gizmos: BoolProperty(

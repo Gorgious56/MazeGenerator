@@ -42,4 +42,3 @@ def create_node(
     if attributes:
         for name, value in attributes.items():
             setattr(node, name, value)
-

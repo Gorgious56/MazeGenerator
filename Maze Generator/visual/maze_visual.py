@@ -3,9 +3,10 @@ This module should be deprecated soon enough
 """
 
 import bpy
-from ..managers import texture_manager, mesh_manager, object_manager, grid_manager, modifier_manager
+from ..managers import mesh_manager, object_manager, grid_manager, modifier_manager
 from ..maze_logic.algorithms import manager as algorithm_manager
 from ..shading.objects import manager as mat_creator
+from ..shading import textures as texture_manager
 
 
 class MazeVisual:
@@ -19,11 +20,10 @@ class MazeVisual:
         MazeVisual.scene = scene
         MazeVisual.props = scene.mg_props
         object_manager.ObjectManager.get_or_create_and_link_objects(scene)
-        texture_manager.TextureManager.generate_textures(bpy.data.textures)
         mesh_manager.MeshManager.create_vertex_groups(
             object_manager.ObjectManager.obj_cells, object_manager.ObjectManager.obj_walls)
         modifier_manager.setup_modifiers_and_drivers(
-            MazeVisual, object_manager.ObjectManager, texture_manager.TextureManager)
+            MazeVisual, object_manager.ObjectManager, MazeVisual.props.textures.displacement)
 
     def generate_maze(scene: bpy.types.Scene) -> None:
         self = MazeVisual
@@ -51,7 +51,7 @@ class MazeVisual:
             object_manager.ObjectManager.update_wall_visibility(
                 props, algorithm_manager.is_algo_weaved(props))
 
-            texture_manager.TextureManager.generate_textures(bpy.data.textures)
+            texture_manager.generate_textures(bpy.data.textures, props)
 
             grid_manager.GridManager.grid.calc_distances(props)
             mesh_manager.MeshManager.create_vertex_groups(
@@ -60,6 +60,6 @@ class MazeVisual:
                 props, grid_manager.GridManager.grid, object_manager.ObjectManager.obj_cells, object_manager.ObjectManager.obj_walls)
 
             modifier_manager.setup_modifiers_and_drivers(
-                MazeVisual, object_manager.ObjectManager, texture_manager.TextureManager)
+                MazeVisual, object_manager.ObjectManager, props.textures.displacement)
 
             mat_creator.create_materials(props, object_manager.ObjectManager.obj_cells, object_manager.ObjectManager.obj_walls)

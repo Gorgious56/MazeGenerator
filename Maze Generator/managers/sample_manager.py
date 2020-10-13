@@ -2,7 +2,8 @@ import bpy
 from .import object_manager
 import numpy as np
 import time
-from . import algorithm_manager, cell_type_manager, modifier_manager
+from . import cell_type_manager, modifier_manager
+from ..maze_logic.algorithms import manager as algorithm_manager
 
 
 class SampleManager:
