@@ -98,9 +98,9 @@ class ParametersPanel(bpy.types.Panel):
         else:
             layout.prop(mg_props, 'maze_polar_branch', text='Branch amount')
 
-        row = layout.row()
-        row.prop(mg_props, "maze_columns")
-        row.active = False
+        # row = layout.row()
+        # row.prop(mg_props, "maze_columns")
+        # row.active = False
 
         row = maze_size_ui('maze_rows_or_radius', [
             0, -1, 0], [0, 1, 0], 'Rows').enabled = True

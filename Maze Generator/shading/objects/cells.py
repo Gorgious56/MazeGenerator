@@ -6,7 +6,7 @@ Contains methods to access and modify the cells object material
 import random
 import bpy
 from ..nodes import create_node, node_from_mat
-from ...managers import mesh_manager
+from ...blender_logic import meshes as mesh_manager
 
 
 def set_cell_materials(props):

@@ -15,8 +15,8 @@ from bpy.props import (
 from .maze_logic.algorithms.manager import generate_algo_enum, is_algo_weaved, DEFAULT_ALGO
 from .maze_logic.cells import generate_cell_type_enum, DEFAULT_CELL_TYPE
 from .managers.space_rep_manager import generate_space_rep_enum, REP_REGULAR
-from .managers.mesh_manager import generate_cell_visual_enum, DEFAULT_CELL_VISUAL_TYPE
-from .managers import mesh_manager, modifier_manager
+from .blender_logic.meshes import generate_cell_visual_enum, DEFAULT_CELL_VISUAL_TYPE, MeshManager
+from .managers import modifier_manager
 
 from .blender_logic.objects import update_wall_visibility, ObjectsPropertyGroup
 from .blender_logic.meshes import MeshesPropertyGroup
@@ -149,8 +149,7 @@ class MGProperties(PropertyGroup):
         name='Smooth Shade Cells',
         description='Enforce smooth shading everytime the maze is generated',
         default=False,
-        update=lambda self, context: mesh_manager.MeshManager.update_smooth(
-            self, ObjectManager.obj_cells.data, ObjectManager.obj_walls.data)
+        update=lambda self, context: MeshManager.update_smooth(self)
     )
 
     cell_decimate: IntProperty(
