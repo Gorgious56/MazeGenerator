@@ -1,8 +1,8 @@
 
-import bpy.types as bpy_types
 import math
+import bpy.types as bpy_types
 from . import space_rep_manager as sp_rep
-from ..blender_logic.meshes import MeshManager as cv
+from ..blender_logic import meshes as cv
 from ..maze_logic.cells import SQUARE, TRIANGLE, HEXAGON, OCTOGON
 
 M_WELD = 'MG_WELD'

@@ -22,6 +22,8 @@ al = auto_load.AutoLoad()
 
 def register():
     register_class(MazeGeneratorPanel)
+    for cl in MazeGeneratorPanel.child_panels_ordered:
+        register_class(cl)
     al.register()
 
 def unregister():

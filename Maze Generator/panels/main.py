@@ -4,6 +4,12 @@ Main Panel
 
 
 import bpy
+from .parameters import ParametersPanel
+from .cells import CellsPanel
+from .walls import WallsPanel
+from .display import DisplayPanel
+from .path import PathPanel
+from .info import InfoPanel
 
 
 class MazeGeneratorPanel(bpy.types.Panel):
@@ -16,6 +22,16 @@ class MazeGeneratorPanel(bpy.types.Panel):
     bl_region_type = 'UI'
     bl_category = 'MG'
     order = 0
+    child_panels_ordered = sorted(
+        [
+            ParametersPanel,
+            CellsPanel,
+            WallsPanel,
+            DisplayPanel,
+            PathPanel,
+            InfoPanel
+        ],
+        key=lambda panel: panel.order)
 
     def draw(self, context):
         layout = self.layout
@@ -38,3 +54,6 @@ class MazeGeneratorPanel(bpy.types.Panel):
                  icon='VIEW_PAN', text='')
         # else:
         #     row.operator("maze.refresh", icon='FILE_REFRESH', text='Refresh')
+
+    def register():
+        pass
