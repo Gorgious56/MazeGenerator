@@ -2,7 +2,6 @@
 Walls Panel
 """
 import bpy
-from ..managers import modifier_manager as mod_mgr
 
 
 class WallsPanel(bpy.types.Panel):
@@ -32,17 +31,21 @@ class WallsPanel(bpy.types.Panel):
         layout = self.layout
 
         mg_props = context.scene.mg_props
+        mod_names = mg_props.mod_names
 
         obj_walls = mg_props.objects.walls
         if obj_walls:
             try: # TODO get rid of try/except
-                wall_solid_mod = obj_walls.modifiers[mod_mgr.M_SOLID]
-                wall_screw_mod = obj_walls.modifiers[mod_mgr.M_SCREW]
-                wall_bevel_mod = obj_walls.modifiers[mod_mgr.M_BEVEL]
                 row = layout.row(align=True)
-                layout.prop(wall_bevel_mod, 'width', text='Bevel')
-                row.prop(wall_screw_mod, 'screw_offset', text='Height')
-                row.prop(wall_solid_mod, 'thickness')
+                wall_bevel_mod = obj_walls.modifiers.get(mod_names.bevel)
+                if wall_bevel_mod:
+                    layout.prop(wall_bevel_mod, 'width', text='Bevel')
+                wall_screw_mod = obj_walls.modifiers.get(mod_names.screw)
+                if wall_screw_mod:
+                    row.prop(wall_screw_mod, 'screw_offset', text='Height')
+                wall_solid_mod = obj_walls.modifiers.get(mod_names.solid)
+                if wall_solid_mod:
+                    row.prop(wall_solid_mod, 'thickness')
             except ReferenceError:
                 pass
         

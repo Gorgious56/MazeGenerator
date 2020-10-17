@@ -7,7 +7,6 @@ import bpy
 from ..maze_logic import cells as cell_mgr
 from ..maze_logic.algorithms.manager import algorithm_class_from_name, KruskalRandom, is_algo_incompatible
 from ..managers import space_rep_manager as sp_rep
-from ..managers import modifier_manager as mod_mgr
 
 
 class ParametersPanel(bpy.types.Panel):
@@ -111,7 +110,7 @@ class ParametersPanel(bpy.types.Panel):
         obj_cells = mg_props.objects.cells
         if obj_cells:
             try:
-                cell_mask_mod = obj_cells.modifiers[mod_mgr.M_MASK]
+                cell_mask_mod = obj_cells.modifiers[mg_props.mod_names.mask]
                 row.prop(cell_mask_mod, 'threshold', text='Steps')
             except (ReferenceError, KeyError):
                 pass
@@ -137,12 +136,14 @@ class ParametersPanel(bpy.types.Panel):
         if obj_cells:
             try:
                 row = box.row(align=True)
-                row.prop(
-                    obj_cells.modifiers[mod_mgr.M_STAIRS], 'strength', text='Stairs')
+                stairs_mod = obj_cells.modifiers.get(mg_props.mod_names.stairs)
+                if stairs_mod:
+                    row.prop(stairs_mod, 'strength', text='Stairs')
 
                 row = box.row(align=True)
-                row.prop(
-                    obj_cells.modifiers["MG_TEX_DISP"], 'strength', text='Inflate', slider=True)
+                tex_disp_mod = obj_cells.modifiers.get("MG_TEX_DISP")
+                if tex_disp_mod:
+                    row.prop(tex_disp_mod, 'strength', text='Inflate', slider=True)
                 row.prop(mg_props.textures.displacement,
                         'noise_scale', text='Scale', slider=True)
             except ReferenceError:

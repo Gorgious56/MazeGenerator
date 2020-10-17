@@ -7,7 +7,6 @@ import time
 import bpy
 import numpy as np
 from ..maze_logic import cells
-from ..managers import modifier_manager
 from ..maze_logic.algorithms import manager as algorithm_manager
 
 
@@ -95,7 +94,6 @@ class SampleManager:
         # dg = bpy.context.evaluated_depsgraph_get()  # Get the dependency graph
         start_time = time.time()
         for obj_from, attr, values, dx, dy in attributes[0:2]:
-            modifier_manager.ModifierManager.delete_all_drivers()
             current_y += dy
             start_value = getattr(obj_from, attr)
             for step_value in values:

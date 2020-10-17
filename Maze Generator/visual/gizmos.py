@@ -7,7 +7,6 @@ from mathutils import Matrix
 from bpy.types import (
     GizmoGroup,
 )
-from ..managers import modifier_manager as mm
 
 
 class MazeWidgetGroup(GizmoGroup):
@@ -29,10 +28,10 @@ class MazeWidgetGroup(GizmoGroup):
             setattr(self, "my_widgets", {})
         getattr(self, "my_widgets")[widget] = {'rotation': rotation}
 
-    def setup_widget(self, data, prop_name, color=(1, 0, 0), rot_axis="X", rot_angle=0):
+    def setup_widget(self, props, prop_name, color=(1, 0, 0), rot_axis="X", rot_angle=0):
         new_widget = self.gizmos.new("GIZMO_GT_arrow_3d")
         # new_widget.offset = getattr(data, prop_name)
-        new_widget.target_set_prop("offset", data, prop_name)
+        new_widget.target_set_prop("offset", props, prop_name)
         new_widget.draw_style = 'BOX'
 
         new_widget.color = color
@@ -51,7 +50,7 @@ class MazeWidgetGroup(GizmoGroup):
         self.setup_widget(mg_props, "maze_rows_or_radius_gizmo",
                           color=(0, 1, 0), rot_axis='X', rot_angle=-90)
         self.setup_widget(
-            mg_props.objects.cells.modifiers[mm.M_STAIRS], "strength", color=(0, 0, 1))
+            mg_props.objects.cells.modifiers[mg_props.mod_names.stairs], "strength", color=(0, 0, 1))
         # self.setup_widget(om.obj_cells.modifiers[mm.M_THICKNESS_DISP], "strength", color=(0, 0, 1), rot_axis='X', rot_angle=180)
 
     def refresh(self, context):

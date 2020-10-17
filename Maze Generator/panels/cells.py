@@ -3,7 +3,6 @@ Cells Panel
 """
 
 import bpy
-from ..managers import modifier_manager as mod_mgr
 
 
 class CellsPanel(bpy.types.Panel):
@@ -41,11 +40,11 @@ class CellsPanel(bpy.types.Panel):
 
         try:
             obj_cells = mg_props.objects.cells
-            cell_thickness_mod = obj_cells.modifiers[mod_mgr.M_THICKNESS_DISP]
-            cell_wire_mod = obj_cells.modifiers[mod_mgr.M_WIREFRAME]
-            cell_bevel_mod = obj_cells.modifiers[mod_mgr.M_BEVEL]
-            cell_subdiv_mod = obj_cells.modifiers[mod_mgr.M_SUBDIV]
-            cell_stairs = obj_cells.modifiers[mod_mgr.M_STAIRS]
+            cell_thickness_mod = obj_cells.modifiers[mg_props.mod_names.thickness_disp]
+            cell_wire_mod = obj_cells.modifiers[mg_props.mod_names.wireframe]
+            cell_bevel_mod = obj_cells.modifiers[mg_props.mod_names.bevel]
+            cell_subdiv_mod = obj_cells.modifiers[mg_props.mod_names.subdiv]
+            cell_stairs = obj_cells.modifiers[mg_props.mod_names.stairs]
         except (ReferenceError, KeyError):
             return
 
@@ -74,7 +73,7 @@ class CellsPanel(bpy.types.Panel):
 
         wireframe_row = row.row()
         wireframe_row.prop(cell_wire_mod, 'thickness', slider=True, text='Wireframe')
-        wireframe_row.enabled = obj_cells.modifiers[mod_mgr.M_BEVEL].width == 0
+        wireframe_row.enabled = obj_cells.modifiers[mg_props.mod_names.bevel].width == 0
 
         row = box.row(align=True)
         row.prop(mg_props, 'cell_contour_black', toggle=True, text='Black Outline')

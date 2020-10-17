@@ -3,7 +3,6 @@ Display Panel
 """
 
 import bpy
-from ..managers import modifier_manager as mod_mgr
 from ..shading.nodes import node_from_mat
 from ..shading.objects import cells
 
@@ -20,11 +19,6 @@ class DisplayPanel(bpy.types.Panel):
     bl_category = 'MG'
     order = 4
 
-    # @classmethod
-    # def poll(cls, context):
-    #     objects = context.scene.mg_props.objects
-    #     return objects.cells or objects.walls
-
     def draw_header(self, context):
         self.layout.label(text='', icon='BRUSH_DATA')
 
@@ -40,11 +34,12 @@ class DisplayPanel(bpy.types.Panel):
         obj_cells = mg_props.objects.cells
         if obj_cells:
             try:  # TODO get rid of try/except
-                longest_path_mask_mod = obj_cells.modifiers[mod_mgr.M_MASK_LONGEST_PATH]
-                row_2 = row.row()
-                row_2.prop(longest_path_mask_mod, 'show_viewport',
-                           text='Hide Rest', toggle=True)
-                row_2.enabled = mg_props.show_longest_path
+                longest_path_mask_mod = obj_cells.modifiers.get(mg_props.mod_names.mask_longest_path)
+                if longest_path_mask_mod:
+                    row_2 = row.row()
+                    row_2.prop(longest_path_mask_mod, 'show_viewport',
+                            text='Hide Rest', toggle=True)
+                    row_2.enabled = mg_props.show_longest_path
             except ReferenceError:
                 pass
         cell_mat = mg_props.materials.cell

@@ -16,11 +16,11 @@ from .maze_logic.algorithms.manager import generate_algo_enum, is_algo_weaved, D
 from .maze_logic.cells import generate_cell_type_enum, DEFAULT_CELL_TYPE
 from .managers.space_rep_manager import generate_space_rep_enum, REP_REGULAR
 from .blender_logic.meshes import generate_cell_visual_enum, DEFAULT_CELL_VISUAL_TYPE, MeshManager
-from .managers import modifier_manager
 
 from .blender_logic.objects import update_wall_visibility, ObjectsPropertyGroup
 from .blender_logic.meshes import MeshesPropertyGroup
 from .blender_logic.collections import CollectionsPropertyGroup
+from .blender_logic.modifiers.manager import ModifierNamesPropertyGroup
 
 from .shading.objects import manager as material_manager
 from .shading.materials import MaterialsPropertyGroup
@@ -39,7 +39,7 @@ def update_inset(self, context) -> None:
 def update_paint(self, context: bpy.types.Context) -> None:
     material_manager.create_materials(self)
     if not self.show_longest_path:
-        self.objects.cells.modifiers[modifier_manager.M_MASK_LONGEST_PATH].show_viewport = False
+        self.objects.cells.modifiers[self.mod_names.mask_longest_path].show_viewport = False
 
 
 # def update_modifiers(self, context) -> None:
@@ -97,6 +97,10 @@ class MGProperties(PropertyGroup):
 
     objects: PointerProperty(
         type=ObjectsPropertyGroup
+    )
+
+    mod_names: PointerProperty(
+        type=ModifierNamesPropertyGroup
     )
 
     materials: PointerProperty(
