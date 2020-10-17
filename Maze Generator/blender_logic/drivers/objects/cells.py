@@ -29,8 +29,15 @@ def setup_drivers(scene, props):
                                       f'int(var) in ({space_reps.cylinder}, {space_reps.moebius}, {space_reps.torus})')
         setup_driver_from_addon_props(
             obj_cells, names.moebius, show, scene, "maze_space_dimension", f'int(var) == {space_reps.moebius}')
-        setup_driver_from_addon_props(
-            obj_cells, names.thickness_disp, show, scene, "maze_basement", 'not var')
+
+        setup_driver(obj_cells.modifiers[names.thickness_disp], DriverProperties(
+            show,
+            [
+                DriverVariable("basement", 'SCENE', scene, "maze_basement"),
+                DriverVariable("stairs", 'OBJECT', obj_cells,
+                               f'modifiers["{names.stairs}"].strength'),
+            ],
+            expression="not basement or stairs == 0"))
 
         setup_driver(obj_cells.modifiers[names.thickness_solid], DriverProperties(
             show,
