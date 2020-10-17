@@ -56,4 +56,5 @@ class MazeGeneratorPanel(bpy.types.Panel):
         #     row.operator("maze.refresh", icon='FILE_REFRESH', text='Refresh')
 
     def register():
-        pass
+        for panel_class in MazeGeneratorPanel.child_panels_ordered:
+            bpy.utils.register_class(panel_class)            

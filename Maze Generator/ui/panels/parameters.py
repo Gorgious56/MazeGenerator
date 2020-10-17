@@ -4,8 +4,8 @@ Parameters Panel
 
 
 import bpy
-from ..maze_logic import cells as cell_mgr
-from ..maze_logic.algorithms.manager import algorithm_class_from_name, KruskalRandom, is_algo_incompatible
+from ...maze_logic import cells as cell_mgr
+from ...maze_logic.algorithms.manager import algorithm_class_from_name, KruskalRandom, is_algo_incompatible
 
 class ParametersPanel(bpy.types.Panel):
     """

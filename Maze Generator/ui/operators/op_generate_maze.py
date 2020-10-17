@@ -5,14 +5,14 @@ This operator handles calling the gene
 
 from time import time
 import bpy
-from ..maze_logic.algorithms import manager as algorithm_manager
-from ..maze_logic.grids.manager import generate_grid
-from ..shading.objects import manager as mat_creator
-from ..shading import textures as texture_manager
-from ..blender_logic.objects import get_or_create_and_link_objects, update_wall_visibility
-from ..blender_logic.meshes import MeshManager
-from ..blender_logic.modifiers import manager as modifier_manager
-from ..blender_logic.drivers import manager as driver_manager
+from ...maze_logic.algorithms import manager as algorithm_manager
+from ...maze_logic.grids.manager import generate_grid
+from ...shading.objects import manager as mat_creator
+from ...shading import textures as texture_manager
+from ...blender_logic.objects import get_or_create_and_link_objects, update_wall_visibility
+from ...blender_logic.meshes import MeshManager
+from ...blender_logic.modifiers import manager as modifier_manager
+from ...blender_logic.drivers import manager as driver_manager
 
 class GenerateMazeOperator(bpy.types.Operator):
     """Generate a new maze"""

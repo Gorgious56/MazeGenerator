@@ -3,8 +3,8 @@ Display Panel
 """
 
 import bpy
-from ..shading.nodes import node_from_mat
-from ..shading.objects import cells
+from ...shading.nodes import node_from_mat
+from ...shading.objects import cells
 
 
 class DisplayPanel(bpy.types.Panel):
