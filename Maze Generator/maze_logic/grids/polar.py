@@ -15,7 +15,7 @@ class GridPolar(Grid):
     Polar Grid
     """
 
-    def __init__(self, rows, columns, levels, cell_size=1, space_rep=0, branch_polar=1, *args, **kwargs):
+    def __init__(self, rows, columns, levels, cell_size=1, branch_polar=1, *args, **kwargs):
         # self.rows_polar = []
         cell_size = max(0, cell_size)
         super().__init__(rows=rows, columns=0, levels=levels, space_rep='1',

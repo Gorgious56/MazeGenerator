@@ -9,12 +9,12 @@ from bpy.props import (
     BoolProperty, 
     EnumProperty, 
     FloatProperty, 
-    PointerProperty, 
-    IntVectorProperty
+    PointerProperty,
+    StringProperty,
+    IntVectorProperty,
 )
 from .maze_logic.algorithms.manager import generate_algo_enum, is_algo_weaved, DEFAULT_ALGO
-from .maze_logic.cells import generate_cell_type_enum, DEFAULT_CELL_TYPE
-from .managers.space_rep_manager import generate_space_rep_enum, REP_REGULAR
+from .maze_logic.cells import generate_cell_type_enum, DEFAULT_CELL_TYPE, POLAR
 from .blender_logic.meshes import generate_cell_visual_enum, DEFAULT_CELL_VISUAL_TYPE, MeshManager
 
 from .blender_logic.objects import update_wall_visibility, ObjectsPropertyGroup
@@ -25,6 +25,39 @@ from .blender_logic.modifiers.manager import ModifierNamesPropertyGroup
 from .shading.objects import manager as material_manager
 from .shading.materials import MaterialsPropertyGroup
 from .shading.textures import TexturesPropertyGroup
+
+
+class SpaceRepsPropertyGroup(PropertyGroup):
+    """
+    Stores the different space representations
+    """
+    regular: StringProperty(
+        default='0'
+    )
+    cylinder: StringProperty(
+        default='1'
+    )
+    moebius: StringProperty(
+        default='2'
+    )
+    torus: StringProperty(
+        default='3'
+    )
+    box: StringProperty(
+        default='4'
+    )
+
+
+def generate_space_rep_enum(self, context):
+    space_reps = self.space_reps
+    ret = [(space_reps.regular, 'Plane', '')]
+    if self.cell_type != POLAR:
+        ret.extend((
+            (space_reps.cylinder, 'Cylinder', ''),
+            (space_reps.moebius, 'Moebius', ''),
+            (space_reps.torus, 'Torus', ''),
+            (space_reps.box, 'Box', '')))
+    return ret
 
 
 def generate_maze(self, context) -> None:
@@ -42,11 +75,6 @@ def update_paint(self, context: bpy.types.Context) -> None:
         self.objects.cells.modifiers[self.mod_names.mask_longest_path].show_viewport = False
 
 
-# def update_modifiers(self, context) -> None:
-#     MazeVisual.generate_modifiers()
-#     MazeVisual.generate_drivers()
-
-
 def update_cell_type(self, context: bpy.types.Context) -> None:
     reset_enum = True
     for ind, _, _ in generate_space_rep_enum(self, context):
@@ -55,7 +83,7 @@ def update_cell_type(self, context: bpy.types.Context) -> None:
             break
     if reset_enum:
         print('Do not worry about these warnings.')
-        self['maze_space_dimension'] = REP_REGULAR
+        self['maze_space_dimension'] = self.space_reps.regular
     generate_maze(self, context)
 
 
@@ -86,6 +114,10 @@ class MGProperties(PropertyGroup):
     Main properties group to store the add-on properties
     """
     grid = None
+
+    space_reps: PointerProperty(
+        type=SpaceRepsPropertyGroup
+    )
 
     meshes: PointerProperty(
         type=MeshesPropertyGroup

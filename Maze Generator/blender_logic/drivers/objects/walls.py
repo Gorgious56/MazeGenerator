@@ -7,11 +7,11 @@ from ..methods import (
     setup_mod2mod_driver,
     setup_driver_from_addon_props,
 )
-from ....managers import space_rep_manager as sp_rep
 
 
 def setup_drivers(scene, props):
     names = props.mod_names
+    space_reps = props.space_reps
     obj_walls = props.objects.walls
     obj_cells = props.objects.cells
     for show in ("show_render", "show_viewport"):
@@ -30,13 +30,13 @@ def setup_drivers(scene, props):
                              obj_walls, names.texture_disp, show, 'var != 0')
 
         setup_driver_from_addon_props(
-            obj_walls, names.torus, show, scene, "maze_space_dimension", "int(var) == " + sp_rep.REP_TORUS)
+            obj_walls, names.torus, show, scene, "maze_space_dimension", "int(var) == " + space_reps.torus)
         setup_driver_from_addon_props(obj_walls, names.cylinder, show, scene, "maze_space_dimension",
-                                      f'int(var) in ({sp_rep.REP_CYLINDER}, {sp_rep.REP_MEOBIUS}, {sp_rep.REP_TORUS})')
+                                      f'int(var) in ({space_reps.cylinder}, {space_reps.moebius}, {space_reps.torus})')
         setup_driver_from_addon_props(
-            obj_walls, names.moebius, show, scene, "maze_space_dimension", f'int(var) == {sp_rep.REP_MEOBIUS}')
+            obj_walls, names.moebius, show, scene, "maze_space_dimension", f'int(var) == {space_reps.moebius}')
         setup_driver_from_addon_props(obj_walls, names.weave_disp, show, scene, "maze_space_dimension",
-                                      f'int(var) == {sp_rep.REP_CYLINDER} or int(var) == {sp_rep.REP_MEOBIUS}')
+                                      f'int(var) == {space_reps.cylinder} or int(var) == {space_reps.moebius}')
         setup_driver_from_addon_props(
             obj_walls, names.thickness_disp, show, scene, "maze_basement", 'not var')
 

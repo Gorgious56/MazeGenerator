@@ -9,7 +9,6 @@ from mathutils import Vector
 from ..cells import Cell
 from .. import constants as cst
 from ..distance import Distances
-from ...managers import space_rep_manager as sp_mgr
 from ...utils import event, union_find
 
 
@@ -18,7 +17,17 @@ class Grid:
     Handles data access and modifications relative to a maze's grid
     """
 
-    def __init__(self, rows: int = 2, columns: int = 2, levels: int = 1, cell_size: float = 1.0, space_rep: int = 0, mask: Iterable[Tuple[int]] = None, init_cells=True) -> None:
+    def __init__(
+            self, 
+            rows: int = 2, 
+            columns: int = 2, 
+            levels: int = 1, 
+            cell_size: float = 1.0, 
+            # space_rep: int = 0, 
+            mask: Iterable[Tuple[int]] = None, 
+            init_cells=True,
+            warp_horiz=False,
+            warp_vert=False) -> None:
         self.rows: int = rows
         self.columns = columns
         self.levels = levels
@@ -27,7 +36,7 @@ class Grid:
         self.size = rows * columns * levels
         self.size_2D = rows * columns
         self.masked_cells = 0  # This container is used in some algorithms.
-        self.space_rep = space_rep
+        # self.space_rep = space_rep
 
         self.dead_ends = []
         self.max_links_per_cell = 0
@@ -47,25 +56,43 @@ class Grid:
         self._union_find = None
         self.verts = []
 
+        self.warp_horiz = warp_horiz
+        self.warp_vert = warp_vert
+
     def __delitem__(self, key):
         del self._cells[key[0] + key[1] * self.columns]
 
-    def __getitem__(self, key):
+    def __getitem__(self, key):        
         key = list(key)
         if len(key) == 2:
             key.append(0)
-        if self.space_rep in (int(sp_mgr.REP_CYLINDER), int(sp_mgr.REP_MEOBIUS), int(sp_mgr.REP_TORUS), int):
+        if self.warp_horiz:
             if key[0] == -1:
                 key[0] = self.columns - 1
             elif key[0] == self.columns:
                 key[0] = 0
-            if self.space_rep == int(sp_mgr.REP_TORUS):
+            if self.warp_vert:
                 if key[1] == -1:
                     key[1] = self.rows - 1
                 elif key[1] == self.rows:
                     key[1] = 0
         return self._cells[key[0] + key[1] * self.columns + key[2] * self.size_2D] \
             if (self.columns > key[0] >= 0 and self.rows > key[1] >= 0 and self.levels > key[2] >= 0) else None
+        # key = list(key)
+        # if len(key) == 2:
+        #     key.append(0)
+        # if self.space_rep in (int(sp_mgr.REP_CYLINDER), int(sp_mgr.REP_MEOBIUS), int(sp_mgr.REP_TORUS), int):
+        #     if key[0] == -1:
+        #         key[0] = self.columns - 1
+        #     elif key[0] == self.columns:
+        #         key[0] = 0
+        #     if self.space_rep == int(sp_mgr.REP_TORUS):
+        #         if key[1] == -1:
+        #             key[1] = self.rows - 1
+        #         elif key[1] == self.rows:
+        #             key[1] = 0
+        # return self._cells[key[0] + key[1] * self.columns + key[2] * self.size_2D] \
+        #     if (self.columns > key[0] >= 0 and self.rows > key[1] >= 0 and self.levels > key[2] >= 0) else None
 
     @property
     def dead_ends_amount(self):
@@ -128,74 +155,11 @@ class Grid:
         return self.columns
 
     def init_cells_neighbors(self) -> None:
-        if self.space_rep == int(sp_mgr.REP_BOX):
-            rows = int(self.rows / 3)
-            cols = int(self.columns / 2 - rows)
-            for c in self.all_cells:
-                row, col, level = c.row, c.column, c.level
-                # North :
-                if row == 2 * rows - 1:
-                    if col < rows:
-                        c.set_neighbor(
-                            cst.NORTH, self[rows, 3 * rows - col - 1, level], cst.SOUTH)
-                        c.neighbor(cst.NORTH).set_neighbor(
-                            cst.WEST, c, cst.EAST)
-                    elif rows + cols <= col < 2 * rows + cols:
-                        c.set_neighbor(
-                            cst.NORTH, self[rows + cols - 1, rows - cols + col, level], cst.SOUTH)
-                        c.neighbor(cst.NORTH).set_neighbor(
-                            cst.EAST, c, cst.SOUTH)
-                    elif col >= 2 * rows + cols:
-                        c.set_neighbor(
-                            cst.NORTH, self[3 * rows + 2 * cols - 1 - col, 3 * rows - 1, level], cst.SOUTH)
-                        c.neighbor(cst.NORTH).set_neighbor(
-                            cst.NORTH, c, cst.SOUTH)
-                    else:
-                        c.set_neighbor(
-                            cst.NORTH, self[col, row + 1, level], cst.SOUTH)
-                        c.neighbor(cst.NORTH).set_neighbor(
-                            cst.SOUTH, c, cst.NORTH)
-                elif not c.neighbor(cst.NORTH):
-                    c.set_neighbor(
-                        cst.NORTH, self[col, row + 1, level], cst.SOUTH)
-                    if c.neighbor(cst.NORTH):
-                        c.neighbor(cst.NORTH).set_neighbor(
-                            cst.SOUTH, c, cst.NORTH)
-                # West :
-                if not c.neighbor(cst.WEST):
-                    c.set_neighbor(
-                        cst.WEST, self[col - 1, row, level], cst.EAST)
-                    if c.neighbor(cst.WEST):
-                        c.neighbor(cst.WEST).set_neighbor(
-                            cst.EAST, c, cst.WEST)
-                # South :
-                if row == rows:
-                    if col < rows:
-                        c.set_neighbor(
-                            cst.SOUTH, self[rows, col, level], cst.NORTH)
-                        c.neighbor(cst.SOUTH).set_neighbor(
-                            cst.WEST, c, cst.EAST)
-                    elif rows + cols <= col < 2 * rows + cols:
-                        c.set_neighbor(
-                            cst.SOUTH, self[rows + cols - 1, 2 * rows + cols - 1 - col, level], cst.NORTH)
-                        c.neighbor(cst.SOUTH).set_neighbor(
-                            cst.EAST, c, cst.WEST)
-                    elif col >= 2 * rows + cols:
-                        c.set_neighbor(
-                            cst.SOUTH, self[3 * rows + 2 * cols - 1 - col, 0, level], cst.NORTH)
-                        c.neighbor(cst.SOUTH).set_neighbor(
-                            cst.SOUTH, c, cst.NORTH)
-                    else:
-                        c.set_neighbor(
-                            cst.SOUTH, self[col, row - 1, level], cst.NORTH)
-                        c.neighbor(cst.SOUTH).set_neighbor(
-                            cst.NORTH, c, cst.SOUTH)
-        else:
-            for c in self.all_cells:
-                c.set_neighbor(cst.NORTH, self.delta_cell(c, row=1), cst.SOUTH)
-                c.set_neighbor(cst.EAST, self.delta_cell(
-                    c, column=1), cst.WEST)
-                c.set_neighbor(cst.UP, self.delta_cell(c, level=1), cst.DOWN)
+        for c in self.all_cells:
+            c.set_neighbor(cst.NORTH, self.delta_cell(c, row=1), cst.SOUTH)
+            c.set_neighbor(cst.EAST, self.delta_cell(
+                c, column=1), cst.WEST)
+            c.set_neighbor(cst.UP, self.delta_cell(c, level=1), cst.DOWN)
 
     def mask_ring(self, center_row: int, center_col: int, radius: float) -> None:
         for r in range(self.rows):

@@ -6,8 +6,6 @@ Parameters Panel
 import bpy
 from ..maze_logic import cells as cell_mgr
 from ..maze_logic.algorithms.manager import algorithm_class_from_name, KruskalRandom, is_algo_incompatible
-from ..managers import space_rep_manager as sp_rep
-
 
 class ParametersPanel(bpy.types.Panel):
     """
@@ -29,6 +27,7 @@ class ParametersPanel(bpy.types.Panel):
 
         scene = context.scene
         mg_props = scene.mg_props
+        space_reps = mg_props.space_reps
 
         cell_enum_icon = 'MESH_PLANE'
         if mg_props.cell_type == cell_mgr.POLAR:
@@ -57,23 +56,22 @@ class ParametersPanel(bpy.types.Panel):
                         box.prop(mg_props, 'maze_weave_toggle', toggle=True)
                 else:
                     box.prop(mg_props, setting)
-
-        if mg_props.cell_type == cell_mgr.POLAR and mg_props.maze_space_dimension in (sp_rep.REP_CYLINDER, sp_rep.REP_MEOBIUS, sp_rep.REP_TORUS, sp_rep.REP_BOX):
+        if mg_props.cell_type == cell_mgr.POLAR and mg_props.maze_space_dimension in (space_reps.cylinder, space_reps.moebius, space_reps.torus, space_reps.moebius):
             layout.label(
                 text='Only Regular and Stairs for Polar cells', icon='ERROR')
         elif mg_props.cell_type in (cell_mgr.TRIANGLE, cell_mgr.HEXAGON, cell_mgr.OCTOGON):
-            if mg_props.maze_space_dimension in (sp_rep.REP_CYLINDER, sp_rep.REP_MEOBIUS, sp_rep.REP_TORUS):
+            if mg_props.maze_space_dimension in (space_reps.cylinder, space_reps.moebius, space_reps.torus):
                 layout.label(
                     text='Needs PAIR Columns (2, 4, 6, ...)', icon='ERROR')
-            if mg_props.maze_space_dimension == sp_rep.REP_MEOBIUS and mg_props.maze_columns <= 5 * mg_props.maze_rows_or_radius:
+            if mg_props.maze_space_dimension == space_reps.moebius and mg_props.maze_columns <= 5 * mg_props.maze_rows_or_radius:
                 layout.label(text='Set Columns > 5 * Rows', icon='ERROR')
-            elif mg_props.maze_space_dimension == sp_rep.REP_TORUS and mg_props.maze_columns > mg_props.maze_rows_or_radius:
+            elif mg_props.maze_space_dimension == space_reps.torus and mg_props.maze_columns > mg_props.maze_rows_or_radius:
                 layout.label(text='Set Rows > Columns', icon='ERROR')
-        elif mg_props.maze_space_dimension == sp_rep.REP_MEOBIUS and mg_props.maze_columns <= 3 * mg_props.maze_rows_or_radius:
+        elif mg_props.maze_space_dimension == space_reps.moebius and mg_props.maze_columns <= 3 * mg_props.maze_rows_or_radius:
             layout.label(text='Set Columns > 3 * Rows', icon='ERROR')
-        elif mg_props.maze_space_dimension == sp_rep.REP_TORUS and 2 * mg_props.maze_columns > mg_props.maze_rows_or_radius:
+        elif mg_props.maze_space_dimension == space_reps.torus and 2 * mg_props.maze_columns > mg_props.maze_rows_or_radius:
             layout.label(text='Set Rows > 2 * Columns', icon='ERROR')
-        elif mg_props.maze_space_dimension == sp_rep.REP_BOX:
+        elif mg_props.maze_space_dimension == space_reps.moebius:
             layout.label(text='Dimensions are 1 face of the cube',
                          icon='QUESTION')
 
@@ -104,7 +102,7 @@ class ParametersPanel(bpy.types.Panel):
         row = maze_size_ui('maze_rows_or_radius', [
             0, -1, 0], [0, 1, 0], 'Rows').enabled = True
         row = maze_size_ui('maze_levels', [
-            0, 0, -1], [0, 0, 1], 'Levels').enabled = mg_props.maze_space_dimension == sp_rep.REP_REGULAR and mg_props.cell_type == cell_mgr.SQUARE
+            0, 0, -1], [0, 0, 1], 'Levels').enabled = mg_props.maze_space_dimension == space_reps.regular and mg_props.cell_type == cell_mgr.SQUARE
         row = layout.row()
         row.prop(mg_props, 'seed')
         obj_cells = mg_props.objects.cells
@@ -121,13 +119,13 @@ class ParametersPanel(bpy.types.Panel):
         box = layout.box()
 
         space_enum_icon = 'MESH_PLANE'
-        if mg_props.maze_space_dimension == sp_rep.REP_REGULAR:
+        if mg_props.maze_space_dimension == space_reps.regular:
             space_enum_icon = 'MESH_PLANE'
-        if mg_props.maze_space_dimension == sp_rep.REP_CYLINDER:
+        if mg_props.maze_space_dimension == space_reps.cylinder:
             space_enum_icon = 'GP_SELECT_STROKES'
-        if mg_props.maze_space_dimension == sp_rep.REP_MEOBIUS:
+        if mg_props.maze_space_dimension == space_reps.moebius:
             space_enum_icon = 'GP_SELECT_STROKES'
-        if mg_props.maze_space_dimension == sp_rep.REP_TORUS:
+        if mg_props.maze_space_dimension == space_reps.torus:
             space_enum_icon = 'MESH_CUBE'
 
         box.prop_menu_enum(mg_props, 'maze_space_dimension',

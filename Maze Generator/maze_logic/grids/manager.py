@@ -1,4 +1,8 @@
-from ...managers import space_rep_manager as sp_rep
+"""
+Grid creation manager
+"""
+
+
 from .. import cells as ct
 from .polar import GridPolar
 from .hex import GridHex
@@ -6,21 +10,23 @@ from .triangle import GridTriangle
 from .octogon import GridOctogon
 from .dodecagon import GridDodecagon
 from .weave import GridWeave
+from .box import GridBox
 from .grid import Grid
 from ..algorithms import manager as algorithm_manager
 
 
 def generate_grid(props) -> None:
     grid = None
-    maze_dimension = int(props.maze_space_dimension)
+    maze_dimension = props.maze_space_dimension
+    space_reps = props.space_reps
+    warp_horiz = maze_dimension in (space_reps.cylinder, space_reps.moebius, space_reps.torus)
+    warp_vert = maze_dimension == space_reps.torus
     if props.cell_type == ct.POLAR:
         return GridPolar(
             rows=props.maze_rows_or_radius,
             columns=0,
-            levels=props.maze_levels if maze_dimension == int(
-                sp_rep.REP_REGULAR) else 1,
+            levels=props.maze_levels,
             cell_size=1 - props.cell_inset,
-            space_rep=maze_dimension,
             branch_polar=props.maze_polar_branch)
 
     if props.cell_type == ct.HEXAGON:
@@ -41,18 +47,18 @@ def generate_grid(props) -> None:
                 use_kruskal=algorithm_manager.is_kruskal_random(
                     props.maze_algorithm),
                 weave=props.maze_weave,
-                space_rep=maze_dimension)
+                warp_horiz=warp_horiz,
+                warp_vert=warp_vert,
+                )
 
-        if maze_dimension == int(sp_rep.REP_BOX):
+        if maze_dimension == space_reps.box:
             rows = props.maze_rows_or_radius
             cols = props.maze_columns
-            return Grid(
+            return GridBox(
                 rows=3 * rows,
                 columns=2 * cols + 2 * rows,
-                levels=props.maze_levels if maze_dimension == int(
-                    sp_rep.REP_REGULAR) else 1,
+                levels=props.maze_levels,
                 cell_size=1 - props.cell_inset,
-                space_rep=maze_dimension,
                 mask=[
                     (0, 0, rows - 1, rows - 1),
                     (rows + cols, 0, 2 * rows + 2 * cols - 1, rows - 1),
@@ -62,7 +68,8 @@ def generate_grid(props) -> None:
     return grid(
         rows=props.maze_rows_or_radius,
         columns=props.maze_columns,
-        levels=props.maze_levels if maze_dimension == int(
-            sp_rep.REP_REGULAR) else 1,
+        levels=props.maze_levels,
         cell_size=1 - props.cell_inset,
-        space_rep=maze_dimension)
+        warp_horiz=warp_horiz,
+        warp_vert=warp_vert,
+        )

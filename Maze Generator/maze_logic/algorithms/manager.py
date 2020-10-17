@@ -3,7 +3,6 @@ Algorithm manager methods and properties
 """
 
 from ..cells import POLAR, SQUARE
-from ...managers import space_rep_manager as sp_mgr
 
 # Algorithms :
 from .maze_algorithm import MazeAlgorithm
@@ -21,24 +20,32 @@ def work(grid, props):
     except KeyError:
         pass
 
+
 def all_algorithm_classes():
     return MazeAlgorithm.__subclasses__()
+
+
 def all_algorithms_names():
     return [alg_class.name for alg_class in all_algorithm_classes()]
+
+
 def algorithm_class_from_name(alg_name):
     for alg in all_algorithm_classes():
         if alg.name == alg_name:
             return alg
     return None
+
+
 DEFAULT_ALGO = RecursiveBacktracker.name
 
-WEAVED_ALGORITHMS = [algo.name for algo in all_algorithm_classes() if algo.weaved]
+WEAVED_ALGORITHMS = [
+    algo.name for algo in all_algorithm_classes() if algo.weaved]
 
 
 def is_algo_incompatible(props):
-    if algorithm_class_from_name(props.maze_algorithm) == AldousBroder and props.maze_space_dimension == sp_mgr.REP_BOX:
+    if algorithm_class_from_name(props.maze_algorithm) == AldousBroder and props.maze_space_dimension == props.space_reps.box:
         return "Aldous-Broder can't solve a box representation"
-    if props.maze_space_dimension == sp_mgr.REP_BOX and props.maze_weave:
+    if props.maze_space_dimension == props.space_reps.box and props.maze_weave:
         return "Can't solve weaved maze for a box"
     if algorithm_class_from_name(props.maze_algorithm) in (RecursiveDivision, VoronoiDivision) and props.cell_type == POLAR:
         return "Can't solve this algorithm with Polar grid (yet)"
