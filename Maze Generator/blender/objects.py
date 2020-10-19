@@ -29,16 +29,16 @@ def get_or_create_helper(
         attr_name: str,
         obj_name: str,
         primitive_add=bpy.ops.curve.primitive_bezier_circle_add,
-        rot: float = (0, 0, 0), 
+        rot: float = (0, 0, 0),
         attributes=None) -> None:
     if not hasattr(props.objects, attr_name):
         return
     obj_get = get_object(obj_name)
     if not obj_get:
         primitive_add(
-            enter_editmode=False, 
+            enter_editmode=False,
             align='WORLD',
-            location=(0, 0, 0), 
+            location=(0, 0, 0),
             rotation=rot)
         obj_get = bpy.context.active_object
         obj_get.name = obj_name
@@ -64,21 +64,21 @@ def get_or_create_and_link_objects(scene) -> None:
     get_or_create_mesh_object(props, scene.objects.get, 'cells', 'MG_Cells')
 
     get_or_create_helper(
-        props, 
-        scene.objects.get, 
-        'thickness_shrinkwrap', 
+        props,
+        scene.objects.get,
+        'thickness_shrinkwrap',
         'MG_Thickness_SW',
-        bpy.ops.mesh.primitive_plane_add, 
+        bpy.ops.mesh.primitive_plane_add,
         attributes={'scale': [10000] * 3})
     get_or_create_helper(
-        props, scene.objects.get, 
+        props, scene.objects.get,
         'cylinder',
-        'MG_Curver_Cyl', 
+        'MG_Curver_Cyl',
         rot=(math.pi / 2, 0, 0))
     get_or_create_helper(
-        props, 
-        scene.objects.get, 
-        'torus', 
+        props,
+        scene.objects.get,
+        'torus',
         'MG_Curver_Tor')
 
     link_objects_to_collection(

@@ -78,21 +78,6 @@ class Grid:
                     key[1] = 0
         return self._cells[key[0] + key[1] * self.columns + key[2] * self.size_2D] \
             if (self.columns > key[0] >= 0 and self.rows > key[1] >= 0 and self.levels > key[2] >= 0) else None
-        # key = list(key)
-        # if len(key) == 2:
-        #     key.append(0)
-        # if self.space_rep in (int(sp_mgr.REP_CYLINDER), int(sp_mgr.REP_MEOBIUS), int(sp_mgr.REP_TORUS), int):
-        #     if key[0] == -1:
-        #         key[0] = self.columns - 1
-        #     elif key[0] == self.columns:
-        #         key[0] = 0
-        #     if self.space_rep == int(sp_mgr.REP_TORUS):
-        #         if key[1] == -1:
-        #             key[1] = self.rows - 1
-        #         elif key[1] == self.rows:
-        #             key[1] = 0
-        # return self._cells[key[0] + key[1] * self.columns + key[2] * self.size_2D] \
-        #     if (self.columns > key[0] >= 0 and self.rows > key[1] >= 0 and self.levels > key[2] >= 0) else None
 
     @property
     def dead_ends_amount(self):
@@ -304,30 +289,61 @@ class Grid:
         return shuffled_cells
 
     def calc_distances(self, props):
-        distances = Distances(self.get_random_linked_cell(_seed=props.seed))
-        distances.get_distances()
-        new_start, distance = distances.max
-        distances = Distances(new_start)
-        distances.get_distances()
-        goal, max_distance = distances.max
-
-        longest_path = distances.path_to(goal).path
-        if longest_path and longest_path[0] is not None:
-            # Avoid flickering when the algorithm randomly chooses start and end cells.
-            start = longest_path[0]
-            start = (start.row, start.column, start.level)
-            last_start = props.maze_last_start_cell
-            last_start = (last_start[0], last_start[1], last_start[2])
-            if start != last_start:
-                goal = longest_path[-1]
-                goal = (goal.row, goal.column, goal.level)
-                if goal == last_start:
-                    distances.reverse()
+        if props.path.solution == 'Random':                    
+            if props.path.force_outside:
+                if random.random() < .5:
+                    start_cell = self[random.randint(0, self.columns - 1), 0]
+                    end_cell = self[random.randint(
+                        0, self.columns - 1), self.rows - 1]
                 else:
-                    props.maze_last_start_cell = start
-            # End.
-        self.distances = distances
-        self.longest_path = longest_path
+                    start_cell = self[0, random.randint(0, self.rows - 1)]
+                    end_cell = self[self.columns - 1,
+                                    random.randint(0, self.rows - 1)]
+            else:
+                    start_cell = self[
+                        random.randint(0, self.columns - 1), 
+                        random.randint(0, self.rows - 1)]
+                    end_cell = self[
+                        random.randint(0, self.columns - 1), 
+                        random.randint(0, self.rows - 1)]
+            setattr(self, "start_cell", start_cell)
+            setattr(self, "end_cell", end_cell)
+            self.distances = Distances(start_cell)
+            self.longest_path = self.distances.path_to(end_cell).path
+        elif props.path.solution == 'Custom': 
+            start_cell = self[
+                min(props.path.start[0], self.columns - 1), 
+                min(props.path.start[1], self.rows - 1)]
+            end_cell = self[
+                min(props.path.end[0], self.columns - 1), 
+                min(props.path.end[1], self.rows - 1)]
+            setattr(self, "start_cell", start_cell)
+            setattr(self, "end_cell", end_cell)
+            self.distances = Distances(start_cell)
+            self.longest_path = self.distances.path_to(end_cell).path
+        else: # Longest path possible
+            distances = Distances(self.get_random_linked_cell(_seed=props.seed))
+            new_start, distance = distances.max
+            distances = Distances(new_start)
+            goal, max_distance = distances.max
+
+            longest_path = distances.path_to(goal).path
+            if longest_path and longest_path[0] is not None:
+                # Avoid flickering when the algorithm randomly chooses start and end cells.
+                start = longest_path[0]
+                start = (start.row, start.column, start.level)
+                last_start = props.maze_last_start_cell
+                last_start = (last_start[0], last_start[1], last_start[2])
+                if start != last_start:
+                    goal = longest_path[-1]
+                    goal = (goal.row, goal.column, goal.level)
+                    if goal == last_start:
+                        distances.reverse()
+                    else:
+                        props.maze_last_start_cell = start
+                # End.
+            self.distances = distances
+            self.longest_path = longest_path
 
     def link(self, cell_a, cell_b, bidirectional=True):
         linked_cells = cell_a.link(cell_b, bidirectional)

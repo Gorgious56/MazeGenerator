@@ -3,8 +3,8 @@ Display Panel
 """
 
 import bpy
-from ...shading.nodes import node_from_mat
-from ...shading.objects import cells
+from ...blender.shading.nodes import node_from_mat
+from ...blender.shading.objects import cells
 
 
 class DisplayPanel(bpy.types.Panel):
@@ -30,7 +30,7 @@ class DisplayPanel(bpy.types.Panel):
         box.prop(mg_props, 'paint_style')
         row = box.row(align=True)
         row.prop(mg_props, 'show_longest_path',
-                 text='Longest Path', toggle=True)
+                 text='Solution', toggle=True)
         obj_cells = mg_props.objects.cells
         if obj_cells:
             try:  # TODO get rid of try/except

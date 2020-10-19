@@ -16,6 +16,7 @@ class Distances:
         self.cells[root] = 1
         self.path = []
         self.max_distance = 0
+        self.get_distances()
 
     def __delitem__(self, key):
         del self.cells[key]

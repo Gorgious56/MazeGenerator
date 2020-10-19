@@ -3,8 +3,8 @@ Contains definitions and methods to store and access Collections
 """
 
 
-import bpy
 from typing import List
+import bpy
 
 
 class CollectionsPropertyGroup(bpy.types.PropertyGroup):

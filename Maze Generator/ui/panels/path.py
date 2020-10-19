@@ -32,16 +32,15 @@ class PathPanel(bpy.types.Panel):
         scene = context.scene
         mg_props = scene.mg_props
 
-        layout.prop(mg_props, "maze_random_path")
+        layout.props_enum(mg_props.path, "solution")
+        row = layout.row()
+        row.prop(mg_props.path, "force_outside", text="Force Outside Solution", toggle=1)
+        row.enabled = mg_props.path.solution == "Random"
 
         row = layout.row()
-        row.prop(mg_props, "maze_outside_path")
-        row.enabled = mg_props.maze_random_path
+        row.prop(mg_props.path, "start", text="Start")
+        row.enabled = mg_props.path.solution == "Custom"
 
         row = layout.row()
-        row.prop(mg_props, "maze_force_start", text="Start")
-        row.enabled = not mg_props.maze_random_path
-
-        row = layout.row()
-        row.prop(mg_props, "maze_force_end", text="End")
-        row.enabled = not mg_props.maze_random_path
+        row.prop(mg_props.path, "end", text="End")
+        row.enabled = mg_props.path.solution == "Custom"

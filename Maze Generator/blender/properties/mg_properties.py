@@ -5,26 +5,28 @@ All the add-on properties and callbacks are stored here
 import bpy.ops
 from bpy.types import PropertyGroup, Scene
 from bpy.props import (
-    IntProperty, 
-    BoolProperty, 
-    EnumProperty, 
-    FloatProperty, 
+    IntProperty,
+    BoolProperty,
+    EnumProperty,
+    FloatProperty,
     PointerProperty,
     StringProperty,
     IntVectorProperty,
 )
-from .maze_logic.algorithms.manager import generate_algo_enum, is_algo_weaved, DEFAULT_ALGO
-from .maze_logic.cells import generate_cell_type_enum, DEFAULT_CELL_TYPE, POLAR
-from .blender_logic.meshes import generate_cell_visual_enum, DEFAULT_CELL_VISUAL_TYPE, MeshManager
+# from .path_properties import PathPropertyGroup
+from ..meshes import generate_cell_visual_enum, DEFAULT_CELL_VISUAL_TYPE, MeshManager
 
-from .blender_logic.objects import update_wall_visibility, ObjectsPropertyGroup
-from .blender_logic.meshes import MeshesPropertyGroup
-from .blender_logic.collections import CollectionsPropertyGroup
-from .blender_logic.modifiers.manager import ModifierNamesPropertyGroup
+from ..objects import update_wall_visibility, ObjectsPropertyGroup
+from ..meshes import MeshesPropertyGroup
+from ..collections import CollectionsPropertyGroup
+from ..modifiers.manager import ModifierNamesPropertyGroup
 
-from .shading.objects import manager as material_manager
-from .shading.materials import MaterialsPropertyGroup
-from .shading.textures import TexturesPropertyGroup
+from ..shading.objects import manager as material_manager
+from ..shading.materials import MaterialsPropertyGroup
+from ..shading.textures import TexturesPropertyGroup
+
+from ...maze_logic.algorithms.manager import generate_algo_enum, is_algo_weaved, DEFAULT_ALGO
+from ...maze_logic.cells import generate_cell_type_enum, DEFAULT_CELL_TYPE, POLAR
 
 
 class SpaceRepsPropertyGroup(PropertyGroup):
@@ -61,7 +63,7 @@ def generate_space_rep_enum(self, context):
 
 
 def generate_maze(self, context) -> None:
-    if self.auto_update and context.mode == "OBJECT":
+    if context.scene.mg_props.auto_update and context.mode == "OBJECT":
         bpy.ops.maze.generate()
 
 
@@ -109,6 +111,36 @@ def update_prop(self, value, prop_name):
         setattr(self, prop_name, value)
 
 
+class PathPropertyGroup(PropertyGroup):
+    force_outside: BoolProperty(
+        name="Force Outside Path",
+        update=generate_maze,
+        default=True,
+    )
+    solution: EnumProperty(
+        name="Solution",
+        default="Longest",
+        items=(
+            ("Longest",)*3,
+            ("Random",)*3,
+            ("Custom",)*3,
+        ),
+        update=generate_maze,
+    )
+    start: IntVectorProperty(
+        size=2,
+        min=0,
+        update=generate_maze,
+        subtype='XYZ',
+    )
+    end: IntVectorProperty(
+        size=2,
+        min=0,
+        update=generate_maze,
+        subtype='XYZ',
+    )
+
+
 class MGProperties(PropertyGroup):
     """
     Main properties group to store the add-on properties
@@ -141,6 +173,10 @@ class MGProperties(PropertyGroup):
 
     textures: PointerProperty(
         type=TexturesPropertyGroup,
+    )
+
+    path: PointerProperty(
+        type=PathPropertyGroup,
     )
 
     show_gizmos: BoolProperty(
@@ -275,27 +311,6 @@ class MGProperties(PropertyGroup):
         default=0,
         min=0,
         update=generate_maze
-    )
-
-    maze_random_path: BoolProperty(
-        name="Random Path",
-        default=True,
-    )
-
-    maze_outside_path: BoolProperty(
-        name="Force Outside Path",
-        description="Force the maze solution to start and end on the outside of the maze",
-        default=False,
-    )
-
-    maze_force_start: IntVectorProperty(
-        name="Start Maze Here",
-        size=2,
-    )
-
-    maze_force_end: IntVectorProperty(
-        name="End Maze Here",
-        size=2,
     )
 
     maze_bias: FloatProperty(
