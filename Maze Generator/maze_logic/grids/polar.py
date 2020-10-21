@@ -18,7 +18,7 @@ class GridPolar(Grid):
     def __init__(self, rows, columns, levels, cell_size=1, branch_polar=1, *args, **kwargs):
         # self.rows_polar = []
         cell_size = max(0, cell_size)
-        super().__init__(rows=rows, columns=0, levels=levels, space_rep='1',
+        super().__init__(rows=rows, columns=0, levels=levels,
                          cell_size=cell_size, init_cells=False, *args, **kwargs)
 
         self.doubling_rows = []
@@ -183,3 +183,11 @@ class GridPolar(Grid):
                     corners=4,
                     half_neighbors=(0, 1))
             return new_cell
+
+    def get_outer_cells(self):
+        last_row = self.rows - 1
+        cols_this_row = self.get_columns_this_row(last_row)
+        start_cell = self[random.randint(0, cols_this_row), self.rows - 1]
+        end_cell = self[int(start_cell.column + cols_this_row / 2) % cols_this_row, self.rows - 1]
+        print(start_cell, end_cell)
+        return start_cell, end_cell

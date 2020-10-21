@@ -23,7 +23,6 @@ class Grid:
             columns: int = 2, 
             levels: int = 1, 
             cell_size: float = 1.0, 
-            # space_rep: int = 0, 
             mask: Iterable[Tuple[int]] = None, 
             init_cells=True,
             warp_horiz=False,
@@ -288,24 +287,24 @@ class Grid:
         random.shuffle(shuffled_cells)
         return shuffled_cells
 
+    def get_outer_cells(self):
+        if random.random() < .5:
+            start_cell = self[random.randint(0, self.columns - 1), 0]
+            end_cell = self[random.randint(
+                0, self.columns - 1), self.rows - 1]
+        else:
+            start_cell = self[0, random.randint(0, self.rows - 1)]
+            end_cell = self[self.columns - 1,
+                            random.randint(0, self.rows - 1)]
+        return start_cell, end_cell
+
     def calc_distances(self, props):
         if props.path.solution == 'Random':                    
             if props.path.force_outside:
-                if random.random() < .5:
-                    start_cell = self[random.randint(0, self.columns - 1), 0]
-                    end_cell = self[random.randint(
-                        0, self.columns - 1), self.rows - 1]
-                else:
-                    start_cell = self[0, random.randint(0, self.rows - 1)]
-                    end_cell = self[self.columns - 1,
-                                    random.randint(0, self.rows - 1)]
+                start_cell, end_cell = self.get_outer_cells()
             else:
-                    start_cell = self[
-                        random.randint(0, self.columns - 1), 
-                        random.randint(0, self.rows - 1)]
-                    end_cell = self[
-                        random.randint(0, self.columns - 1), 
-                        random.randint(0, self.rows - 1)]
+                    start_cell = self.random_cell()
+                    end_cell = self.random_cell()
             setattr(self, "start_cell", start_cell)
             setattr(self, "end_cell", end_cell)
             self.distances = Distances(start_cell)

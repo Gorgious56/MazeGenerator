@@ -71,7 +71,7 @@ class ParametersPanel(bpy.types.Panel):
             layout.label(text='Set Columns > 3 * Rows', icon='ERROR')
         elif mg_props.maze_space_dimension == space_reps.torus and 2 * mg_props.maze_columns > mg_props.maze_rows_or_radius:
             layout.label(text='Set Rows > 2 * Columns', icon='ERROR')
-        elif mg_props.maze_space_dimension == space_reps.moebius:
+        elif mg_props.maze_space_dimension == space_reps.box:
             layout.label(text='Dimensions are 1 face of the cube',
                          icon='QUESTION')
 
@@ -101,8 +101,8 @@ class ParametersPanel(bpy.types.Panel):
 
         row = maze_size_ui('maze_rows_or_radius', [
             0, -1, 0], [0, 1, 0], 'Rows').enabled = True
-        row = maze_size_ui('maze_levels', [
-            0, 0, -1], [0, 0, 1], 'Levels').enabled = mg_props.maze_space_dimension == space_reps.regular and mg_props.cell_type == cell_mgr.SQUARE
+        # row = maze_size_ui('maze_levels', [
+        #     0, 0, -1], [0, 0, 1], 'Levels').enabled = mg_props.maze_space_dimension == space_reps.regular and mg_props.cell_type == cell_mgr.SQUARE
         row = layout.row()
         row.prop(mg_props, 'seed')
         obj_cells = mg_props.objects.cells

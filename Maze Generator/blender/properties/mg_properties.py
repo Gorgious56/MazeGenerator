@@ -57,8 +57,8 @@ def generate_space_rep_enum(self, context):
         ret.extend((
             (space_reps.cylinder, 'Cylinder', ''),
             (space_reps.moebius, 'Moebius', ''),
-            (space_reps.torus, 'Torus', ''),
-            (space_reps.box, 'Box', '')))
+            (space_reps.torus, 'Torus', '')))
+            # (space_reps.box, 'Box', '')))
     return ret
 
 
@@ -72,7 +72,7 @@ def update_inset(self, context) -> None:
 
 
 def update_paint(self, context: bpy.types.Context) -> None:
-    material_manager.create_materials(self)
+    material_manager.update_links(self)
     if not self.show_longest_path:
         self.objects.cells.modifiers[self.mod_names.mask_longest_path].show_viewport = False
 
