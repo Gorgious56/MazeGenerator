@@ -7,12 +7,16 @@ import random
 import bpy
 from ..nodes import create_node, node_from_mat
 from ... import meshes as mesh_manager
+from ...drivers.methods import setup_driver, DriverProperties, DriverVariable
 
 
-def set_cell_materials(props):
+def set_cell_materials(scene, props):
     __set_cell_material(props)
     __set_cell_contour_material(props)
+    __set_drivers(scene, props)
 
+def update_links(props):
+    __link_cell_nodes(props)
 
 def __set_cell_material(props) -> None:
     obj_cells = props.objects.cells
@@ -42,9 +46,9 @@ def __set_cell_contour_material(props) -> None:
         mat.use_nodes = True
 
     for node in mat.node_tree.nodes:
-        if node.type == bpy.types.ShaderNodeBsdfPrincipled:
+        if isinstance(node, bpy.types.ShaderNodeBsdfPrincipled):
             node.inputs[0].default_value = (0, 0, 0, 1)
-            node.inputs['Roughness'].default_value = 1
+            node.inputs[7].default_value = 1
             break
 
 
@@ -131,7 +135,6 @@ def __create_cell_nodes(props):
         NodeNames.output,
         'ShaderNodeOutputMaterial',
         (300, 0))
-
     create_node(
         nodes,
         NodeNames.math_compare,
@@ -139,6 +142,22 @@ def __create_cell_nodes(props):
         (-1000, 200),
         inputs={1: -0.01},
         attributes={'operation': 'COMPARE'})
+
+
+def __set_drivers(scene, props):
+    mat = props.materials.cell
+    nodes = mat.node_tree.nodes
+
+    show_longest_path_node = nodes.get(NodeNames.math)
+    if show_longest_path_node:
+        setup_driver(
+            show_longest_path_node.inputs[1],
+            DriverProperties(
+                "default_value",
+                DriverVariable("show_longest_path", 'SCENE', scene, "mg_props.show_longest_path"),
+                "show_longest_path"
+            ))
+
 
 
 class NodeNames:

@@ -28,12 +28,13 @@ class GenerateMazeOperator(bpy.types.Operator):
     def execute(self, context):
         start_time = time()
         if context.mode == 'OBJECT':
-            self.generate_maze(context.scene)
+            self.generate_maze(context)
         context.scene.mg_props.generation_time = int(
             (time() - start_time) * 1000)
         return {'FINISHED'}
 
-    def generate_maze(self, scene) -> None:
+    def generate_maze(self, context) -> None:
+        scene = context.scene
         props = scene.mg_props
 
         MeshManager.reset()
@@ -53,8 +54,7 @@ class GenerateMazeOperator(bpy.types.Operator):
         grid.braid_dead_ends(100 - props.keep_dead_ends, props.seed)
 
         get_or_create_and_link_objects(scene)
-        update_wall_visibility(
-            props, algorithm_manager.is_algo_weaved(props))
+        update_wall_visibility(props, algorithm_manager.is_algo_weaved(props))
 
         texture_manager.generate_textures(bpy.data.textures, props)
 
@@ -66,4 +66,4 @@ class GenerateMazeOperator(bpy.types.Operator):
         modifier_manager.setup_modifiers(scene, props)
         driver_manager.setup_drivers(scene, props)
 
-        mat_creator.create_materials(props)
+        mat_creator.create_materials(scene, props)
