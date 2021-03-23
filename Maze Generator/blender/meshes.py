@@ -2,7 +2,6 @@
 Contains definitions and methods to store and access Meshes
 """
 
-
 import bpy
 import bmesh
 import random
@@ -132,7 +131,7 @@ class MeshManager:
         mesh_cells.transform(Matrix.Translation(grid.offset))
         mesh_walls.transform(Matrix.Translation(grid.offset))
 
-        if props.cell_use_smooth:  # Update only when the mesh is supposed to be smoothed, because the default will be unsmoothed
+        if props.meshes_use_smooth:  # Update only when the mesh is supposed to be smoothed, because the default will be unsmoothed
             MeshManager.update_smooth(props)
         for mesh in (mesh_cells, mesh_walls):
             mesh.use_auto_smooth = True
@@ -140,12 +139,11 @@ class MeshManager:
 
     @staticmethod
     def update_smooth(props) -> None:
-        smooth = props.cell_use_smooth
-        for p in props.meshes.cells.polygons:
-            p.use_smooth = smooth
-        for p in props.meshes.walls.polygons:
-            p.use_smooth = smooth
-
+        "Set all mesh objects polygons smooth (or not) according to the props Smooth property"
+        smooth = props.meshes_use_smooth
+        for mesh in (props.meshes.cells, props.meshes.walls):
+            mesh.polygons.foreach_set("use_smooth", [smooth] * len(mesh.polygons))
+            mesh.update()
 
     @staticmethod
     def get_mesh_info(grid, inset, force_outside):
