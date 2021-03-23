@@ -2,6 +2,7 @@
 All the add-on properties and callbacks are stored here
 """
 
+from enum import Enum
 import bpy.ops
 from bpy.types import PropertyGroup, Scene
 from bpy.props import (
@@ -70,12 +71,12 @@ class SpaceRepsPropertyGroup(PropertyGroup):
 def generate_space_rep_enum(self, context):
     space_reps = self.space_reps
     ret = [(space_reps.regular, 'Plane', '')]
-    if self.cell_type != POLAR:
+    if not self.is_cell_type(CellType.POLAR):
         ret.extend((
             (space_reps.cylinder, 'Cylinder', ''),
             (space_reps.moebius, 'Moebius', ''),
             (space_reps.torus, 'Torus', '')))
-            # (space_reps.box, 'Box', '')))
+        # (space_reps.box, 'Box', '')))
     return ret
 
 
@@ -300,7 +301,7 @@ class MGProperties(PropertyGroup):
         default=10,
         min=2,
         soft_max=100,
-        update=generate_maze
+        update=generate_maze,
     )
 
     maze_columns_gizmo: FloatProperty(
@@ -460,6 +461,9 @@ class MGProperties(PropertyGroup):
         description='When toggled ON, this will add more precisions to each field in the panels',
         default=False,
     )
+
+    def is_cell_type(self, cell_type: Enum) -> bool:
+        return self.cell_type == cell_type.value
 
     def register():
         Scene.mg_props = PointerProperty(type=MGProperties)

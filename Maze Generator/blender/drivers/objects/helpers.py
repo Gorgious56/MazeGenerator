@@ -8,7 +8,7 @@ from ..methods import (
     DriverProperties,
     DriverVariable,
 )
-from ....maze_logic.cells import SQUARE, TRIANGLE, HEXAGON, OCTOGON
+from ....maze_logic.cells import CellType
 
 
 def setup_drivers(scene, props):
@@ -31,14 +31,14 @@ def setup_drivers(scene, props):
     # Scale the cylinder and torus objects when scaling the size of the maze
     for i, obj in enumerate((obj_cylinder, obj_torus)):
         exp = 'var * 0.314'
-        if props.cell_type == SQUARE or props.cell_type == OCTOGON:
+        if props.is_cell_type(CellType.SQUARE) or props.is_cell_type(CellType.OCTOGON):
             exp = 'var * 0.15915'
-        elif props.cell_type == TRIANGLE:
+        elif props.is_cell_type(CellType.TRIANGLE):
             if i == 0:
                 exp = 'var * 0.07963'
             else:
                 exp = 'var * 0.13791'
-        elif props.cell_type == HEXAGON:
+        elif props.is_cell_type(CellType.HEXAGON):
             if i == 0:
                 exp = 'var * 0.2388'
             else:

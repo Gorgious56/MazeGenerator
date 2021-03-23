@@ -4,7 +4,7 @@ Parameters Panel
 
 
 import bpy
-from ...maze_logic import cells as cell_mgr
+from ...maze_logic.cells import CellType
 from ...maze_logic.algorithms.manager import algorithm_class_from_name, KruskalRandom, is_algo_incompatible
 
 from ...blender.operators.op_tweak_maze_size import MG_OT_TweakMazeSize
@@ -31,15 +31,12 @@ class ParametersPanel(bpy.types.Panel):
         mg_props = scene.mg_props
         space_reps = mg_props.space_reps
 
-        cell_enum_icon = 'MESH_PLANE'
-        if mg_props.cell_type == cell_mgr.POLAR:
-            cell_enum_icon = 'MESH_CIRCLE'
-        elif mg_props.cell_type == cell_mgr.TRIANGLE:
-            cell_enum_icon = 'OUTLINER_OB_MESH'
-        elif mg_props.cell_type == cell_mgr.HEXAGON:
-            cell_enum_icon = 'SEQ_CHROMA_SCOPE'
-        elif mg_props.cell_type == cell_mgr.OCTOGON:
-            cell_enum_icon = 'MESH_ICOSPHERE'
+        cell_enum_icon = {
+            CellType.POLAR.value: 'MESH_CIRCLE',
+            CellType.TRIANGLE.value: 'OUTLINER_OB_MESH',
+            CellType.HEXAGON.value: 'SEQ_CHROMA_SCOPE',
+            CellType.OCTOGON.value: 'MESH_ICOSPHERE',
+        }.get(mg_props.cell_type, 'MESH_PLANE')
 
         layout.prop_menu_enum(mg_props, 'cell_type', icon=cell_enum_icon)
         layout.prop(mg_props, 'maze_algorithm', icon='HAND', text='Solver')
@@ -59,10 +56,10 @@ class ParametersPanel(bpy.types.Panel):
                         box.prop(mg_props, 'maze_weave_toggle', toggle=True)
                 else:
                     box.prop(mg_props, setting)
-        if mg_props.cell_type == cell_mgr.POLAR and mg_props.maze_space_dimension in (space_reps.cylinder, space_reps.moebius, space_reps.torus, space_reps.moebius):
+        if mg_props.is_cell_type(CellType.POLAR) and mg_props.maze_space_dimension in (space_reps.cylinder, space_reps.moebius, space_reps.torus, space_reps.moebius):
             layout.label(
                 text='Only Regular and Stairs for Polar cells', icon='ERROR')
-        elif mg_props.cell_type in (cell_mgr.TRIANGLE, cell_mgr.HEXAGON, cell_mgr.OCTOGON):
+        elif mg_props.is_cell_type(CellType.TRIANGLE) or mg_props.is_cell_type(CellType.HEXAGON) or mg_props.is_cell_type(CellType.OCTOGON):
             if mg_props.maze_space_dimension in (space_reps.cylinder, space_reps.moebius, space_reps.torus):
                 layout.label(
                     text='Needs PAIR Columns (2, 4, 6, ...)', icon='ERROR')
@@ -89,11 +86,11 @@ class ParametersPanel(bpy.types.Panel):
             sub.scale_x = 10.0
 
             sub = row.row()
-            sub.operator('maze.tweak_maze_size', text='',
+            sub.operator(MG_OT_TweakMazeSize.bl_idname, text='',
                          icon='ADD').tweak_size = increase
             return row
 
-        if mg_props.cell_type != cell_mgr.POLAR:
+        if mg_props.is_cell_type(CellType.POLAR):
             maze_size_ui('maze_columns', [-1, 0, 0], [1, 0, 0], 'Columns')
         else:
             layout.prop(mg_props, 'maze_polar_branch', text='Branch amount')

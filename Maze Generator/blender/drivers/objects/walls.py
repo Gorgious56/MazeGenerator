@@ -1,5 +1,5 @@
 """
-Stores all the drivers used in the walls objects
+Stores all the drivers used in the walls object
 """
 
 from ..methods import (
@@ -48,6 +48,6 @@ def setup_drivers(scene, props):
     setup_driver_from_addon_props(
         obj_walls, names.weave_disp, 'strength', scene, "wall_height", '-var')
     setup_driver_from_addon_props(
-        obj_walls, names.bevel, 'harden_normals', scene, "cell_use_smooth", 'var')
+        obj_walls, names.bevel, 'harden_normals', scene, "meshes_use_smooth", 'var')
     setup_driver_from_addon_props(
         obj_walls, names.screw, 'use_smooth_shade', scene, "wall_bevel", 'var > 0.005')

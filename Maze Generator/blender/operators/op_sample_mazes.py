@@ -47,7 +47,7 @@ class SampleManager:
             (
                 mg_props,
                 'cell_type',
-                (cells.HEXAGON, cells.POLAR, cells.SQUARE, cells.TRIANGLE),
+                (cells.CellType.HEXAGON.value, cells.CellType.POLAR.value, cells.CellType.SQUARE.value, cells.CellType.TRIANGLE.value),
                 20, 17,
             ),
             (

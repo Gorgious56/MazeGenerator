@@ -6,7 +6,7 @@ Stores the walls object's modifier properties
 import math
 from ..methods import add_modifier, ModifierCreator
 from ... import meshes as cv
-from ....maze_logic.cells import TRIANGLE
+from ....maze_logic.cells import CellType
 
 
 def setup_modifiers(scene, props) -> None:
@@ -134,7 +134,7 @@ def setup_modifiers(scene, props) -> None:
             _type='SIMPLE_DEFORM',
             name=names.moebius,
             properties={
-                'angle': 2 * math.pi + (1 / 16 if props.cell_type == TRIANGLE else 0),
+                'angle': 2 * math.pi + (1 / 16 if props.is_cell_type(CellType.TRIANGLE) else 0),
             }
         ),
         ModifierCreator(

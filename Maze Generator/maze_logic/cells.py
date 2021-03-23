@@ -3,27 +3,29 @@ This module handles all data constructs about a maze's cells
 """
 
 import random
+from enum import Enum
 from ..utils import event
 from . import constants as cst
 
 
-POLAR = '0'
-TRIANGLE = '1'
-SQUARE = '2'
-HEXAGON = '3'
-OCTOGON = '4'
-DODECAGON = '5'
+class CellType(Enum):
+    POLAR = '0'
+    TRIANGLE = '1'
+    SQUARE = '2'
+    HEXAGON = '3'
+    OCTOGON = '4'
+    DODECAGON = '5'
 
-DEFAULT_CELL_TYPE = SQUARE
+DEFAULT_CELL_TYPE = CellType.SQUARE.value
 
 
 def generate_cell_type_enum():
-    return [(POLAR, 'Polar', ''),
-            (TRIANGLE, 'Triangle', ''),
-            (SQUARE, 'Square', ''),
-            (HEXAGON, 'Hexagon', ''),
-            (OCTOGON, 'Octogon', ''),
-            (DODECAGON, 'Dodecagon', ''),
+    return [(CellType.POLAR.value, 'Polar', ''),
+            (CellType.TRIANGLE.value, 'Triangle', ''),
+            (CellType.SQUARE.value, 'Square', ''),
+            (CellType.HEXAGON.value, 'Hexagon', ''),
+            (CellType.OCTOGON.value, 'Octogon', ''),
+            (CellType.DODECAGON.value, 'Dodecagon', ''),
             ]
 
 

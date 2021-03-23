@@ -6,7 +6,7 @@ Stores the cells object's modifier properties
 import math
 from ..methods import add_modifier, ModifierCreator
 from ... import meshes as cv
-from ....maze_logic.cells import TRIANGLE
+from ....maze_logic.cells import CellType
 
 
 def setup_modifiers(scene, props) -> None:
@@ -106,7 +106,7 @@ def setup_modifiers(scene, props) -> None:
                 name=names.moebius,
                 properties={
                     "angle": 2 * math.pi +
-                             (1 / 18 if props.cell_type == TRIANGLE else 0),
+                (1 / 18 if props.is_cell_type(CellType.TRIANGLE) else 0),
                 }
             ))
     if ow or not obj_cells.modifiers.get(names.cylinder):

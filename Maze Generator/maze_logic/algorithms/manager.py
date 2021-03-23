@@ -2,7 +2,7 @@
 Algorithm manager methods and properties
 """
 
-from ..cells import POLAR, SQUARE
+from ..cells import CellType
 
 # Algorithms :
 from .maze_algorithm import MazeAlgorithm
@@ -47,13 +47,13 @@ def is_algo_incompatible(props):
         return "Aldous-Broder can't solve a box representation"
     if props.maze_space_dimension == props.space_reps.box and props.maze_weave:
         return "Can't solve weaved maze for a box"
-    if algorithm_class_from_name(props.maze_algorithm) in (RecursiveDivision, VoronoiDivision) and props.cell_type == POLAR:
+    if algorithm_class_from_name(props.maze_algorithm) in (RecursiveDivision, VoronoiDivision) and props.is_cell_type(CellType.POLAR):
         return "Can't solve this algorithm with Polar grid (yet)"
     return False
 
 
 def is_algo_weaved(props):
-    return props.cell_type == SQUARE and props.maze_algorithm in WEAVED_ALGORITHMS
+    return props.is_cell_type(CellType.SQUARE) and props.maze_algorithm in WEAVED_ALGORITHMS
 
 
 def is_kruskal_random(algo_name):

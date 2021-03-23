@@ -3,7 +3,7 @@ Grid creation manager
 """
 
 
-from .. import cells as ct
+from ..cells import CellType as ct
 from .polar import GridPolar
 from .hex import GridHex
 from .triangle import GridTriangle
@@ -21,7 +21,7 @@ def generate_grid(props) -> None:
     space_reps = props.space_reps
     warp_horiz = maze_dimension in (space_reps.cylinder, space_reps.moebius, space_reps.torus)
     warp_vert = maze_dimension == space_reps.torus
-    if props.cell_type == ct.POLAR:
+    if props.is_cell_type(ct.POLAR):
         return GridPolar(
             rows=props.maze_rows_or_radius,
             columns=0,
@@ -29,13 +29,13 @@ def generate_grid(props) -> None:
             cell_size=1 - props.cell_inset,
             branch_polar=props.maze_polar_branch)
 
-    if props.cell_type == ct.HEXAGON:
+    if props.is_cell_type(ct.HEXAGON):
         grid = GridHex
-    elif props.cell_type == ct.TRIANGLE:
+    elif props.is_cell_type(ct.TRIANGLE):
         grid = GridTriangle
-    elif props.cell_type == ct.OCTOGON:
+    elif props.is_cell_type(ct.OCTOGON):
         grid = GridOctogon
-    elif props.cell_type == ct.DODECAGON:
+    elif props.is_cell_type(ct.DODECAGON):
         grid = GridDodecagon
     else:
         if props.maze_weave:
