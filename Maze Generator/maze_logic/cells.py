@@ -42,7 +42,7 @@ class Cell(object):
 
         self.group = 0
 
-        self.links = {}
+        self.links = []
 
         self.corners = corners
         self.half_neighbors = half_neighbors
@@ -67,7 +67,7 @@ class Cell(object):
 
     def link(self, other_cell, bidirectional=True):
         if other_cell:
-            self.links[other_cell] = True
+            self.links.append(other_cell)
             if bidirectional:
                 return other_cell.link(self, False)
             else:
@@ -75,10 +75,8 @@ class Cell(object):
 
     def unlink(self, other_cell, bidirectional=True):
         if other_cell:
-            try:
-                del self.links[other_cell]
-            except KeyError:
-                pass
+            if other_cell in self.links:
+                self.links.remove(other_cell)
             if bidirectional:
                 other_cell.unlink(self, False)
 
@@ -86,7 +84,7 @@ class Cell(object):
         return other_cell in self.links
 
     def has_any_link(self):
-        return any(self.links)
+        return len(self.links) > 0
 
     def exists_and_is_linked(self, other_cell):
         return other_cell is not None and self.is_linked(other_cell)

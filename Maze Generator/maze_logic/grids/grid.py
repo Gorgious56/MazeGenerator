@@ -157,7 +157,7 @@ class Grid:
                 self[c, r] = 0
 
     def get_linked_cells(self) -> List[Cell]:
-        return [c for c in self.all_cells if any(c.links)]
+        return [c for c in self.all_cells if c.has_any_link()]
 
     def mask_cell(self, column: int, row: int) -> None:
         c = self[column, row]

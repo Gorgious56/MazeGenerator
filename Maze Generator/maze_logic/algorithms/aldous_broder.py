@@ -19,7 +19,7 @@ class AldousBroder(MazeAlgorithm):
 
             neighbor = choice(current.neighbors)
 
-            if len(neighbor.links) <= 0:
+            if not neighbor.has_any_link():
                 grid.link(current, neighbor)
                 unvisited -= 1
             current = neighbor
