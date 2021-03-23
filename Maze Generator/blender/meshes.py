@@ -109,21 +109,31 @@ class MeshManager:
 
         bm_cells.verts.ensure_lookup_table()
         bm_walls.verts.ensure_lookup_table()
-        for vg_info, weights in stairs_vertex_group.items():
-            for v_ind in vg_info:
+
+        vg_stairs_index = VERTEX_GROUPS.index(VG_STAIRS)
+        vg_longest_path_index = VERTEX_GROUPS.index(VG_LONGEST_PATH)
+        vg_thickness_index = VERTEX_GROUPS.index(VG_THICKNESS)
+        for verts_range in stairs_vertex_group:
+            _range = verts_range.range
+            relative_distance = verts_range.relative_distance
+            is_longest_path = verts_range.is_longest_path
+            cell_group = verts_range.cell_group
+            links = verts_range.links
+
+            for v_ind in _range:
                 bm_cells_vert = bm_cells.verts[v_ind]
-                bm_cells_vert[vg_cells][0] = weights[0]
-                bm_cells_vert[vg_cells][2] = weights[1]
+                bm_cells_vert[vg_cells][vg_stairs_index] = relative_distance
+                bm_cells_vert[vg_cells][vg_longest_path_index] = is_longest_path
 
                 bm_walls_vert = bm_walls.verts[v_ind]
-                bm_walls_vert[vg_walls][0] = weights[0]
-                bm_walls_vert[vg_walls][1] = 1
-                bm_walls_vert[vg_walls][2] = weights[1]
+                bm_walls_vert[vg_walls][vg_stairs_index] = relative_distance
+                bm_walls_vert[vg_walls][vg_thickness_index] = 1
+                bm_walls_vert[vg_walls][vg_longest_path_index] = is_longest_path
 
                 for loop in bm_cells_vert.link_loops:
-                    loop[distance_vc] = (weights[0], weights[1], 0, 0)
-                    loop[group_vc] = group_colors[weights[2]]
-                    loop[neighbors_vc] = neighbors_colors[weights[3]]
+                    loop[distance_vc] = (relative_distance, is_longest_path, 0, 0)
+                    loop[group_vc] = group_colors[cell_group]
+                    loop[neighbors_vc] = neighbors_colors[links]
 
         bm_cells.to_mesh(mesh_cells)
         bm_walls.to_mesh(mesh_walls)
@@ -142,7 +152,8 @@ class MeshManager:
         "Set all mesh objects polygons smooth (or not) according to the props Smooth property"
         smooth = props.meshes_use_smooth
         for mesh in (props.meshes.cells, props.meshes.walls):
-            mesh.polygons.foreach_set("use_smooth", [smooth] * len(mesh.polygons))
+            mesh.polygons.foreach_set(
+                "use_smooth", [smooth] * len(mesh.polygons))
             mesh.update()
 
     @staticmethod
@@ -150,13 +161,14 @@ class MeshManager:
         all_cells = grid.all_cells
         verts = grid.verts
 
-        cells_data = {}
+        ranges_info = []
         faces = []
         walls_edges = []
         max_distance = grid.distances.max[1]
         longest_path = grid.longest_path
 
-        exit_cells = (getattr(grid, "start_cell", -1), getattr(grid, "end_cell", -1))
+        exit_cells = (getattr(grid, "start_cell", -1),
+                      getattr(grid, "end_cell", -1))
 
         for c in all_cells:
             verts_indices = range(c.first_vert_index,
@@ -164,8 +176,17 @@ class MeshManager:
 
             faces.append(verts_indices)
             this_distance = grid.distances[c]
-            cells_data[verts_indices] = (
-                (this_distance / max_distance) if this_distance else -1, 0 if c in longest_path else 1, c.group, len(c.links))
+            ranges_info.append(
+                VerticesRangeInfo(
+                    _range=verts_indices,
+                    relative_distance=(
+                        this_distance / max_distance) if this_distance else -1,
+                    is_longest_path=0 if c in longest_path else 1,
+                    # TODO : use pointer to cell if not other info is required :
+                    cell_group=c.group,
+                    links=len(c.links),
+                )
+            )
             half_neighbors = c.half_neighbors
             for direction, w in enumerate(c.get_wall_mask()):
                 if w and direction < len(verts_indices):
@@ -191,4 +212,13 @@ class MeshManager:
                     walls_edges.append(
                         (verts_indices[(first_idx + 1) % c.corners], neighbor_indices[second_idx]))
 
-        return verts, faces, cells_data, walls_edges
+        return verts, faces, ranges_info, walls_edges
+
+
+class VerticesRangeInfo:
+    def __init__(self, _range, relative_distance, is_longest_path, cell_group, links) -> None:
+        self.range = _range
+        self.relative_distance = relative_distance
+        self.is_longest_path = is_longest_path
+        self.cell_group = cell_group
+        self.links = links
