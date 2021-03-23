@@ -91,9 +91,9 @@ class ParametersPanel(bpy.types.Panel):
             return row
 
         if mg_props.is_cell_type(CellType.POLAR):
-            maze_size_ui('maze_columns', [-1, 0, 0], [1, 0, 0], 'Columns')
-        else:
             layout.prop(mg_props, 'maze_polar_branch', text='Branch amount')
+        else:
+            maze_size_ui('maze_columns', [-1, 0, 0], [1, 0, 0], 'Columns')
 
         # row = layout.row()
         # row.prop(mg_props, "maze_columns")

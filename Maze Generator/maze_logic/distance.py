@@ -3,6 +3,7 @@ This module handles distance calculations inside the maze
 """
 
 
+from typing import Tuple
 from . import cells
 
 
@@ -63,7 +64,7 @@ class Distances:
         return breadcrumbs
 
     @property
-    def max(self) -> (cells.Cell, int):
+    def max(self) -> Tuple[cells.Cell, int]:
         self.max_distance = 0
         max_cell = self.root
 

@@ -6,9 +6,19 @@ from ..cells import CellType
 
 # Algorithms :
 from .maze_algorithm import MazeAlgorithm
+
+from .binary_tree import BinaryTree
+from .sidewinder import Sidewinder
+from .cross_stitch import CrossStitch
+from .eller import Eller
+from .prim import Prim
+from .wilson import Wilson
+from .growing_tree import GrowingTree
+from .hunt_and_kill import HuntAndKill
 from .recursive_backtracker import RecursiveBacktracker
 from .aldous_broder import AldousBroder
 from .recursive_division import RecursiveDivision
+from .recursive_voronoi_division import RecursiveVoronoiDivision
 from .voronoi_division import VoronoiDivision
 from .kruskal_random import KruskalRandom
 
