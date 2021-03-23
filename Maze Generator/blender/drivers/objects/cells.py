@@ -1,5 +1,5 @@
 """
-Stores all the drivers used in the cells objects
+Stores all the drivers used in the cells object
 """
 
 from ..methods import (
@@ -24,68 +24,85 @@ def setup_drivers(scene, props):
                              obj_cells, names.texture_disp, show, 'var != 0')
 
         setup_driver_from_addon_props(
-            obj_cells, names.torus, show, scene, "maze_space_dimension", "int(var) == " + space_reps.torus)
-        setup_driver_from_addon_props(obj_cells, names.cylinder, show, scene, "maze_space_dimension",
-                                      f'int(var) in ({space_reps.cylinder}, {space_reps.moebius}, {space_reps.torus})')
+            obj_cells, names.torus, show,
+            scene, "maze_space_dimension", "int(var) == " + space_reps.torus)
         setup_driver_from_addon_props(
-            obj_cells, names.moebius, show, scene, "maze_space_dimension", f'int(var) == {space_reps.moebius}')
+            obj_cells, names.cylinder, show,
+            scene, "maze_space_dimension", f'int(var) in ({space_reps.cylinder}, {space_reps.moebius}, {space_reps.torus})')
+        setup_driver_from_addon_props(
+            obj_cells, names.moebius, show,
+            scene, "maze_space_dimension", f'int(var) == {space_reps.moebius}')
 
-        setup_driver(obj_cells.modifiers[names.thickness_disp], DriverProperties(
-            show,
-            [
-                DriverVariable("basement", 'SCENE', scene, "maze_basement"),
-                DriverVariable("stairs", 'OBJECT', obj_cells,
-                               f'modifiers["{names.stairs}"].strength'),
-            ],
-            expression="not basement or stairs == 0"))
+        setup_driver(
+            obj_cells.modifiers[names.thickness_disp], 
+            DriverProperties(
+                show,
+                [
+                    DriverVariable("basement", 'SCENE', scene, "maze_basement"),
+                    DriverVariable("stairs", 'OBJECT', obj_cells,
+                                f'modifiers["{names.stairs}"].strength'),
+                ],
+                expression="not basement or stairs == 0")
+            )
 
-        setup_driver(obj_cells.modifiers[names.thickness_solid], DriverProperties(
-            show,
-            [
-                DriverVariable("sw_visibility", 'OBJECT', obj_cells,
-                               f'modifiers["{names.thickness_disp}"].show_viewport'),
-                DriverVariable("disp_visibility", 'OBJECT', obj_cells,
-                               f'modifiers["{names.thickness_shrinkwrap}"].show_viewport'),
-            ],
-            expression="sw_visibility or disp_visibility"))
-        setup_driver(obj_cells.modifiers[names.wireframe], DriverProperties(
-            show,
-            [
-                DriverVariable("cell_wireframe", 'OBJECT', obj_cells,
-                               f'modifiers["{names.wireframe}"].thickness'),
-                DriverVariable("cell_inset", 'SCENE', scene,
-                               "mg_props.cell_inset"),
-            ],
-            expression="cell_wireframe != 0 and cell_inset > 0.1"))
-        setup_driver(obj_cells.modifiers[names.bevel], DriverProperties(
-            show,
-            [
-                DriverVariable("cell_bevel", 'OBJECT', obj_cells,
-                               f'modifiers["{names.bevel}"].width'),
-                DriverVariable("cell_inset", 'SCENE', scene,
-                               "mg_props.cell_inset"),
-            ],
-            expression="cell_bevel != 0 and cell_inset > 0.1"))
+        setup_driver(
+            obj_cells.modifiers[names.thickness_solid], 
+            DriverProperties(
+                show,
+                [
+                    DriverVariable("sw_visibility", 'OBJECT', obj_cells,
+                                f'modifiers["{names.thickness_disp}"].show_viewport'),
+                    DriverVariable("disp_visibility", 'OBJECT', obj_cells,
+                                f'modifiers["{names.thickness_shrinkwrap}"].show_viewport'),
+                ],
+                expression="sw_visibility or disp_visibility")
+            )
+        setup_driver(
+            obj_cells.modifiers[names.wireframe], 
+            DriverProperties(
+                show,
+                [
+                    DriverVariable("cell_wireframe", 'OBJECT', obj_cells,
+                                f'modifiers["{names.wireframe}"].thickness'),
+                    DriverVariable("cell_inset", 'SCENE', scene,
+                                "mg_props.cell_inset"),
+                ],
+                expression="cell_wireframe != 0 and cell_inset > 0.1")
+            )
+        setup_driver(
+            obj_cells.modifiers[names.bevel], 
+            DriverProperties(
+                show,
+                [
+                    DriverVariable("cell_bevel", 'OBJECT', obj_cells,
+                                f'modifiers["{names.bevel}"].width'),
+                    DriverVariable("cell_inset", 'SCENE', scene,
+                                "mg_props.cell_inset"),
+                ],
+                expression="cell_bevel != 0 and cell_inset > 0.1")
+            )
         setup_driver(obj_cells.modifiers[names.decimate], DriverProperties(
-            show,
-            [
-                DriverVariable("cell_deci", 'SCENE', scene,
-                               "mg_props.cell_decimate"),
-                DriverVariable("cell_inset", 'SCENE', scene,
-                               "mg_props.cell_inset"),
-                DriverVariable("stairs", 'OBJECT', obj_cells,
-                               f'modifiers["{names.stairs}"].strength'),
-            ],
-            expression="cell_deci > 0 and (cell_inset > 0 or stairs != 0)"))
+                show,
+                [
+                    DriverVariable("cell_deci", 'SCENE', scene,
+                                "mg_props.cell_decimate"),
+                    DriverVariable("cell_inset", 'SCENE', scene,
+                                "mg_props.cell_inset"),
+                    DriverVariable("stairs", 'OBJECT', obj_cells,
+                                f'modifiers["{names.stairs}"].strength'),
+                ],
+                expression="cell_deci > 0 and (cell_inset > 0 or stairs != 0)")
+            )
         setup_driver(obj_cells.modifiers[names.thickness_shrinkwrap], DriverProperties(
-            show,
-            [
-                DriverVariable("maze_basement", 'SCENE', scene,
-                               "mg_props.maze_basement"),
-                DriverVariable("stairs", 'OBJECT', obj_cells,
-                               f'modifiers["{names.stairs}"].strength'),
-            ],
-            expression="maze_basement and stairs != 0"))
+                show,
+                [
+                    DriverVariable("maze_basement", 'SCENE', scene,
+                                "mg_props.maze_basement"),
+                    DriverVariable("stairs", 'OBJECT', obj_cells,
+                                f'modifiers["{names.stairs}"].strength'),
+                ],
+                expression="maze_basement and stairs != 0")
+            )
 
         setup_mod2mod_driver(obj_cells, names.subdiv, 'levels',
                              obj_cells, names.subdiv, show, 'var > 0')

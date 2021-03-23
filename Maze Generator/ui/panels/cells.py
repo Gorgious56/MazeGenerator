@@ -57,7 +57,7 @@ class CellsPanel(bpy.types.Panel):
         row.prop(cell_subdiv_mod, 'levels', text='Subdiv')
         row.prop(mg_props, 'cell_decimate', slider=True, text='Decimate', icon='MOD_DECIM')
 
-        box.prop(mg_props, 'cell_use_smooth', toggle=True, icon='SHADING_RENDERED', text='Shade Smooth')
+        box.prop(mg_props, 'meshes_use_smooth', toggle=True, icon='SHADING_RENDERED', text='Shade Smooth')
 
         if cell_subdiv_mod.levels > 0 and (cell_bevel_mod.width > 0 or cell_wire_mod.thickness > 0):
             box.label(text='Bevel conflicts with Subdivision', icon='ERROR')

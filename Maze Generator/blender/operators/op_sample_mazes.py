@@ -6,7 +6,7 @@ from ...maze_logic import cells
 from ...maze_logic.algorithms import manager as algorithm_manager
 
 
-class SampleMazesOperator(Operator):
+class MG_OT_SampleMazes(Operator):
     """Samples Mazes (Debug)"""
     bl_idname = "maze.sample"
     bl_label = "Sample Mazes"
@@ -15,10 +15,8 @@ class SampleMazesOperator(Operator):
         SampleManager.sample(context)
         return {'FINISHED'}
 """
-This module handles automatic generation of mazes with parameters variation
+This module handles automatic generation of mazes with parameters variation (WIP)
 """
-
-
 
 
 class SampleManager:

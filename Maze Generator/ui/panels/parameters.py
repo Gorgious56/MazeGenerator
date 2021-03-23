@@ -7,6 +7,8 @@ import bpy
 from ...maze_logic import cells as cell_mgr
 from ...maze_logic.algorithms.manager import algorithm_class_from_name, KruskalRandom, is_algo_incompatible
 
+from ...blender.operators.op_tweak_maze_size import MG_OT_TweakMazeSize
+
 class ParametersPanel(bpy.types.Panel):
     """
     Parameters Panel
@@ -49,6 +51,7 @@ class ParametersPanel(bpy.types.Panel):
             box = layout.box()
             for setting in algorithm_class_from_name(mg_props.maze_algorithm).settings:
                 if setting == 'maze_weave':
+                    # TODO fix weave maze
                     continue
                     if mg_props.maze_algorithm == KruskalRandom.name:
                         box.prop(mg_props, 'maze_weave', slider=True)
@@ -78,7 +81,7 @@ class ParametersPanel(bpy.types.Panel):
         def maze_size_ui(prop_name, decrease, increase, text):
             row = layout.row(align=True)
             sub = row.row()
-            sub.operator('maze.tweak_maze_size', text='',
+            sub.operator(MG_OT_TweakMazeSize.bl_idname, text='',
                          icon='REMOVE').tweak_size = decrease
 
             sub = row.row()
@@ -101,8 +104,6 @@ class ParametersPanel(bpy.types.Panel):
 
         row = maze_size_ui('maze_rows_or_radius', [
             0, -1, 0], [0, 1, 0], 'Rows').enabled = True
-        # row = maze_size_ui('maze_levels', [
-        #     0, 0, -1], [0, 0, 1], 'Levels').enabled = mg_props.maze_space_dimension == space_reps.regular and mg_props.cell_type == cell_mgr.SQUARE
         row = layout.row()
         row.prop(mg_props, 'seed')
         obj_cells = mg_props.objects.cells

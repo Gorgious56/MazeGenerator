@@ -10,6 +10,7 @@ from .walls import WallsPanel
 from .display import DisplayPanel
 from .path import PathPanel
 from .info import InfoPanel
+from ...blender.operators.op_generate_maze import MG_OT_GenerateMaze
 
 
 class MazeGeneratorPanel(bpy.types.Panel):
@@ -42,7 +43,7 @@ class MazeGeneratorPanel(bpy.types.Panel):
         row = layout.row(align=True)
         row.scale_y = 2
         sub = row.row(align=True)
-        sub.operator("maze.generate", icon='VIEW_ORTHO')
+        sub.operator(MG_OT_GenerateMaze.bl_idname, icon='VIEW_ORTHO')
         sub.scale_x = 10.0
 
         sub = row.row(align=True)

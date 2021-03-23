@@ -3,15 +3,9 @@ This module stores the properties related to the path of the maze and its repres
 """
 
 
-import bpy.ops
-from bpy.types import PropertyGroup, Scene
+from bpy.types import PropertyGroup
 from bpy.props import (
-    IntProperty,
     BoolProperty,
-    EnumProperty,
-    FloatProperty,
-    PointerProperty,
-    StringProperty,
     IntVectorProperty,
 )
 

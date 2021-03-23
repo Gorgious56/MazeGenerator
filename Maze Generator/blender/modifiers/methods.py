@@ -45,7 +45,7 @@ def add_modifier(
                 remove_if_already_exists,
                 remove_all_modifiers)
         else:
-            mod = obj.modifiers[mod_name]
+            mod = obj.modifiers.get(mod_name)
     else:
         mod = obj.modifiers.new(mod_name, creator.type)
 

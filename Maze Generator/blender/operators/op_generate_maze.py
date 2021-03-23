@@ -7,6 +7,7 @@ from time import time
 import bpy
 from ...maze_logic.algorithms import manager as algorithm_manager
 from ...maze_logic.grids.manager import generate_grid
+
 from ...blender.shading.objects import manager as mat_creator
 from ...blender.shading import textures as texture_manager
 from ...blender.objects import get_or_create_and_link_objects, update_wall_visibility
@@ -14,7 +15,7 @@ from ...blender.meshes import MeshManager
 from ...blender.modifiers import manager as modifier_manager
 from ...blender.drivers import manager as driver_manager
 
-class GenerateMazeOperator(bpy.types.Operator):
+class MG_OT_GenerateMaze(bpy.types.Operator):
     """Generate a new maze"""
     bl_idname = "maze.generate"
     bl_label = "Generate Maze"

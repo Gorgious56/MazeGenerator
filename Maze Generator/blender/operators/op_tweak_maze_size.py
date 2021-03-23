@@ -2,13 +2,14 @@ from bpy.types import Operator
 from bpy.props import IntVectorProperty
 
 
-class TweakMazeSizeOperator(Operator):
-    """Tooltip"""
+class MG_OT_TweakMazeSize(Operator):
+    """Change maze dimensions"""
     bl_idname = "maze.tweak_maze_size"
     bl_label = "Tweak Row Number"
 
     tweak_size: IntVectorProperty(
         name="Tweak the maze size dimension",
+        size=3,
     )
 
     def execute(self, context):

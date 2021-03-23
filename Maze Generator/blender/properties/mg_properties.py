@@ -14,9 +14,16 @@ from bpy.props import (
     IntVectorProperty,
 )
 # from .path_properties import PathPropertyGroup
-from ..meshes import generate_cell_visual_enum, DEFAULT_CELL_VISUAL_TYPE, MeshManager
+from ..meshes import (
+    generate_cell_visual_enum,
+    DEFAULT_CELL_VISUAL_TYPE,
+    MeshManager,
+)
 
-from ..objects import update_wall_visibility, ObjectsPropertyGroup
+from ..objects import (
+    update_wall_visibility,
+    ObjectsPropertyGroup,
+)
 from ..meshes import MeshesPropertyGroup
 from ..collections import CollectionsPropertyGroup
 from ..modifiers.manager import ModifierNamesPropertyGroup
@@ -25,8 +32,18 @@ from ..shading.objects import manager as material_manager
 from ..shading.materials import MaterialsPropertyGroup
 from ..shading.textures import TexturesPropertyGroup
 
-from ...maze_logic.algorithms.manager import generate_algo_enum, is_algo_weaved, DEFAULT_ALGO
-from ...maze_logic.cells import generate_cell_type_enum, DEFAULT_CELL_TYPE, POLAR
+from ...maze_logic.algorithms.manager import (
+    generate_algo_enum,
+    is_algo_weaved,
+    DEFAULT_ALGO,
+)
+from ...maze_logic.cells import (
+    generate_cell_type_enum,
+    DEFAULT_CELL_TYPE,
+    CellType,
+)
+
+from ...blender.operators.op_generate_maze import MG_OT_GenerateMaze
 
 
 class SpaceRepsPropertyGroup(PropertyGroup):
@@ -64,7 +81,7 @@ def generate_space_rep_enum(self, context):
 
 def generate_maze(self, context) -> None:
     if context.scene.mg_props.auto_update and context.mode == "OBJECT":
-        bpy.ops.maze.generate()
+        exec(f"bpy.ops.{MG_OT_GenerateMaze.bl_idname}()")
 
 
 def update_inset(self, context) -> None:
@@ -217,8 +234,8 @@ class MGProperties(PropertyGroup):
         update=update_cell_type
     )
 
-    cell_use_smooth: BoolProperty(
-        name='Smooth Shade Cells',
+    meshes_use_smooth: BoolProperty(
+        name='Smooth Shade Meshes',
         description='Enforce smooth shading everytime the maze is generated',
         default=False,
         update=lambda self, context: MeshManager.update_smooth(self)
