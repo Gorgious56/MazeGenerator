@@ -37,8 +37,6 @@ class GenerateMazeOperator(bpy.types.Operator):
         scene = context.scene
         props = scene.mg_props
 
-        MeshManager.reset()
-
         grid = generate_grid(props)
         props.grid = grid
         grid.mask_cells()

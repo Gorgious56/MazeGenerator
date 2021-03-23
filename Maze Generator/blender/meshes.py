@@ -43,7 +43,7 @@ VERTEX_GROUPS = VG_STAIRS, VG_THICKNESS, VG_LONGEST_PATH
 
 
 class MeshManager:
-    cells = 0
+    # cells = 0
 
     @staticmethod
     def create_vertex_groups(objects):
@@ -146,9 +146,6 @@ class MeshManager:
         for p in props.meshes.walls.polygons:
             p.use_smooth = smooth
 
-    @staticmethod
-    def reset():
-        MeshManager.cells = 0
 
     @staticmethod
     def get_mesh_info(grid, inset, force_outside):
