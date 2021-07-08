@@ -7,7 +7,7 @@ from .ui.panels.main import MazeGeneratorPanel
 
 bl_info = {
     "name": "Maze Generator",
-    "author": "Nathan Hild",
+    "author": "Gorgious",
     "description": "Add-on for generating mazes with a bunch of settings",
     "blender": (2, 83, 0),
     "version": (0, 4, 0),
@@ -17,12 +17,12 @@ bl_info = {
     "doc_url": "https://github.com/Gorgious56/MazeGenerator/blob/master/README.md",
 }
 
-al = auto_load.AutoLoad()
-
-
 def register():
     register_class(MazeGeneratorPanel)
-    al.register()
+    auto_load.init()
+    auto_load.register()
+
 
 def unregister():
-    al.unregister()
+    auto_load.unregister()
+    unregister_class(MazeGeneratorPanel)
