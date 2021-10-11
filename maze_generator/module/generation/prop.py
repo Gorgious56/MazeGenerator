@@ -12,7 +12,7 @@ from bpy.props import (
 from maze_generator.blender.properties.updates import generate_maze
 
 
-class CorePropertyGroup(bpy.types.PropertyGroup):
+class GenerationPropertyGroup(bpy.types.PropertyGroup):
     """
     Property group storing Core Parameters
     """

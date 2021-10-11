@@ -30,7 +30,7 @@ class AlgorithmPropertyGroup(bpy.types.PropertyGroup):
     )
 
     seed: IntProperty(
-        name="Seed", description="This seed will be used to randomize the maze", default=0, min=0, update=generate_maze
+        name="Seed", description="This seed will be used to randomize the maze", default=0, update=generate_maze
     )
 
     bias: FloatProperty(

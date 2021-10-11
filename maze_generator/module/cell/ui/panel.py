@@ -13,11 +13,9 @@ class CellsPanel(bpy.types.Panel):
 
     bl_idname = "MAZE_GENERATOR_PT_CellsPanel"
     bl_label = " "
-    bl_parent_id = "MAZE_GENERATOR_PT_MainPanel"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_category = "MG"
-    order = 2
 
     @classmethod
     def poll(cls, context):

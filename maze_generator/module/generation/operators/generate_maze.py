@@ -12,12 +12,12 @@ from maze_generator.module.algorithm.algorithms import (
 )
 from maze_generator.module.grid.grids import generate_grid
 
-from ...blender.shading.objects import manager as mat_creator
-from ...blender.shading import textures as texture_manager
-from ...blender.objects import get_or_create_and_link_objects, update_wall_visibility
-from ...blender.meshes import MeshManager
-from ...blender.modifiers import manager as modifier_manager
-from ...blender.drivers import manager as driver_manager
+from maze_generator.blender.shading.objects import manager as mat_creator
+from maze_generator.blender.shading import textures as texture_manager
+from maze_generator.blender.objects import get_or_create_and_link_objects, update_wall_visibility
+from maze_generator.blender.meshes import MeshManager
+from maze_generator.blender.modifiers import manager as modifier_manager
+from maze_generator.blender.drivers import manager as driver_manager
 
 
 class MG_OT_GenerateMaze(bpy.types.Operator):

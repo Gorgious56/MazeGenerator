@@ -17,12 +17,9 @@ from bpy.props import (
     IntVectorProperty,
 )
 from maze_generator.module.algorithm.prop import AlgorithmPropertyGroup
-from maze_generator.module.core.prop import CorePropertyGroup
+from maze_generator.module.generation.prop import GenerationPropertyGroup
 from maze_generator.module.display.prop import DisplayPropertyGroup
-from maze_generator.module.interaction.prop import InteractionPropertyGroup
-
-# from .path_properties import PathPropertyGroup
-from ..meshes import MeshManager
+from maze_generator.blender.interaction.prop import InteractionPropertyGroup
 
 from ..objects import (
     update_wall_visibility,
@@ -71,7 +68,7 @@ class MGProperties(PropertyGroup):
 
     grid = None
 
-    core: PointerProperty(type=CorePropertyGroup)
+    generation: PointerProperty(type=GenerationPropertyGroup)
 
     collections: PointerProperty(type=CollectionsPropertyGroup)
     objects: PointerProperty(type=ObjectsPropertyGroup)

@@ -11,7 +11,7 @@ from maze_generator.module.cell.constants import CellType
 
 def setup_modifiers(scene, props) -> None:
     names = props.mod_names
-    ow = props.core.auto_overwrite
+    ow = props.generation.auto_overwrite
     obj_cells = props.objects.cells
     obj_cylinder = props.objects.cylinder
     obj_torus = props.objects.torus

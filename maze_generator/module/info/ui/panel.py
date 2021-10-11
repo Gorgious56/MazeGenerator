@@ -12,11 +12,9 @@ class InfoPanel(bpy.types.Panel):
 
     bl_idname = "MAZE_GENERATOR_PT_InfoPanel"
     bl_label = "Info"
-    bl_parent_id = "MAZE_GENERATOR_PT_MainPanel"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_category = "MG"
-    order = 6
     # bl_options = {"DEFAULT_CLOSED"}
 
     @classmethod

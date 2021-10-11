@@ -2,8 +2,9 @@
 Main file required by Blender Add-on
 """
 from bpy.utils import register_class, unregister_class
-from . import auto_load
-from .ui.panels.main import MazeGeneratorPanel
+from maze_generator import auto_load
+from maze_generator.module.display.ui.panels import panels
+
 
 bl_info = {
     "name": "Maze Generator",
@@ -19,11 +20,13 @@ bl_info = {
 
 
 def register():
-    register_class(MazeGeneratorPanel)
+    for panel in panels:
+        register_class(panel)
     auto_load.init()
     auto_load.register()
 
 
 def unregister():
     auto_load.unregister()
-    unregister_class(MazeGeneratorPanel)
+    for panel in reversed(panels):
+        unregister_class(panel)

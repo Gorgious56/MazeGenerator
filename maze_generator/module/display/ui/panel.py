@@ -3,8 +3,8 @@ Display Panel
 """
 
 import bpy
-from ...blender.shading.nodes import node_from_mat
-from ...blender.shading.objects import cells
+from maze_generator.blender.shading.nodes import node_from_mat
+from maze_generator.blender.shading.objects import cells
 
 
 class DisplayPanel(bpy.types.Panel):
@@ -14,11 +14,9 @@ class DisplayPanel(bpy.types.Panel):
 
     bl_idname = "MAZE_GENERATOR_PT_DisplayPanel"
     bl_label = "Display"
-    bl_parent_id = "MAZE_GENERATOR_PT_MainPanel"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_category = "MG"
-    order = 4
 
     def draw_header(self, context):
         self.layout.label(text="", icon="BRUSH_DATA")

@@ -24,7 +24,7 @@ def __set_cell_material(props) -> None:
     obj_cells = props.objects.cells
     try:
         mat = obj_cells.material_slots[0].material
-        if not props.core.auto_overwrite:
+        if not props.generation.auto_overwrite:
             return
     except IndexError:
         mat = bpy.data.materials.new("mat_cells")
@@ -40,7 +40,7 @@ def __set_cell_contour_material(props) -> None:
     obj_cells = props.objects.cells
     try:
         mat = obj_cells.material_slots[1].material
-        if not props.core.auto_overwrite:
+        if not props.generation.auto_overwrite:
             return
     except IndexError:
         mat = bpy.data.materials.new("mat_cells_contour")
@@ -57,7 +57,7 @@ def __set_cell_contour_material(props) -> None:
 def __create_cell_nodes(props):
     mat = props.display.materials.cell
     nodes = mat.node_tree.nodes
-    # if not already_created or props.core.auto_overwrite:
+    # if not already_created or props.generation.auto_overwrite:
     #     nodes.clear()
     #     mat.blend_method = 'HASHED'
 
@@ -88,7 +88,7 @@ def __create_cell_nodes(props):
     create_node(nodes, NodeNames.sep_rgb, "ShaderNodeSeparateRGB", (-1200, 0))
 
     create_node(nodes, NodeNames.cr_distance, "ShaderNodeValToRGB", (-800, -100))
-    # if not already_created or props.core.auto_overwrite:
+    # if not already_created or props.generation.auto_overwrite:
     try:
         cr_distance = node_from_mat(mat, NodeNames.cr_distance)
         cr_distance.color_ramp.elements[0].color = (0, 1, 0, 1)

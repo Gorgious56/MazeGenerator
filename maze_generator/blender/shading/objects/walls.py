@@ -10,7 +10,7 @@ def set_wall_material(props) -> None:
     obj_walls = props.objects.walls
     try:
         mat = obj_walls.material_slots[0].material
-        if not props.core.auto_overwrite:
+        if not props.generation.auto_overwrite:
             return
     except IndexError:
         mat = bpy.data.materials.new("mat_walls")
