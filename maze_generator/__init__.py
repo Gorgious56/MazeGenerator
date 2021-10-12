@@ -3,7 +3,7 @@ Main file required by Blender Add-on
 """
 from bpy.utils import register_class, unregister_class
 from maze_generator import auto_load
-from maze_generator.module.display.ui.panels import panels
+from maze_generator.blender.ui.panels import panels
 
 
 bl_info = {
