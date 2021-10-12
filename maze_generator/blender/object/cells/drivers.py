@@ -52,7 +52,7 @@ def setup_drivers(scene, props):
             DriverProperties(
                 show,
                 [
-                    DriverVariable("basement", "SCENE", scene, "maze_basement"),
+                    DriverVariable("basement", "SCENE", scene, "mg_props.space_rep_props.basement"),
                     DriverVariable("stairs", "OBJECT", obj_cells, f'modifiers["{names.stairs}"].strength'),
                 ],
                 expression="not basement or stairs == 0",
@@ -116,7 +116,7 @@ def setup_drivers(scene, props):
             DriverProperties(
                 show,
                 [
-                    DriverVariable("maze_basement", "SCENE", scene, "mg_props.maze_basement"),
+                    DriverVariable("maze_basement", "SCENE", scene, "mg_props.space_rep_props.basement"),
                     DriverVariable("stairs", "OBJECT", obj_cells, f'modifiers["{names.stairs}"].strength'),
                 ],
                 expression="maze_basement and stairs != 0",

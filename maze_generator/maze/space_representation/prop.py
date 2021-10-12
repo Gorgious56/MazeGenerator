@@ -44,3 +44,5 @@ class SpaceRepPropertyGroup(bpy.types.PropertyGroup):
         items=generate_space_rep_enum,
         update=generate_maze,
     )
+
+    basement: BoolProperty(name="Equalize Thickness", description="Add a basement to the maze", default=True)

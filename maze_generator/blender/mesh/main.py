@@ -6,22 +6,12 @@ import bmesh
 import random
 from mathutils import Matrix
 from maze_generator.blender.mesh.constants import (
-    VERTEX_GROUPS,
     DISTANCE,
     NEIGHBORS,
-    VG_STAIRS,
-    VG_LONGEST_PATH,
-    VG_THICKNESS,
     GROUP,
 )
 from maze_generator.blender.mesh.prop import VerticesRangeInfo
-from maze_generator.blender.mesh.helper import ensure_vertex_groups_exist
-
-
-def create_vertex_groups(objects):
-    for obj in (objects.cells, objects.walls):
-        ensure_vertex_groups_exist(obj, VERTEX_GROUPS)
-
+from maze_generator.blender.mesh.vertex_groups.helper import get_vertex_group_index
 
 def build_objects(props, grid):
     mesh_cells = props.objects.cells.data
@@ -66,9 +56,10 @@ def build_objects(props, grid):
     bm_cells.verts.ensure_lookup_table()
     bm_walls.verts.ensure_lookup_table()
 
-    vg_stairs_index = VERTEX_GROUPS.index(VG_STAIRS)
-    vg_longest_path_index = VERTEX_GROUPS.index(VG_LONGEST_PATH)
-    vg_thickness_index = VERTEX_GROUPS.index(VG_THICKNESS)
+    vg_props = props.meshes.vertex_groups
+    vg_stairs_index = get_vertex_group_index(props.objects.cells, vg_props.stairs_name)
+    vg_longest_path_index = get_vertex_group_index(props.objects.cells, vg_props.longest_path_name)
+    vg_thickness_index = get_vertex_group_index(props.objects.cells, vg_props.cell_thickness_name)
     for verts_range in stairs_vertex_group:
         _range = verts_range.range
         relative_distance = verts_range.relative_distance

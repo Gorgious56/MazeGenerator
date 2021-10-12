@@ -47,7 +47,7 @@ def setup_drivers(scene, props):
             "space_rep_props.representation",
             f"int(var) == {sr.CYLINDER.value} or int(var) == {sr.MOEBIUS.value}",
         )
-        setup_driver_from_addon_props(obj_walls, names.thickness_disp, show, scene, "maze_basement", "not var")
+        setup_driver_from_addon_props(obj_walls, names.thickness_disp, show, scene, "space_rep_props.basement", "not var")
 
     copy_mod2mod_driver(obj_cells, names.mask, "threshold", obj_walls)
     copy_mod2mod_driver(obj_cells, names.stairs, "strength", obj_walls)

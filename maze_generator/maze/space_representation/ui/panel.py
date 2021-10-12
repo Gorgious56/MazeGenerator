@@ -86,6 +86,8 @@ class SpaceRepresentationPanel(bpy.types.Panel):
                 stairs_mod = obj_cells.modifiers.get(mg_props.mod_names.stairs)
                 if stairs_mod:
                     row.prop(stairs_mod, "strength", text="Stairs")
+                    if stairs_mod.strength != 0:
+                        row.prop(mg_props.space_rep_props, "basement", text="Basement", toggle=True)
 
                 row = layout.row(align=True)
                 tex_disp_mod = obj_cells.modifiers.get("MG_TEX_DISP")

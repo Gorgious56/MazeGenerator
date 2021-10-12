@@ -10,10 +10,13 @@ from maze_generator.blender.object.helper import (
 def get_or_create_and_link_objects(scene) -> None:
     props = scene.mg_props
 
-    col = bpy.data.collections.get("MG_Collection")
+    props_col = props.collections
+    col = props_col.objects
     if not col:
-        col = bpy.data.collections.new(name="MG_Collection")
-    props.collections.objects = col
+        col = bpy.data.collections.get(props_col.objects_name)
+    if not col:
+        col = bpy.data.collections.new(name=props_col.objects_name)
+    props_col.objects = col
     if col.name not in scene.collection.children:
         scene.collection.children.link(col)
 

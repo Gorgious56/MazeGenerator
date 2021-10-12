@@ -8,12 +8,12 @@ from maze_generator.blender.modifier.helper import (
     add_modifier,
     ModifierCreator,
 )
-import maze_generator.blender.mesh.constants as cv
 from maze_generator.maze.cell.constants import CellType
 
 
 def setup_modifiers(scene, props) -> None:
     names = props.mod_names
+    vg_props = props.meshes.vertex_groups
     ow = props.generation.auto_overwrite
     obj_cells = props.objects.cells
     obj_cylinder = props.objects.cylinder
@@ -27,7 +27,7 @@ def setup_modifiers(scene, props) -> None:
             name=names.mask_longest_path,
             properties={
                 "show_viewport": False,
-                "vertex_group": cv.VG_LONGEST_PATH,
+                "vertex_group": vg_props.longest_path_name,
                 "invert_vertex_group": True,
             },
         ),
@@ -35,14 +35,14 @@ def setup_modifiers(scene, props) -> None:
             _type="MASK",
             name=names.mask_sparse,
             properties={
-                "vertex_group": cv.VG_STAIRS,
+                "vertex_group": vg_props.stairs_name,
             },
         ),
         ModifierCreator(
             _type="MASK",
             name=names.mask,
             properties={
-                "vertex_group": cv.VG_STAIRS,
+                "vertex_group": vg_props.stairs_name,
                 "invert_vertex_group": True,
                 "threshold": 1,
             },
@@ -52,7 +52,7 @@ def setup_modifiers(scene, props) -> None:
             name=names.stairs,
             properties={
                 "direction": "Z",
-                "vertex_group": cv.VG_STAIRS,
+                "vertex_group": vg_props.stairs_name,
                 "mid_level": 0,
                 "strength": 0,
             },
@@ -62,7 +62,7 @@ def setup_modifiers(scene, props) -> None:
             name=names.thickness_solid,
             properties={
                 "thickness": 0.000000001,
-                "shell_vertex_group": cv.VG_THICKNESS,
+                "shell_vertex_group": vg_props.cell_thickness_name,
             },
         ),
         ModifierCreator(
@@ -70,7 +70,7 @@ def setup_modifiers(scene, props) -> None:
             name=names.thickness_disp,
             properties={
                 "direction": "Z",
-                "vertex_group": cv.VG_THICKNESS,
+                "vertex_group": vg_props.cell_thickness_name,
                 "mid_level": 0,
                 "strength": 0,
             },
@@ -80,7 +80,7 @@ def setup_modifiers(scene, props) -> None:
             name=names.thickness_shrinkwrap,
             properties={
                 "wrap_method": "PROJECT",
-                "vertex_group": cv.VG_THICKNESS,
+                "vertex_group": vg_props.cell_thickness_name,
                 "use_project_x": False,
                 "use_project_y": False,
                 "use_project_z": True,

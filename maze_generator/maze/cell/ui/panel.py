@@ -35,7 +35,7 @@ class CellsPanel(bpy.types.Panel):
 
         scene = context.scene
         mg_props = scene.mg_props
-    
+
         cell_props = mg_props.cell_props
         cell_enum_icon = {
             CellType.POLAR.value: "MESH_CIRCLE",
@@ -53,15 +53,12 @@ class CellsPanel(bpy.types.Panel):
             cell_wire_mod = obj_cells.modifiers[mg_props.mod_names.wireframe]
             cell_bevel_mod = obj_cells.modifiers[mg_props.mod_names.bevel]
             cell_subdiv_mod = obj_cells.modifiers[mg_props.mod_names.subdiv]
-            cell_stairs = obj_cells.modifiers[mg_props.mod_names.stairs]
         except (ReferenceError, KeyError):
             return
 
         box.prop(mg_props.cell_props, "inset", slider=True, text="Inset")
         row = box.row(align=True)
         row.prop(cell_thickness_mod, "strength", text="Thickness")
-        if cell_stairs.strength != 0:
-            row.prop(mg_props, "maze_basement", text="Basement", toggle=True)
         row = box.row(align=True)
         row.prop(cell_subdiv_mod, "levels", text="Subdiv")
         row.prop(mg_props.cell_props, "cell_decimate", slider=True, text="Decimate", icon="MOD_DECIM")
@@ -93,5 +90,5 @@ class CellsPanel(bpy.types.Panel):
 
         if (cell_wire_mod.thickness > 0 or cell_bevel_mod.width > 0) and mg_props.cell_props.inset < 0.1:
             box.label(text="Set Inset > 0,1", icon="ERROR")
-        if cell_bevel_mod.width > 0 and (cell_thickness_mod.strength == 0 and not mg_props.maze_basement):
+        if cell_bevel_mod.width > 0 and (cell_thickness_mod.strength == 0 and not mg_props.space_rep_props.basement):
             box.label(text="Set Cell Thickness != 0 or Toggle Basement", icon="ERROR")

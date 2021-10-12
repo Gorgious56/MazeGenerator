@@ -127,8 +127,6 @@ class MGProperties(PropertyGroup):
         update=generate_maze,
     )
 
-    maze_basement: BoolProperty(name="Equalize Thickness", description="Add a basement to the maze", default=True)
-
     maze_polar_branch: FloatProperty(
         name="Branch polar grid",
         description="This parameter drives how much the polar grid branches",

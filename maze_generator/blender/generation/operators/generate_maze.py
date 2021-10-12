@@ -16,7 +16,8 @@ from maze_generator.maze.pathfinding.grid import calc_distances
 from maze_generator.blender.shading.material.main import create_materials
 from maze_generator.blender.shading.texture.main import generate_textures
 from maze_generator.blender.modifier.main import setup_modifiers
-from maze_generator.blender.mesh.main import create_vertex_groups, build_objects
+from maze_generator.blender.mesh.main import build_objects
+from maze_generator.blender.mesh.vertex_groups.main import ensure_vertex_groups
 from maze_generator.blender.driver.main import setup_drivers
 from maze_generator.blender.object.main import get_or_create_and_link_objects
 from maze_generator.blender.object.walls.viewport import update_wall_visibility
@@ -47,6 +48,7 @@ class MG_OT_GenerateMaze(bpy.types.Operator):
         return {"FINISHED"}
 
     def generate_maze(self, context) -> None:
+        ao = context.active_object
         scene = context.scene
         props = scene.mg_props
 
@@ -71,10 +73,11 @@ class MG_OT_GenerateMaze(bpy.types.Operator):
 
         calc_distances(grid, props)
 
-        create_vertex_groups(props.objects)
+        ensure_vertex_groups(props.objects, props.meshes.vertex_groups)
         build_objects(props, grid)
 
         setup_modifiers(scene, props)
         setup_drivers(scene, props)
 
         create_materials(scene, props)
+        context.view_layer.objects.active = ao
