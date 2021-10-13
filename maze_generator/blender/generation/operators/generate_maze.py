@@ -22,6 +22,8 @@ from maze_generator.blender.driver.main import setup_drivers
 from maze_generator.blender.object.main import get_or_create_and_link_objects
 from maze_generator.blender.object.walls.viewport import update_wall_visibility
 
+from maze_generator.blender.preferences.helper import get_preferences
+
 
 class MG_OT_GenerateMaze(bpy.types.Operator):
     """Generate a new maze"""
@@ -48,6 +50,7 @@ class MG_OT_GenerateMaze(bpy.types.Operator):
         return {"FINISHED"}
 
     def generate_maze(self, context) -> None:
+        addon_prefs = get_preferences(context)
         ao = context.active_object
         scene = context.scene
         props = scene.mg_props
@@ -66,17 +69,17 @@ class MG_OT_GenerateMaze(bpy.types.Operator):
         grid.sparse_dead_ends(props.algorithm.sparse_dead_ends, props.algorithm.seed)
         grid.braid_dead_ends(100 - props.algorithm.keep_dead_ends, props.algorithm.seed)
 
-        get_or_create_and_link_objects(scene)
+        get_or_create_and_link_objects(scene, addon_prefs)
         update_wall_visibility(props, is_algo_weaved(props))
 
         generate_textures(bpy.data.textures, props)
 
         calc_distances(grid, props)
 
-        ensure_vertex_groups(props.objects, props.meshes.vertex_groups)
-        build_objects(props, grid)
+        ensure_vertex_groups(props.objects, addon_prefs.vertex_groups_names)
+        build_objects(props, addon_prefs, grid)
 
-        setup_modifiers(scene, props)
+        setup_modifiers(scene, props, addon_prefs)
         setup_drivers(scene, props)
 
         create_materials(scene, props)

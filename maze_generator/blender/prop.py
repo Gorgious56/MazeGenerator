@@ -18,7 +18,7 @@ from bpy.props import (
 )
 from maze_generator.blender.generation.prop import GenerationPropertyGroup
 from maze_generator.blender.shading.prop import DisplayPropertyGroup
-from  maze_generator.blender.shading.texture.prop import TexturesPropertyGroup
+from maze_generator.blender.shading.texture.prop import TexturesPropertyGroup
 from maze_generator.blender.interaction.prop import InteractionPropertyGroup
 from maze_generator.blender.object.prop import ObjectsPropertyGroup
 from maze_generator.blender.object.walls.viewport import update_wall_visibility

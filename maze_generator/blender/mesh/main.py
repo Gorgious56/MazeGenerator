@@ -13,7 +13,7 @@ from maze_generator.blender.mesh.constants import (
 from maze_generator.blender.mesh.prop import VerticesRangeInfo
 from maze_generator.blender.mesh.vertex_groups.helper import get_vertex_group_index
 
-def build_objects(props, grid):
+def build_objects(props, preferences, grid):
     mesh_cells = props.objects.cells.data
     mesh_walls = props.objects.walls.data
 
@@ -56,7 +56,7 @@ def build_objects(props, grid):
     bm_cells.verts.ensure_lookup_table()
     bm_walls.verts.ensure_lookup_table()
 
-    vg_props = props.meshes.vertex_groups
+    vg_props = preferences.vertex_groups_names
     vg_stairs_index = get_vertex_group_index(props.objects.cells, vg_props.stairs_name)
     vg_longest_path_index = get_vertex_group_index(props.objects.cells, vg_props.longest_path_name)
     vg_thickness_index = get_vertex_group_index(props.objects.cells, vg_props.cell_thickness_name)

@@ -11,3 +11,7 @@ class ObjectsPropertyGroup(bpy.types.PropertyGroup):
     cylinder: bpy.props.PointerProperty(name="Cylinder Object", type=bpy.types.Object)
     torus: bpy.props.PointerProperty(name="Torus Object", type=bpy.types.Object)
     thickness_shrinkwrap: bpy.props.PointerProperty(name="Empty Object helping shrinkwrapping", type=bpy.types.Object)
+
+    @property
+    def all(self):
+        return (self.wall, self.cells, self.cylinder, self.torus, self.thickness_shrinkwrap)

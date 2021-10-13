@@ -1,8 +1,7 @@
 from maze_generator.blender.info.ui.panel import InfoPanel
-from maze_generator.blender.shading.ui.panel import DisplayPanel
 from maze_generator.blender.object.walls.ui.panel import WallsPanel
 from maze_generator.blender.generation.ui.panel import MazeGeneratorPanel
-from maze_generator.maze.cell.ui.panel import CellsPanel
+from maze_generator.blender.object.cells.ui.panel import CellsPanel
 from maze_generator.maze.grid.ui.panel import ParametersPanel
 from maze_generator.maze.pathfinding.ui.panel import PathPanel
 from maze_generator.maze.algorithm.ui.panel import AlgorithmPanel
@@ -15,7 +14,6 @@ panels = (
     SpaceRepresentationPanel,
     CellsPanel,
     WallsPanel,
-    DisplayPanel,
     PathPanel,
     InfoPanel,
 )

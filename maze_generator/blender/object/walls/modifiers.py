@@ -11,9 +11,9 @@ from maze_generator.blender.modifier.helper import (
 from maze_generator.maze.cell.constants import CellType
 
 
-def setup_modifiers(scene, props) -> None:
+def setup_modifiers(scene, props, preferences) -> None:
     names = props.mod_names
-    vg_props = props.meshes.vertex_groups
+    vg_props = preferences.vertex_groups_names
     ow = props.generation.auto_overwrite
     obj_walls = props.objects.walls
     obj_cells = props.objects.cells

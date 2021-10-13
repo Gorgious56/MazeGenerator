@@ -15,3 +15,12 @@ def link_objects_to_collection(
                 col.objects.unlink(obj)
         if obj.name not in new_col.objects:
             new_col.objects.link(obj)
+
+
+def get_or_create_collection(scene: bpy.types.Scene, name: str) -> bpy.types.Collection:
+    col = bpy.data.collections.get(name)
+    if not col:
+        col = bpy.data.collections.new(name)
+    if col.name not in scene.collection.children:
+        scene.collection.children.link(col)
+    return col

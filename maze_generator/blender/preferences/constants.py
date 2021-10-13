@@ -1,0 +1,1 @@
+addon_name = "maze_generator"

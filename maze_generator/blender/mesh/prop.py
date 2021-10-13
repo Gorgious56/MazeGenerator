@@ -1,6 +1,5 @@
 import bpy
 from maze_generator.blender.mesh.helper import update_mesh_smooth
-from maze_generator.blender.mesh.vertex_groups.prop import VertexGroupsPropertyGroup
 
 def update_smooth_all_meshes(self):
     for mesh in (self.cells, self.walls):
@@ -14,7 +13,6 @@ class MeshesPropertyGroup(bpy.types.PropertyGroup):
 
     walls: bpy.props.PointerProperty(name="Wall Mesh", type=bpy.types.Mesh)
     cells: bpy.props.PointerProperty(name="Cells Mesh", type=bpy.types.Mesh)
-    vertex_groups: bpy.props.PointerProperty(name="vertex Groups", type=VertexGroupsPropertyGroup)
 
     use_smooth: bpy.props.BoolProperty(
         name="Smooth Shade Meshes",

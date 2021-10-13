@@ -27,6 +27,20 @@ class PathPanel(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
+        mg_props = context.scene.mg_props
+
+        row = layout.row(align=True)
+        row.prop(mg_props.display, "show_longest_path", text="Display Solution", toggle=True)
+        obj_cells = mg_props.objects.cells
+        if obj_cells:
+            try:  # TODO get rid of try/except
+                longest_path_mask_mod = obj_cells.modifiers.get(mg_props.mod_names.mask_longest_path)
+                if longest_path_mask_mod:
+                    row_2 = row.row()
+                    row_2.prop(longest_path_mask_mod, "show_viewport", text="", icon="HIDE_OFF")
+                    row_2.enabled = mg_props.display.show_longest_path
+            except ReferenceError:
+                pass
 
         scene = context.scene
         mg_props = scene.mg_props
