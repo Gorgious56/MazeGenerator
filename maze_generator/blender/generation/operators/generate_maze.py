@@ -24,6 +24,8 @@ from maze_generator.blender.object.walls.viewport import update_wall_visibility
 
 from maze_generator.blender.preferences.helper import get_preferences
 
+from maze_generator.maze.grid.grids import grid_test
+
 
 class MG_OT_GenerateMaze(bpy.types.Operator):
     """Generate a new maze"""
@@ -59,7 +61,7 @@ class MG_OT_GenerateMaze(bpy.types.Operator):
         props.grid = grid
         grid.mask_cells()
         grid.prepare_grid()
-        grid.init_cells_neighbors()
+        # grid.init_cells_neighbors()
         grid.prepare_union_find()
 
         if is_algo_incompatible(props):
@@ -74,9 +76,9 @@ class MG_OT_GenerateMaze(bpy.types.Operator):
 
         generate_textures(bpy.data.textures, props)
 
-        calc_distances(grid, props)
+        # calc_distances(grid, props)
 
-        ensure_vertex_groups(props.objects, addon_prefs.vertex_groups_names)
+        # ensure_vertex_groups(props.objects, addon_prefs.vertex_groups_names)
         build_objects(props, addon_prefs, grid)
 
         setup_modifiers(scene, props, addon_prefs)

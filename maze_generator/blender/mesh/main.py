@@ -4,7 +4,7 @@ Contains definitions and methods to store and access Meshes
 
 import bmesh
 import random
-from mathutils import Matrix
+from mathutils import Matrix, Vector
 from maze_generator.blender.mesh.constants import (
     DISTANCE,
     NEIGHBORS,
@@ -12,6 +12,7 @@ from maze_generator.blender.mesh.constants import (
 )
 from maze_generator.blender.mesh.prop import VerticesRangeInfo
 from maze_generator.blender.mesh.vertex_groups.helper import get_vertex_group_index
+
 
 def build_objects(props, preferences, grid):
     mesh_cells = props.objects.cells.data
@@ -25,7 +26,7 @@ def build_objects(props, preferences, grid):
     mesh_cells.from_pydata(cells_corners, [], cells_faces)
     mesh_walls.clear_geometry()
     mesh_walls.from_pydata(cells_corners, walls_edges, [])
-
+    return
     bm_cells = bmesh.new()
     bm_cells.from_mesh(mesh_cells)
 
@@ -96,57 +97,74 @@ def build_objects(props, preferences, grid):
 
 
 def get_mesh_info(grid, inset, force_outside):
-    all_cells = grid.all_cells
-    verts = grid.verts
+    verts = []
+    offset = 0
 
     ranges_info = []
     faces = []
     walls_edges = []
-    max_distance = grid.distances.max[1]
+    # max_distance = grid.distances.max[1]
     longest_path = grid.longest_path
 
     exit_cells = (getattr(grid, "start_cell", -1), getattr(grid, "end_cell", -1))
+    verts_indices = []
 
-    for c in all_cells:
-        verts_indices = range(c.first_vert_index, c.first_vert_index + c.corners)
+    neighbors_return = (2, 3, 0, 1)
+    half_neighbors = grid.half_neighbors
+    for c_idx, cell in enumerate(grid.cells_np):
+        if cell.sum() == 0:
+            verts_indices.append(None)
+            offset += grid.corners
+            continue
 
-        faces.append(verts_indices)
-        this_distance = grid.distances[c]
-        ranges_info.append(
-            VerticesRangeInfo(
-                _range=verts_indices,
-                relative_distance=(this_distance / max_distance) if this_distance else -1,
-                is_longest_path=0 if c in longest_path else 1,
-                # TODO : use pointer to cell if no other info is required :
-                cell_group=c.group,
-                links=len(c.links),
-            )
-        )
-        half_neighbors = c.half_neighbors
-        for direction, w in enumerate(c.get_wall_mask()):
-            if w and direction < len(verts_indices):
-                if c in exit_cells and not c.get_neighbor_towards(direction):
+        verts.extend(grid.get_cell_info(c_idx))
+        first_index = c_idx * 4 - offset
+        verts_indices.append(range(first_index, first_index + 4))
+        faces.append(verts_indices[-1])
+        # faces.append(verts_indices)
+        # this_distance = grid.distances[c]
+        # ranges_info.append(
+        #     VerticesRangeInfo(
+        #         _range=verts_indices,
+        #         relative_distance=(this_distance / max_distance) if this_distance else -1,
+        #         is_longest_path=0 if c in longest_path else 1,
+        #         # TODO : use pointer to cell if no other info is required :
+        #         cell_group=c.group,
+        #         links=len(c.links),
+        #     )
+        # )
+
+    for c_idx, cell in enumerate(grid.cells_np):
+        current_verts_indices = verts_indices[c_idx]
+        if current_verts_indices is None:
+            continue
+        for direction, link in enumerate(grid.cells_np[c_idx]):
+            if not link and direction < len(current_verts_indices):
+                if c_idx in exit_cells and not c_idx.get_neighbor_towards(direction):
                     continue
-                walls_edges.append((verts_indices[direction], verts_indices[(direction + 1) % c.corners]))
-            elif not w and direction in half_neighbors:
-                n = c.get_neighbor_towards(direction)
+                walls_edges.append(
+                    (current_verts_indices[direction], current_verts_indices[(direction + 1) % grid.corners])
+                )
+            elif link and direction in half_neighbors:
+                n = grid.get_neighbor_towards(c_idx, direction)
                 if not n:
                     continue
-                neighbor_indices = range(n.first_vert_index, n.first_vert_index + n.corners)
+                neighbor_indices = verts_indices[n]
                 first_idx = direction
-                second_idx = c.get_neighbor_return(direction)
+                second_idx = neighbors_return[direction]
+                # second_idx = grid.get_neighbor_return(c_idx, direction)
 
                 faces.append(
                     (
-                        verts_indices[first_idx],
-                        neighbor_indices[(second_idx + 1) % n.corners],
+                        current_verts_indices[first_idx],
+                        neighbor_indices[(second_idx + 1) % grid.corners],
                         neighbor_indices[second_idx],
-                        verts_indices[(first_idx + 1) % c.corners],
+                        current_verts_indices[(first_idx + 1) % grid.corners],
                     )
                 )
                 if not inset:
                     continue
-                walls_edges.append((verts_indices[first_idx], neighbor_indices[(second_idx + 1) % n.corners]))
-                walls_edges.append((verts_indices[(first_idx + 1) % c.corners], neighbor_indices[second_idx]))
+                walls_edges.append((current_verts_indices[first_idx], neighbor_indices[(second_idx + 1) % grid.corners]))
+                walls_edges.append((current_verts_indices[(first_idx + 1) % grid.corners], neighbor_indices[second_idx]))
 
     return verts, faces, ranges_info, walls_edges

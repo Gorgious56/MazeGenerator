@@ -33,13 +33,6 @@ def setup_modifiers(scene, props, preferences) -> None:
         ),
         ModifierCreator(
             _type="MASK",
-            name=names.mask_sparse,
-            properties={
-                "vertex_group": vg_props.stairs_name,
-            },
-        ),
-        ModifierCreator(
-            _type="MASK",
             name=names.mask,
             properties={
                 "vertex_group": vg_props.stairs_name,

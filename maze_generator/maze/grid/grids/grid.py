@@ -2,7 +2,7 @@
 Handles data access and modifications relative to a maze's grid
 """
 
-
+import numpy as np
 import random
 from typing import Iterable, Tuple, List, Generator
 from mathutils import Vector
@@ -34,7 +34,7 @@ class Grid:
         warp_horiz=False,
         warp_vert=False,
     ) -> None:
-        self.rows: int = rows
+        self.rows = rows
         self.columns = columns
         self.levels = levels
         if init_cells:
@@ -64,6 +64,30 @@ class Grid:
 
         self.warp_horiz = warp_horiz
         self.warp_vert = warp_vert
+
+        self.shape = (rows, columns)
+        self.corners = 4
+        self.half_neighbors = (0, 1)
+        self.cells_np = np.zeros(rows * columns * self.corners, dtype=np.bool)
+        self.cells_np.shape = (rows * columns, self.corners)
+        self.neighbor_indices = np.empty(rows * columns * self.corners, dtype=np.int)
+        self.neighbor_indices.fill(-1)
+        self.neighbor_indices.shape = (rows * columns, self.corners)
+
+        for index in range(self.shape[0] * self.shape[1]):
+            neighbor_indices = self.neighbor_indices[index]
+
+            if index < self.shape[0] * (self.shape[1] - 1):
+                neighbor_indices[0] = index + self.shape[0]
+
+            if index % self.shape[0] != 0:
+                neighbor_indices[1] = index - 1
+
+            if index >= self.shape[0]:
+                neighbor_indices[2] = index - self.shape[0]
+
+            if index % self.shape[0] != self.shape[0] - 1:
+                neighbor_indices[3] = index + 1
 
     def __delitem__(self, key):
         del self._cells[key[0] + key[1] * self.columns]
@@ -112,6 +136,27 @@ class Grid:
                 )
                 for mask_patch in self.mask
             ]
+
+    def get_neighbor_towards(self, index, direction):
+        return self.neighbor_indices[index][direction]
+
+    def get_neighbor_return(self, _index, direction):
+        n = self.neighbor_indices[_index][direction]
+        return index(self.neighbor_indices[n], _index)
+
+    def get_cell_info(self, index):
+        size = self.cell_size
+        column = index % self.shape[0]
+        row = index // self.shape[0]
+        center = Vector((column, row, 0))
+
+        verts = (
+            center + Vector((size / 2, size / 2, 0)),
+            center + Vector((-size / 2, size / 2, 0)),
+            center + Vector((-size / 2, -size / 2, 0)),
+            center + Vector((size / 2, -size / 2, 0)),
+        )
+        return verts
 
     def create_cell(self, row, column, level) -> Cell:
         size = self.cell_size
@@ -177,7 +222,8 @@ class Grid:
                 self[c, r] = 0
 
     def get_linked_cells(self) -> List[Cell]:
-        return [c for c in self.all_cells if c.has_any_link()]
+        # TODO numpy ?
+        return [c for c in self.cells_np if c.any()]
 
     def mask_cell(self, column: int, row: int) -> None:
         c = self[column, row]
@@ -191,9 +237,16 @@ class Grid:
         if _seed:
             random.seed(_seed)
         try:
-            return random.choice(self.all_cells)
+            return random.randrange(self.shape[0] * self.shape[1])
+            # return random.choice(self.all_cells)
         except IndexError:
             return None
+
+    def get_random_neighbor(self, index):
+        return random.choice([c for c in self.neighbor_indices[index] if c >= 0])
+
+    def has_any_link(self, index):
+        return self.cells_np[index].any()
 
     def get_random_linked_cell(self, _seed: int = None) -> Cell:
         if _seed:
@@ -211,7 +264,9 @@ class Grid:
         for level in range(self.levels):
             for r in range(self.rows):
                 yield [
-                    c for c in self._cells[r * cols + level * self.size_2D : (r + 1) * cols + level * self.size_2D] if c
+                    c
+                    for c in self._cells[r * cols + level * self.size_2D : (r + 1) * cols + level * self.size_2D]
+                    if c
                 ]
 
     def each_level(self) -> Generator[List[Cell], None, None]:
@@ -227,7 +282,11 @@ class Grid:
 
     @property
     def all_cells(self) -> List[Cell]:
-        return [c for c in self._cells if c]
+        return range(0, self.shape[0] * self.shape[1])
+
+    @property
+    def all_cells_indices(self) -> List[int]:
+        return range(0, self.shape[0] * self.shape[1])
 
     @property
     def all_cells_with_a_link(self) -> List[Cell]:
@@ -237,12 +296,12 @@ class Grid:
         self.dead_ends = []
         self.max_links_per_cell = 0
         self.groups = set()
-        for c in self.all_cells:
-            links = len(c.links)
+        for i, c in enumerate(self.cells_np):
+            links = c.sum()
             if links == 1:
-                self.dead_ends.append(c)
+                self.dead_ends.append(i)
             self.max_links_per_cell = max(links, self.max_links_per_cell)
-            self.groups.add(c.group)
+            # self.groups.add(c.group)
 
     def sparse_dead_ends(self, sparse: int = 0, _seed: int = None) -> None:
         """
@@ -256,20 +315,24 @@ class Grid:
         max_cells_to_cull = len(self.get_linked_cells()) * (sparse / 100) - 2
         culled_cells = 0
         while culled_cells < max_cells_to_cull:
-            self.dead_ends = [c for c in self.all_cells if c and len(c.links) == 1]
             if not any(self.dead_ends):
-                return
+                self.dead_ends = [i for i, c in enumerate(self.cells_np) if c.sum() == 1]
+                if not any(self.dead_ends):
+                    return
             random.shuffle(self.dead_ends)
-            for c in self.dead_ends:
-                try:
-                    c.unlink(next(iter(c.links)))
-                    # self.dead_ends.remove(c)
-                    culled_cells += 1
-                    if culled_cells >= max_cells_to_cull:
-                        return
-                except (StopIteration, AttributeError):
-                    # self.dead_ends.remove(c)
-                    pass
+            while self.dead_ends:
+                c = self.dead_ends.pop(0)
+                self.unlink(c)
+                culled_cells += 1
+                if culled_cells >= max_cells_to_cull:
+                    return
+
+    def unlink(self, cell_a, cell_b=None):
+        if cell_b is None:  # We're unlinking a dead-end
+            link_to_unlink = index(self.cells_np[cell_a], True)
+            self.cells_np[cell_a][link_to_unlink] = False
+            cell_b = self.neighbor_indices[cell_a][link_to_unlink]
+            self.cells_np[cell_b][index(self.neighbor_indices[cell_b], cell_a)] = False
 
     def braid_dead_ends(self, braid: int = 0, _seed: int = None) -> int:
         """
@@ -316,10 +379,16 @@ class Grid:
         return start_cell, end_cell
 
     def link(self, cell_a, cell_b, bidirectional=True):
+        neighbor_index_a = index(self.neighbor_indices[cell_a], cell_b)
+        self.cells_np[cell_a][neighbor_index_a] = True
+        neighbor_index_b = index(self.neighbor_indices[cell_b], cell_a)
+        self.cells_np[cell_b][neighbor_index_b] = True
+        return
         linked_cells = cell_a.link(cell_b, bidirectional)
         if linked_cells and all(linked_cells):
             self._union_find.union(linked_cells[0], linked_cells[1])
         return linked_cells
 
-    def unlink(self, cell_a, cell_b):
-        cell_a.unlink(cell_b)
+
+def index(array, item):
+    return np.where(array == item)[0][0]

@@ -18,6 +18,7 @@ from .growing_tree import GrowingTree
 from .hunt_and_kill import HuntAndKill
 from .recursive_backtracker import RecursiveBacktracker
 from .aldous_broder import AldousBroder
+from .aldous_broder_copy import AldousBroderCopy
 from .recursive_division import RecursiveDivision
 from .recursive_voronoi_division import RecursiveVoronoiDivision
 from .voronoi_division import VoronoiDivision

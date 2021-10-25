@@ -8,7 +8,7 @@ from maze_generator.maze.constants import grid_logic as cst
 
 
 class Cell(object):
-    """Base class for representing a square cell
+    """Base class for representing a cell
 
     column : Horizontal axis position in the grid
     row: Vertical axis position in the grid
