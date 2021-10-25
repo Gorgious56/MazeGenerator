@@ -189,5 +189,4 @@ class GridPolar(Grid):
         cols_this_row = self.get_columns_this_row(last_row)
         start_cell = self[random.randint(0, cols_this_row), self.rows - 1]
         end_cell = self[int(start_cell.column + cols_this_row / 2) % cols_this_row, self.rows - 1]
-        print(start_cell, end_cell)
         return start_cell, end_cell
