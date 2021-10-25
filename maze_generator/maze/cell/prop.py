@@ -23,7 +23,6 @@ def update_cell_type(self, context: bpy.types.Context) -> None:
             reset_enum = False
             break
     if reset_enum:
-        print("Do not worry about these warnings.")
         context.mg_props.space_rep_props["representation"] = SpaceRepresentation.PLANE.value
     generate_maze(self, context)
 
