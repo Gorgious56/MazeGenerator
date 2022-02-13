@@ -1,9 +1,9 @@
-"""
-Main file required by Blender Add-on
-"""
-from bpy.utils import register_class, unregister_class
-from maze_generator import auto_load
-from maze_generator.blender.ui.panels import panels
+# """
+# Main file required by Blender Add-on
+# """
+# from bpy.utils import register_class, unregister_class
+# from maze_generator import auto_load
+# from maze_generator.blender.ui.panels import panels
 
 
 bl_info = {
@@ -20,13 +20,25 @@ bl_info = {
 
 
 def register():
-    for panel in panels:
-        register_class(panel)
-    auto_load.init()
-    auto_load.register()
+    pass
+#     try:
+#         import numpy
+#     except ModuleNotFoundError:
+#         import subprocess
+#         import sys
+
+#         py_exec = str(sys.executable)
+#         subprocess.call([py_exec, "-m", "ensurepip", "--user"])
+#         subprocess.call([py_exec, "-m", "pip", "install", f"--target={py_exec[:-14]}" + "lib", "scipy"])
+
+#     for panel in panels:
+#         register_class(panel)
+#     auto_load.init()
+#     auto_load.register()
 
 
 def unregister():
-    auto_load.unregister()
-    for panel in reversed(panels):
-        unregister_class(panel)
+    pass
+#     auto_load.unregister()
+#     for panel in reversed(panels):
+#         unregister_class(panel)

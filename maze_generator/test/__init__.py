@@ -1,0 +1,2 @@
+# python -m unittest discover maze_generator/test
+# & C:/Users/NH/AppData/Local/Programs/Python/Python310/python.exe "d:/DRIVE/CREATION/BLENDER/DEV/ADDONS/Maze Generator/maze_generator/test/blender/test_maze.py"

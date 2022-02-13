@@ -37,7 +37,7 @@ class SampleManager:
         for prop in mg_props.__annotations__:
             prop_save[prop] = getattr(mg_props, prop)
 
-        mg_props.maze_columns = mg_props.maze_rows = 10
+        mg_props.maze.columns = mg_props.maze.rows = 10
 
         obj_cells = mg_props.objects.cells
         current_x = 0
@@ -165,5 +165,5 @@ class SampleManager:
         # print(mg_props.__annotations__)
         # for attr in mg_props.bl_rna:
         #     print(attr)
-        # columns_start = mg_props.maze_columns
-        # columns_start = mg_props.maze_columns
+        # columns_start = mg_props.maze.columns
+        # columns_start = mg_props.maze.columns
