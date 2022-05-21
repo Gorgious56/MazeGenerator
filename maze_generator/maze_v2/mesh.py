@@ -7,17 +7,6 @@ class MazeMesh:
         self.maze = maze
         self.mesh = None
 
-    def center_mesh(self):
-        if not self.mesh.vertices:
-            return
-        min_vert_x = min(self.mesh.vertices, key=lambda v: v.co[0]).co[0]
-        min_vert_y = min(self.mesh.vertices, key=lambda v: v.co[1]).co[1]
-        max_vert_x = max(self.mesh.vertices, key=lambda v: v.co[0]).co[0]
-        max_vert_y = max(self.mesh.vertices, key=lambda v: v.co[1]).co[1]
-        delta = Vector(((max_vert_x + min_vert_x) / 2, (max_vert_y + min_vert_y) / 2, 0))
-        for vert in self.mesh.vertices:
-            vert.co -= delta
-
     def create_mesh(self):
         self.mesh = bpy.data.meshes.new("mesh")
 
@@ -28,8 +17,8 @@ class MazeMesh:
             faces = ()
         if self.mesh is None:
             self.create_mesh()
+        self.mesh.clear_geometry()
         self.mesh.from_pydata(verts, edges, faces)
-        self.center_mesh()
 
     def create_a_mesh_where_cells_are_connected_by_edges(self) -> None:
         graph = self.maze.graph

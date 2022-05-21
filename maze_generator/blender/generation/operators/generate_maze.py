@@ -25,13 +25,20 @@ from maze_generator.blender.object.walls.viewport import update_wall_visibility
 from maze_generator.blender.preferences.helper import get_preferences
 import random
 
+from maze_generator.blender.object.tool import get_or_create
+from maze_generator.blender.geometry_nodes.factory.main import ensure_gn_modifier, ensure_gn_tree
+from maze_generator.blender.mesh.factory import ensure_test_mesh
 
-class MG_OT_GenerateMaze(bpy.types.Operator):
-    """Generate a new maze"""
 
-    bl_idname = "maze.generate"
-    bl_label = "Generate Maze"
-    bl_options = {"UNDO"}
+from maze_generator.maze_v2 import maze as maze_creator
+from maze_generator.maze_v2.mesh import MazeMesh
+
+
+class MG_OT_maze_generate(bpy.types.Operator):
+    bl_idname: str = "mg.maze_generate"
+    bl_label: str = "Generate Maze"
+    bl_description: str = "Generate a new maze"
+    bl_options: set[str] = {"UNDO"}
 
     @classmethod
     def poll(cls, context):
@@ -51,38 +58,53 @@ class MG_OT_GenerateMaze(bpy.types.Operator):
         return {"FINISHED"}
 
     def generate_maze(self, context) -> None:
-        addon_prefs = get_preferences(context)
-        ao = context.active_object
+        obj = get_or_create("MG_test")
+        mesh = obj.data
+        # ensure_test_mesh(mesh)
+        mod = ensure_gn_modifier(obj, "MG_Modifier")
+        ensure_gn_tree(mod)
+
+        # addon_prefs = get_preferences(context)
+        # ao = context.active_object
         scene = context.scene
         props = scene.mg_props
         random.seed(props.algorithm.seed)
+        
+        maze = maze_creator.new_grid(props.maze.rows_or_radius, props.maze.columns)
+        maze.algorithm.run()
 
-        grid = generate_grid(props)
-        props.grid = grid
-        grid.mask_cells()
-        grid.prepare_grid()
-        # grid.init_cells_neighbors()
-        grid.prepare_union_find()
+        maze_mesh = MazeMesh(maze)
+        maze_mesh.mesh = mesh
+        # maze_mesh.create_a_mesh_where_points_with_rotation_attribute_define_walls()
+        maze_mesh.create_a_mesh_where_edges_define_walls()
 
-        if is_algo_incompatible(props):
-            return
-        work(grid, props)
-        grid.calc_state()
-        grid.sparse_dead_ends(props.algorithm.sparse_dead_ends, props.algorithm.seed)
-        grid.braid_dead_ends(100 - props.algorithm.keep_dead_ends, props.algorithm.seed)
+        # grid = generate_grid(props)
+        # props.grid = grid
+        # grid.mask_cells()
+        # grid.prepare_grid()
 
-        get_or_create_and_link_objects(scene, addon_prefs)
-        update_wall_visibility(props, is_algo_weaved(props))
+        # grid.prepare_union_find()
 
-        generate_textures(bpy.data.textures, props)
+        # if is_algo_incompatible(props):
+        #     return
+
+        # work(grid, props)
+        # grid.calc_state()
+        # grid.sparse_dead_ends(props.algorithm.sparse_dead_ends, props.algorithm.seed)
+        # grid.braid_dead_ends(100 - props.algorithm.keep_dead_ends, props.algorithm.seed)
+
+        # get_or_create_and_link_objects(scene, addon_prefs)
+        # update_wall_visibility(props, is_algo_weaved(props))
+
+        # generate_textures(bpy.data.textures, props)
 
         # calc_distances(grid, props)
 
         # ensure_vertex_groups(props.objects, addon_prefs.vertex_groups_names)
-        build_objects(props, addon_prefs, grid)
+        # build_objects(props, addon_prefs, grid)
 
-        setup_modifiers(scene, props, addon_prefs)
-        setup_drivers(scene, props)
+        # setup_modifiers(scene, props, addon_prefs)
+        # setup_drivers(scene, props)
 
-        create_materials(scene, props)
-        context.view_layer.objects.active = ao
+        # create_materials(scene, props)
+        # context.view_layer.objects.active = ao

@@ -4,7 +4,7 @@ Main Panel
 
 
 import bpy
-from maze_generator.blender.generation.operators.generate_maze import MG_OT_GenerateMaze
+from maze_generator.blender.generation.operators.generate_maze import MG_OT_maze_generate
 
 
 class MazeGeneratorPanel(bpy.types.Panel):
@@ -27,7 +27,7 @@ class MazeGeneratorPanel(bpy.types.Panel):
         row = layout.row(align=True)
         row.scale_y = 2
         sub = row.row(align=True)
-        sub.operator(MG_OT_GenerateMaze.bl_idname, icon="VIEW_ORTHO")
+        sub.operator(MG_OT_maze_generate.bl_idname, icon="VIEW_ORTHO")
         sub.scale_x = 10.0
 
         sub = row.row(align=True)

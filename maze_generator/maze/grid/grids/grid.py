@@ -3,6 +3,8 @@ Handles data access and modifications relative to a maze's grid
 """
 
 import numpy as np
+import operator
+from scipy.spatial import Voronoi
 import random
 from typing import Iterable, Tuple, List, Generator
 from mathutils import Vector
@@ -15,7 +17,9 @@ from maze_generator.maze.constants import grid_logic as cst
 from maze_generator.helper import (
     union_find,
     event,
+    graph,
 )
+import time
 
 
 class Grid:
@@ -33,14 +37,12 @@ class Grid:
         init_cells=True,
         warp_horiz=False,
         warp_vert=False,
+        random_cells: int = 0,
     ) -> None:
-        self.rows = rows
-        self.columns = columns
-        self.levels = levels
-        if init_cells:
-            self._cells = [None] * (rows * columns * levels)
-        self.size = rows * columns * levels
-        self.size_2D = rows * columns
+        self.random_cells = random_cells
+        self.shape = (columns, rows, levels)
+        self.size = self.shape[0] * self.shape[1] * self.shape[2]
+        self.size_2D = self.shape[0] * self.shape[1]
         self.masked_cells = 0  # This container is used in some algorithms.
         # self.space_rep = space_rep
 
@@ -56,74 +58,22 @@ class Grid:
 
         self.cell_size = cell_size
 
-        # self.verts_indices = {}
         self.new_cell_evt = event.EventHandler(event.Event("New Cell"), self)
 
         self._union_find = None
-        self.verts = []
 
         self.warp_horiz = warp_horiz
         self.warp_vert = warp_vert
 
-        self.shape = (rows, columns)
         self.corners = 4
         self.half_neighbors = (0, 1)
-        self.cells_np = np.zeros(rows * columns * self.corners, dtype=np.bool)
-        self.cells_np.shape = (rows * columns, self.corners)
-        self.neighbor_indices = np.empty(rows * columns * self.corners, dtype=np.int)
-        self.neighbor_indices.fill(-1)
-        self.neighbor_indices.shape = (rows * columns, self.corners)
-
-        for index in range(self.shape[0] * self.shape[1]):
-            neighbor_indices = self.neighbor_indices[index]
-
-            if index < self.shape[0] * (self.shape[1] - 1):
-                neighbor_indices[0] = index + self.shape[0]
-
-            if index % self.shape[0] != 0:
-                neighbor_indices[1] = index - 1
-
-            if index >= self.shape[0]:
-                neighbor_indices[2] = index - self.shape[0]
-
-            if index % self.shape[0] != self.shape[0] - 1:
-                neighbor_indices[3] = index + 1
-
-    def __delitem__(self, key):
-        del self._cells[key[0] + key[1] * self.columns]
-
-    def __getitem__(self, key):
-        key = list(key)
-        if len(key) == 2:
-            key.append(0)
-        if self.warp_horiz:
-            if key[0] == -1:
-                key[0] = self.columns - 1
-            elif key[0] == self.columns:
-                key[0] = 0
-            if self.warp_vert:
-                if key[1] == -1:
-                    key[1] = self.rows - 1
-                elif key[1] == self.rows:
-                    key[1] = 0
-        return (
-            self._cells[key[0] + key[1] * self.columns + key[2] * self.size_2D]
-            if (self.columns > key[0] >= 0 and self.rows > key[1] >= 0 and self.levels > key[2] >= 0)
-            else None
-        )
 
     @property
     def dead_ends_amount(self):
         return len(self.dead_ends)
 
-    def __setitem__(self, key, value):
-        if len(key) == 2:
-            self.__setitem__((key[0], key[1], 0), value)
-        else:
-            self._cells[key[0] + key[1] * self.columns + key[2] * self.size_2D] = value
-
     def _get_offset(self) -> Vector:
-        return Vector(((1 - self.columns) / 2, (1 - self.rows) / 2, 0))
+        return Vector(((1 - self.shape[0]) / 2, (1 - self.shape[1]) / 2, 0))
 
     def mask_cells(self) -> None:
         if self.mask:
@@ -138,13 +88,32 @@ class Grid:
             ]
 
     def get_neighbor_towards(self, index, direction):
-        return self.neighbor_indices[index][direction]
+        return abs(self.cells_np[index][direction])
 
     def get_neighbor_return(self, _index, direction):
-        n = self.neighbor_indices[_index][direction]
-        return index(self.neighbor_indices[n], _index)
+        n = self.get_neighbor_towards(_index, direction)
+        return index(self.cells_np[n], _index)
 
-    def get_cell_info(self, index):
+    def get_shape_from_index(self, i):
+        return (i % self.shape[0], i // self.shape[0])
+
+    def get_cell_position_from_index(self, i):
+        return self.get_cell_position_from_shape(self.get_shape_from_index(i))
+
+    def get_cell_position_from_shape(self, shape):
+        return Vector((shape[0], shape[1], 0))
+
+    def get_cell_position_2D_from_shape(self, shape):
+        if self.random_cells > 0 and 0 < shape[0] < self.shape[0] - 1 and 0 < shape[1] < self.shape[1] - 1:
+            # if self.random_cells > 0:
+            return (
+                round(shape[0] + random.uniform(-0.5, 0.5) * self.random_cells, 2),
+                round(shape[1] + random.uniform(-0.5, 0.5) * self.random_cells, 2),
+            )
+        else:
+            return (shape[0], shape[1])
+
+    def get_cell_vertices(self, index):
         size = self.cell_size
         column = index % self.shape[0]
         row = index // self.shape[0]
@@ -158,36 +127,69 @@ class Grid:
         )
         return verts
 
-    def create_cell(self, row, column, level) -> Cell:
-        size = self.cell_size
-        if self[column, row, level] is None:
-            new_cell = Cell(
-                row,
-                column,
-                level,
-                # neighbors_return=(cst.SOUTH, cst.EAST, cst.NORTH, cst.WEST),
-                half_neighbors=(0, 1),
-            )
-            center = Vector((column + level * (self.columns + 1), row, 0))
-
-            new_cell.first_vert_index = len(self.verts)
-            self.verts.extend(
-                (
-                    center + Vector((size / 2, size / 2, 0)),
-                    center + Vector((-size / 2, size / 2, 0)),
-                    center + Vector((-size / 2, -size / 2, 0)),
-                    center + Vector((size / 2, -size / 2, 0)),
-                )
-            )
-            return new_cell
-
     def prepare_grid(self) -> None:
-        for level in range(self.levels):
-            for c in range(self.columns):
-                for r in range(self.rows):
-                    new_cell = self.create_cell(r, c, level)
-                    self[c, r, level] = new_cell
-                    self.new_cell_evt(new_cell)
+        cols, rows, _ = self.shape
+        cells_positions = [
+            self.get_cell_position_2D_from_shape(self.get_shape_from_index(idx)) for idx in range(self.size_2D)
+        ]
+
+        cells_positions.append(self.get_cell_position_2D_from_shape((-1, -1)))
+        for c in range(cols):
+            cells_positions.append(self.get_cell_position_2D_from_shape((c, -1)))
+        cells_positions.append(self.get_cell_position_2D_from_shape((cols, -1)))
+        for r in range(rows):
+            cells_positions.append(self.get_cell_position_2D_from_shape((-1, r)))
+            cells_positions.append(self.get_cell_position_2D_from_shape((cols, r)))
+        cells_positions.append(self.get_cell_position_2D_from_shape((-1, rows)))
+        for c in range(cols):
+            cells_positions.append(self.get_cell_position_2D_from_shape((c, rows)))
+        cells_positions.append(self.get_cell_position_2D_from_shape((cols, rows)))
+        print("voronoi")
+        start = time.time()
+        self.vor = Voronoi(cells_positions, qhull_options="Qc Q3")
+        print(time.time() - start)
+        not_good_regions = self.vor.point_region[self.size_2D : :]
+        self.vor.regions = [r for i, r in enumerate(self.vor.regions) if i not in not_good_regions]
+        connections = []
+        print("sanitize")
+        start = time.time()
+        for i in range(len(self.vor.ridge_points) - 1, -1, -1):
+            p0, p1 = self.vor.ridge_points[i]
+            p1_rim = p0 >= self.size_2D
+            p2_rim = p1 >= self.size_2D
+
+            # Do not draw outside cells
+            if p1_rim and p2_rim:
+                self.vor.ridge_points = np.delete(self.vor.ridge_points, i, 0)
+                self.vor.ridge_vertices.pop(i)
+
+            # Remove connections that are too short to make sense
+            elif not (p1_rim or p2_rim):
+                v0, v1 = self.vor.ridge_vertices[i]
+                vec0, vec1 = self.vor.vertices[v0], self.vor.vertices[v1]
+                if np.linalg.norm((vec0 - vec1)) > self.cell_size / 6:
+                    connections.append((p0, p1))
+        print(time.time() - start)
+
+        # print("Points")
+        # print(cells_positions)
+        # print("Vertices")
+        # print(self.vor.vertices)
+        # print("Faces")
+        # print(self.vor.regions)
+        # print("Ridge points")
+        # print(self.vor.ridge_points)
+        # print("Ridge vertices")
+        # print(self.vor.ridge_vertices)
+        # print("Connections")
+        # print(connections)
+        # connections.sort(key=operator.itemgetter(0, 1))
+        # print(connections)
+        
+        print("graph")
+        start = time.time()
+        self.graph = graph.OrderedGraph(connections=connections)
+        print(time.time() - start)
 
     def prepare_union_find(self) -> None:
         self._union_find = union_find.UnionFind(self.all_cells)
@@ -204,12 +206,6 @@ class Grid:
     def get_columns_this_row(self, row):
         return self.columns
 
-    def init_cells_neighbors(self) -> None:
-        for c in self.all_cells:
-            c.set_neighbor(cst.NORTH, self.delta_cell(c, row=1), cst.SOUTH)
-            c.set_neighbor(cst.EAST, self.delta_cell(c, column=1), cst.WEST)
-            c.set_neighbor(cst.UP, self.delta_cell(c, level=1), cst.DOWN)
-
     def mask_ring(self, center_row: int, center_col: int, radius: float) -> None:
         for r in range(self.rows):
             for c in range(self.columns):
@@ -223,7 +219,7 @@ class Grid:
 
     def get_linked_cells(self) -> List[Cell]:
         # TODO numpy ?
-        return [c for c in self.cells_np if c.any()]
+        return [c for c in self.cells_np if self.has_any_link(c)]
 
     def mask_cell(self, column: int, row: int) -> None:
         c = self[column, row]
@@ -238,15 +234,35 @@ class Grid:
             random.seed(_seed)
         try:
             return random.randrange(self.shape[0] * self.shape[1])
-            # return random.choice(self.all_cells)
         except IndexError:
             return None
 
+    def get_neighbors_array(self, index):
+        neighbors = [-1] * 4
+        if index < self.shape[0] * (self.shape[1] - 1):
+            neighbors[0] = index + self.shape[0]
+        if index % self.shape[0] != 0:
+            neighbors[1] = index - 1
+        if index >= self.shape[0]:
+            neighbors[2] = index - self.shape[0]
+        if index % self.shape[0] != self.shape[0] - 1:
+            neighbors[3] = index + 1
+        return neighbors
+
+    def get_neighbors(self, index):
+        return list(self.graph.get_neighbors(index))
+
+    def forget_neighbors(self, cell_a, cell_b):
+        self.graph.disconnect(cell_a, cell_b)
+
     def get_random_neighbor(self, index):
-        return random.choice([c for c in self.neighbor_indices[index] if c >= 0])
+        return random.choice(list(self.get_neighbors(index)))
 
     def has_any_link(self, index):
-        return self.cells_np[index].any()
+        return any([self.graph.edge_value(index, n) for n in self.graph.get_neighbors(index)])
+
+    def are_linked(self, cell_a, cell_b):
+        return self.graph.connected(cell_a, cell_b) and self.graph.edge_value(cell_a, cell_b)
 
     def get_random_linked_cell(self, _seed: int = None) -> Cell:
         if _seed:
@@ -327,12 +343,18 @@ class Grid:
                 if culled_cells >= max_cells_to_cull:
                     return
 
+    def get_neighbor_index(self, cell, neighbor):
+        cell_neighbors = self.cells_np[abs(cell)]
+        if neighbor not in cell_neighbors:
+            neighbor = -neighbor
+        return index(cell_neighbors, neighbor)
+
+    def link(self, cell_a, cell_b):
+        self.graph.link(cell_a, cell_b)
+
     def unlink(self, cell_a, cell_b=None):
         if cell_b is None:  # We're unlinking a dead-end
-            link_to_unlink = index(self.cells_np[cell_a], True)
-            self.cells_np[cell_a][link_to_unlink] = False
-            cell_b = self.neighbor_indices[cell_a][link_to_unlink]
-            self.cells_np[cell_b][index(self.neighbor_indices[cell_b], cell_a)] = False
+            self.links.remove(cell_a)
 
     def braid_dead_ends(self, braid: int = 0, _seed: int = None) -> int:
         """
@@ -377,17 +399,6 @@ class Grid:
             start_cell = self[0, random.randint(0, self.rows - 1)]
             end_cell = self[self.columns - 1, random.randint(0, self.rows - 1)]
         return start_cell, end_cell
-
-    def link(self, cell_a, cell_b, bidirectional=True):
-        neighbor_index_a = index(self.neighbor_indices[cell_a], cell_b)
-        self.cells_np[cell_a][neighbor_index_a] = True
-        neighbor_index_b = index(self.neighbor_indices[cell_b], cell_a)
-        self.cells_np[cell_b][neighbor_index_b] = True
-        return
-        linked_cells = cell_a.link(cell_b, bidirectional)
-        if linked_cells and all(linked_cells):
-            self._union_find.union(linked_cells[0], linked_cells[1])
-        return linked_cells
 
 
 def index(array, item):
