@@ -28,8 +28,9 @@ class ParametersPanel(bpy.types.Panel):
         mg_props = scene.mg_props
 
         if mg_props.cell_props.is_a(CellType.POLAR):
-            layout.prop(mg_props, "maze_polar_branch", text="Branch amount")
+            layout.prop(mg_props.maze, "polar_branch", text="Branch amount")
         else:
-            layout.prop(mg_props, "maze_columns", text="Columns")
+            layout.prop(mg_props.maze, "columns", text="Columns")
 
-        layout.prop(mg_props, "maze_rows_or_radius", text="Rows")
+        layout.prop(mg_props.maze, "rows_or_radius", text="Rows")
+        layout.prop(mg_props.maze, "random_cells_geomery", text="Random Cells", slider=True)

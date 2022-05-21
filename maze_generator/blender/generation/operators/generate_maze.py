@@ -23,8 +23,7 @@ from maze_generator.blender.object.main import get_or_create_and_link_objects
 from maze_generator.blender.object.walls.viewport import update_wall_visibility
 
 from maze_generator.blender.preferences.helper import get_preferences
-
-from maze_generator.maze.grid.grids import grid_test
+import random
 
 
 class MG_OT_GenerateMaze(bpy.types.Operator):
@@ -38,9 +37,9 @@ class MG_OT_GenerateMaze(bpy.types.Operator):
     def poll(cls, context):
         mg_props = context.scene.mg_props
         return (
-            mg_props.maze_rows_or_radius > 0
-            and mg_props.maze_columns > 0
-            and mg_props.maze_levels > 0
+            mg_props.maze.rows_or_radius > 0
+            and mg_props.maze.columns > 0
+            and mg_props.maze.levels > 0
             and context.mode == "OBJECT"
         )
 
@@ -56,6 +55,7 @@ class MG_OT_GenerateMaze(bpy.types.Operator):
         ao = context.active_object
         scene = context.scene
         props = scene.mg_props
+        random.seed(props.algorithm.seed)
 
         grid = generate_grid(props)
         props.grid = grid

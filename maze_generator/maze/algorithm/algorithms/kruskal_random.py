@@ -6,7 +6,7 @@ from .maze_algorithm import (
 
 class KruskalRandom(MazeAlgorithm):
     name = "Kruskal Randomized"
-    settings = ["bias", "maze_weave"]
+    settings = ["bias", "weave"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

@@ -37,13 +37,13 @@ class AlgorithmPanel(bpy.types.Panel):
             layout.label(text=algo_incompatibility, icon="ERROR")
         else:
             for setting in algorithm_class_from_name(mg_props.algorithm.algorithm).settings:
-                if setting == "maze_weave":
+                if setting == "weave":
                     # TODO fix weave maze
                     continue
                     if mg_props.algorithm.algorithm == KruskalRandom.name:
-                        box.prop(mg_props, "maze_weave", slider=True)
+                        box.prop(mg_props.maze, "weave", slider=True)
                     else:
-                        box.prop(mg_props, "maze_weave_toggle", toggle=True)
+                        box.prop(mg_props.maze, "weave_toggle", toggle=True)
                 else:
                     layout.prop(mg_props.algorithm, setting)
         

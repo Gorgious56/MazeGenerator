@@ -53,7 +53,7 @@ def setup_drivers(scene, props):
             DriverProperties(
                 "scale",
                 DriverVariable(
-                    "var", "SCENE", scene, "mg_props.maze_columns" if i == 0 else "mg_props.maze_rows_or_radius"
+                    "var", "SCENE", scene, "mg_props.maze.columns" if i == 0 else "mg_props.maze.rows_or_radius"
                 ),
                 expression=exp,
             ),

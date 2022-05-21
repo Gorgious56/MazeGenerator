@@ -28,11 +28,11 @@ def generate_grid(props) -> None:
     cell_props = props.cell_props
     if cell_props.is_a(ct.POLAR):
         return GridPolar(
-            rows=props.maze_rows_or_radius,
+            rows=props.maze.rows_or_radius,
             columns=0,
-            levels=props.maze_levels,
+            levels=props.maze.levels,
             cell_size=1 - props.cell_props.inset,
-            branch_polar=props.maze_polar_branch,
+            branch_polar=props.maze.polar_branch,
         )
 
     if cell_props.is_a(ct.HEXAGON):
@@ -44,25 +44,25 @@ def generate_grid(props) -> None:
     elif cell_props.is_a(ct.DODECAGON):
         grid = GridDodecagon
     else:
-        if props.maze_weave:
+        if props.maze.weave:
             return GridWeave(
-                rows=props.maze_rows_or_radius,
-                columns=props.maze_columns,
+                rows=props.maze.rows_or_radius,
+                columns=props.maze.columns,
                 levels=1,
                 cell_size=1 - max(0.2, props.cell_props.inset),
                 use_kruskal=is_kruskal_random(props.algorithm.algorithm),
-                weave=props.maze_weave,
+                weave=props.maze.weave,
                 warp_horiz=warp_horiz,
                 warp_vert=warp_vert,
             )
 
         if maze_dimension == SpaceRepresentation.BOX.value:
-            rows = props.maze_rows_or_radius
-            cols = props.maze_columns
+            rows = props.maze.rows_or_radius
+            cols = props.maze.columns
             return GridBox(
                 rows=3 * rows,
                 columns=2 * cols + 2 * rows,
-                levels=props.maze_levels,
+                levels=props.maze.levels,
                 cell_size=1 - props.cell_props.inset,
                 mask=[
                     (0, 0, rows - 1, rows - 1),
@@ -73,10 +73,11 @@ def generate_grid(props) -> None:
             )
         grid = Grid
     return grid(
-        rows=props.maze_rows_or_radius,
-        columns=props.maze_columns,
-        levels=props.maze_levels,
+        rows=props.maze.rows_or_radius,
+        columns=props.maze.columns,
+        levels=props.maze.levels,
         cell_size=1 - props.cell_props.inset,
         warp_horiz=warp_horiz,
         warp_vert=warp_vert,
+        random_cells=props.maze.random_cells_geomery,
     )

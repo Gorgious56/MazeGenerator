@@ -26,43 +26,26 @@ from maze_generator.blender.collection.prop import CollectionsPropertyGroup
 from maze_generator.blender.modifier.prop import ModifierNamesPropertyGroup
 from maze_generator.blender.mesh.prop import MeshesPropertyGroup
 
-from maze_generator.blender.generation.main import generate_maze
-
 from maze_generator.maze.algorithm.prop import AlgorithmPropertyGroup
 from maze_generator.maze.space_representation.prop import SpaceRepPropertyGroup
 from maze_generator.maze.cell.prop import CellPropertyGroup
 from maze_generator.maze.pathfinding.prop import PathPropertyGroup
+from maze_generator.maze.grid.prop import GridPropertyGroup
 
 from maze_generator.maze.algorithm.algorithms import is_algo_weaved
-
-def toggle_maze_weave(self, context) -> None:
-    if self.maze_weave_toggle:
-        if self.maze_weave == 0:
-            self.maze_weave = 50
-    else:
-        self.maze_weave = 0
 
 
 def update_objects_visibility(self, context) -> None:
     update_wall_visibility(self, is_algo_weaved(self))
 
 
-def tweak_maze_weave(self, context: bpy.types.Context) -> None:
-    self["maze_weave_toggle"] = self.maze_weave > 0
-    generate_maze(self, context)
-
-
-def update_prop(self, value, prop_name):
-    if hasattr(self, prop_name):
-        setattr(self, prop_name, value)
-
-
 class MGProperties(PropertyGroup):
     """
     Main properties group to store the add-on properties
     """
+    grid = None  # Used to keep reference of the Grid object
 
-    grid = None
+    maze: PointerProperty(type=GridPropertyGroup)
 
     generation: PointerProperty(type=GenerationPropertyGroup)
 
@@ -80,61 +63,6 @@ class MGProperties(PropertyGroup):
     interaction: PointerProperty(type=InteractionPropertyGroup)
     display: PointerProperty(type=DisplayPropertyGroup)
 
-    maze_rows_or_radius: IntProperty(
-        name="Rows | Radius",
-        description="Choose the size along the Y axis or the radius if using polar coordinates",
-        default=10,
-        min=2,
-        soft_max=100,
-        update=generate_maze,
-    )
-
-    maze_rows_or_radius_gizmo: FloatProperty(
-        name="Rows",
-        description="Choose the size along the X axis",
-        default=10,
-        min=2,
-        soft_max=100,
-        get=lambda self: self.maze_rows_or_radius / 2,
-        set=lambda self, value: update_prop(self, value * 2, "maze_rows_or_radius"),
-    )
-
-    maze_columns: IntProperty(
-        name="Columns",
-        description="Choose the size along the X axis",
-        default=10,
-        min=2,
-        soft_max=100,
-        update=generate_maze,
-    )
-
-    maze_columns_gizmo: FloatProperty(
-        name="Columns",
-        description="Choose the size along the X axis",
-        default=10,
-        min=2,
-        soft_max=100,
-        get=lambda self: self.maze_columns / 2,
-        set=lambda self, value: update_prop(self, value * 2, "maze_columns"),
-    )
-
-    maze_levels: IntProperty(
-        name="Maze Levels",
-        description="Choose the size along the Z axis",
-        default=1,
-        min=1,
-        soft_max=5,
-        update=generate_maze,
-    )
-
-    maze_polar_branch: FloatProperty(
-        name="Branch polar grid",
-        description="This parameter drives how much the polar grid branches",
-        default=1,
-        min=0.3,
-        soft_max=3,
-        update=generate_maze,
-    )
     wall_hide: BoolProperty(
         name="Wall Hide",
         description="Keep the wall hidden",
@@ -144,23 +72,6 @@ class MGProperties(PropertyGroup):
 
     generation_time: IntProperty(
         name="Generation Time",
-    )
-
-    maze_weave: IntProperty(
-        name="Weave Maze",
-        description="Tweak this value to weave the maze. Not all algorithms allow it",
-        default=0,
-        min=0,
-        max=100,
-        subtype="PERCENTAGE",
-        update=tweak_maze_weave,
-    )
-
-    maze_weave_toggle: BoolProperty(
-        name="Weave Maze",
-        description="Toggle this value to weave the maze. Not all algorithms allow it",
-        default=False,
-        update=toggle_maze_weave,
     )
 
     info_show_help: BoolProperty(

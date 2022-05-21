@@ -46,22 +46,22 @@ class SpaceRepresentationPanel(bpy.types.Panel):
                 layout.label(text="Needs PAIR Columns (2, 4, 6, ...)", icon="ERROR")
             if (
                 mg_props.space_rep_props.representation == SpaceRepresentation.MOEBIUS.value
-                and mg_props.maze_columns <= 5 * mg_props.maze_rows_or_radius
+                and mg_props.maze.columns <= 5 * mg_props.maze.rows_or_radius
             ):
                 layout.label(text="Set Columns > 5 * Rows", icon="ERROR")
             elif (
                 mg_props.space_rep_props.representation == SpaceRepresentation.TORUS.value
-                and mg_props.maze_columns > mg_props.maze_rows_or_radius
+                and mg_props.maze.columns > mg_props.maze.rows_or_radius
             ):
                 layout.label(text="Set Rows > Columns", icon="ERROR")
         elif (
             mg_props.space_rep_props.representation == SpaceRepresentation.MOEBIUS.value
-            and mg_props.maze_columns <= 3 * mg_props.maze_rows_or_radius
+            and mg_props.maze.columns <= 3 * mg_props.maze.rows_or_radius
         ):
             layout.label(text="Set Columns > 3 * Rows", icon="ERROR")
         elif (
             mg_props.space_rep_props.representation == SpaceRepresentation.TORUS.value
-            and 2 * mg_props.maze_columns > mg_props.maze_rows_or_radius
+            and 2 * mg_props.maze.columns > mg_props.maze.rows_or_radius
         ):
             layout.label(text="Set Rows > 2 * Columns", icon="ERROR")
         elif mg_props.space_rep_props.representation == SpaceRepresentation.BOX.value:

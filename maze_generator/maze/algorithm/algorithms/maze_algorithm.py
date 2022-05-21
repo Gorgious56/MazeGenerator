@@ -25,7 +25,7 @@ class MazeAlgorithm(object):
 
     name = __name__
     weaved = True
-    settings = ["bias", "maze_weave"]
+    settings = ["bias", "weave"]
 
     def __init__(self, grid=None, props=None):
         self.grid = grid

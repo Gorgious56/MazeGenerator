@@ -59,7 +59,7 @@ def is_algo_incompatible(props):
         and props.space_rep_props.representation == SpaceRepresentation.BOX.value
     ):
         return "Aldous-Broder can't solve a box representation"
-    if props.space_rep_props.representation == SpaceRepresentation.BOX.value and props.maze_weave:
+    if props.space_rep_props.representation == SpaceRepresentation.BOX.value and props.maze.weave:
         return "Can't solve weaved maze for a box"
     if algorithm_class_from_name(props.algorithm.algorithm) in (RecursiveDivision, VoronoiDivision) and props.cell_props.is_a(
         CellType.POLAR
