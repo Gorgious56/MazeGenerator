@@ -1,5 +1,5 @@
 import bpy
-from maze_generator.blender.mesh.helper import update_mesh_smooth
+from maze_generator.blender.mesh.tool import update_mesh_smooth
 
 def update_smooth_all_meshes(self):
     for mesh in (self.cells, self.walls):

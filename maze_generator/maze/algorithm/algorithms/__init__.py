@@ -28,8 +28,8 @@ from .kruskal_random import KruskalRandom
 def work(grid, props):
     try:
         algorithm_class_from_name(props.algorithm.algorithm)(grid, props)
-        # ALGORITHM_FROM_NAME[props.algorithm.algorithm](grid, props)
     except KeyError:
+        print("Algorithm not found !")
         pass
 
 
@@ -61,8 +61,13 @@ def is_algo_incompatible(props):
         return "Aldous-Broder can't solve a box representation"
     if props.space_rep_props.representation == SpaceRepresentation.BOX.value and props.maze.weave:
         return "Can't solve weaved maze for a box"
-    if algorithm_class_from_name(props.algorithm.algorithm) in (RecursiveDivision, VoronoiDivision) and props.cell_props.is_a(
-        CellType.POLAR
+    if (
+        algorithm_class_from_name(props.algorithm.algorithm)
+        in (
+            RecursiveDivision,
+            VoronoiDivision,
+        )
+        and props.cell_props.is_a(CellType.POLAR)
     ):
         return "Can't solve this algorithm with Polar grid (yet)"
     return False

@@ -4,7 +4,7 @@ from maze_generator.blender.collection.helper import (
     link_objects_to_collection,
     get_or_create_collection,
 )
-from maze_generator.blender.object.helper import (
+from maze_generator.blender.object.tool import (
     get_or_create_mesh_object,
     get_or_create_helper,
 )
