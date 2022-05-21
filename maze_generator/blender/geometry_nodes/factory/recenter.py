@@ -1,38 +1,27 @@
 import bpy
-from maze_generator.blender.nodes.tool import (
-    ensure_and_get_tree,
-    create_node,
-    get_input,
-    get_output,
-    offset_nodes_chain,
+from maze_generator.blender.geometry_nodes.factory.base import (
+    BaseGNTree
 )
-from maze_generator.blender.geometry_nodes.factory.blank import init_node_tree
 
 
-def get_or_create_recenter_node_group():
-    tree = ensure_and_get_tree("MG_GN_RECENTER", _type=bpy.types.GeometryNodeTree)
-    init_node_tree(tree)
+class RecenterGNTree(BaseGNTree):
+    TREE_NAME = "MG_GN_RECENTER"
 
-    nodes = tree.nodes
-    bbox = create_node(nodes, bpy.types.GeometryNodeBoundBox)
-    subtract = create_node(nodes, bpy.types.ShaderNodeVectorMath)
-    subtract.operation = "SUBTRACT"
-    scale = create_node(nodes, bpy.types.ShaderNodeVectorMath)
-    scale.operation = "SCALE"
-    scale.inputs["Scale"].default_value = 0.5
-    set_position = create_node(nodes, bpy.types.GeometryNodeSetPosition)
-    input = get_input(nodes)
-    output = get_output(nodes)
+    def create_nodes(self):
+        self.bbox = self.create_node(bpy.types.GeometryNodeBoundBox)
+        self.subtract = self.create_node(bpy.types.ShaderNodeVectorMath)
+        self.subtract.operation = "SUBTRACT"
+        self.scale = self.create_node(bpy.types.ShaderNodeVectorMath)
+        self.scale.operation = "SCALE"
+        self.scale.inputs["Scale"].default_value = 0.5
+        self.set_position = self.create_node(bpy.types.GeometryNodeSetPosition)
 
-    offset_nodes_chain(input, bbox, subtract, scale, set_position, output)
-
-    links = tree.links
-    links.new(input.outputs["Geometry"], bbox.inputs["Geometry"])
-    links.new(bbox.outputs["Min"], subtract.inputs[0])
-    links.new(bbox.outputs["Max"], subtract.inputs[1])
-    links.new(subtract.outputs["Vector"], scale.inputs["Vector"])
-    links.new(input.outputs["Geometry"], set_position.inputs["Geometry"])
-    links.new(scale.outputs["Vector"], set_position.inputs["Offset"])
-    links.new(set_position.outputs["Geometry"], output.inputs["Geometry"])
-
-    return tree
+    def create_links(self):
+        links = self.links
+        links.new(self.input.outputs["Geometry"], self.bbox.inputs["Geometry"])
+        links.new(self.bbox.outputs["Min"], self.subtract.inputs[0])
+        links.new(self.bbox.outputs["Max"], self.subtract.inputs[1])
+        links.new(self.subtract.outputs["Vector"], self.scale.inputs["Vector"])
+        links.new(self.input.outputs["Geometry"], self.set_position.inputs["Geometry"])
+        links.new(self.scale.outputs["Vector"], self.set_position.inputs["Offset"])
+        links.new(self.set_position.outputs["Geometry"], self.output.inputs["Geometry"])

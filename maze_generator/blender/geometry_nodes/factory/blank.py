@@ -10,7 +10,6 @@ def init_node_tree(tree):
     output = create_node(nodes, bpy.types.NodeGroupOutput)
     proxy = create_node(nodes, bpy.types.GeometryNodeJoinGeometry)
 
-    input.location = Vector((0, 0))
     output.location = input.location + Vector((200, 0))
 
     tree.inputs.clear()

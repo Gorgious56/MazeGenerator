@@ -4,7 +4,7 @@ Stores the cells object's modifier properties
 
 
 import math
-from maze_generator.blender.modifier.helper import (
+from maze_generator.blender.modifier.tool import (
     add_modifier,
     ModifierCreator,
 )

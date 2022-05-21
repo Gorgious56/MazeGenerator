@@ -25,9 +25,8 @@ from maze_generator.blender.object.walls.viewport import update_wall_visibility
 from maze_generator.blender.preferences.helper import get_preferences
 import random
 
-from maze_generator.blender.object.tool import get_or_create
 from maze_generator.blender.geometry_nodes.factory.main import ensure_gn_modifier, ensure_gn_tree
-from maze_generator.blender.mesh.factory import ensure_test_mesh
+from maze_generator.blender.modifier.factory import ensure_solidify_mod
 
 
 from maze_generator.maze_v2 import maze as maze_creator
@@ -58,18 +57,20 @@ class MG_OT_maze_generate(bpy.types.Operator):
         return {"FINISHED"}
 
     def generate_maze(self, context) -> None:
-        obj = get_or_create("MG_test")
-        mesh = obj.data
-        # ensure_test_mesh(mesh)
-        mod = ensure_gn_modifier(obj, "MG_Modifier")
-        ensure_gn_tree(mod)
 
         # addon_prefs = get_preferences(context)
         # ao = context.active_object
         scene = context.scene
         props = scene.mg_props
         random.seed(props.algorithm.seed)
-        
+
+        obj = props.objects.main
+        mesh = obj.data
+        # ensure_test_mesh(mesh)
+        mod = ensure_gn_modifier(obj, "MG_GN_MAIN")
+        ensure_gn_tree(mod)
+
+        ensure_solidify_mod(obj)
         maze = maze_creator.new_grid(props.maze.rows_or_radius, props.maze.columns)
         maze.algorithm.run()
 

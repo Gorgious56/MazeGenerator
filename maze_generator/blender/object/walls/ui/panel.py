@@ -18,39 +18,45 @@ class WallsPanel(bpy.types.Panel):
 
     @classmethod
     def poll(cls, context):
-        return context.scene.mg_props.objects.walls
+        return context.scene.mg_props.objects.main
 
     def draw_header(self, context):
         self.layout.label(text="Walls", icon="SNAP_EDGE")
-        wall_hide = context.scene.mg_props.wall_hide
-        self.layout.prop(context.scene.mg_props, "wall_hide", text="", icon="HIDE_ON" if wall_hide else "HIDE_OFF")
+        # wall_hide = context.scene.mg_props.wall_hide
+        # self.layout.prop(context.scene.mg_props, "wall_hide", text="", icon="HIDE_ON" if wall_hide else "HIDE_OFF")
 
     def draw(self, context):
         layout = self.layout
 
         mg_props = context.scene.mg_props
-        mod_names = mg_props.mod_names
+        main_obj = mg_props.objects.main
+        gn_nodes = main_obj.modifiers["MG_GN_MAIN"].node_group.nodes
+        input_node = next(n for n in gn_nodes if isinstance(n, bpy.types.NodeGroupInput))
+        input = input_node.outputs["Offset Scale"]
+        layout.prop(main_obj.modifiers["MG_GN_MAIN"], f'["{input.identifier}"]', text="Height")
+        layout.prop(main_obj.modifiers["MG_MOD_SOLIDIFY"], "thickness")
+        # mod_names = mg_props.mod_names
 
-        obj_walls = mg_props.objects.walls
-        if obj_walls:
-            try:  # TODO get rid of try/except
-                row = layout.row(align=True)
-                wall_bevel_mod = obj_walls.modifiers.get(mod_names.bevel)
-                if wall_bevel_mod:
-                    layout.prop(wall_bevel_mod, "width", text="Bevel")
-                wall_screw_mod = obj_walls.modifiers.get(mod_names.screw)
-                if wall_screw_mod:
-                    row.prop(wall_screw_mod, "screw_offset", text="Height")
-                wall_solid_mod = obj_walls.modifiers.get(mod_names.solid)
-                if wall_solid_mod:
-                    row.prop(wall_solid_mod, "thickness")
-            except ReferenceError:
-                pass
+        # obj_walls = mg_props.objects.walls
+        # if obj_walls:
+        #     try:  # TODO get rid of try/except
+        #         row = layout.row(align=True)
+        #         wall_bevel_mod = obj_walls.modifiers.get(mod_names.bevel)
+        #         if wall_bevel_mod:
+        #             layout.prop(wall_bevel_mod, "width", text="Bevel")
+        #         wall_screw_mod = obj_walls.modifiers.get(mod_names.screw)
+        #         if wall_screw_mod:
+        #             row.prop(wall_screw_mod, "screw_offset", text="Height")
+        #         wall_solid_mod = obj_walls.modifiers.get(mod_names.solid)
+        #         if wall_solid_mod:
+        #             row.prop(wall_solid_mod, "thickness")
+        #     except ReferenceError:
+        #         pass
 
-        wall_mat = mg_props.display.materials.wall
-        if wall_mat:
-            for n in wall_mat.node_tree.nodes:
-                if not isinstance(n, bpy.types.ShaderNodeBsdfPrincipled):
-                    continue
-                layout.prop(n.inputs[0], "default_value", text="Color")
-                break
+        # wall_mat = mg_props.display.materials.wall
+        # if wall_mat:
+        #     for n in wall_mat.node_tree.nodes:
+        #         if not isinstance(n, bpy.types.ShaderNodeBsdfPrincipled):
+        #             continue
+        #         layout.prop(n.inputs[0], "default_value", text="Color")
+        #         break

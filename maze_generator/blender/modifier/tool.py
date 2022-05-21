@@ -7,6 +7,13 @@ from typing import Dict
 import bpy.types as bpy_types
 
 
+def ensure_modifier(obj, name, mod_type):
+    mod = next((m for m in obj.modifiers if m.name == name), None)
+    if mod is None:
+        mod = obj.modifiers.new(type=mod_type, name=name)
+    return mod
+
+
 class ModifierCreator:
     """
     Helper class to create modifiers

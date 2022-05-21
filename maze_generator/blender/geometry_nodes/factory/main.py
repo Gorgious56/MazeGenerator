@@ -1,7 +1,6 @@
 import bpy
-from maze_generator.blender.geometry_nodes.factory.extrude_edges_upwards import (
-    get_or_create_extrude_edges_upward_node_group,
-)
+from mathutils import Vector
+from maze_generator.blender.geometry_nodes.factory.extrude_edges_upwards import ExtrudeEdgesUpwardGNTree
 from maze_generator.blender.nodes.tool import (
     create_node,
     ensure_and_get_tree,
@@ -10,7 +9,7 @@ from maze_generator.blender.nodes.tool import (
     plug_and_offset_geometry_sockets,
 )
 from maze_generator.blender.geometry_nodes.factory.blank import init_node_tree
-from maze_generator.blender.geometry_nodes.factory.recenter import get_or_create_recenter_node_group
+from maze_generator.blender.geometry_nodes.factory.recenter import RecenterGNTree
 
 
 def ensure_gn_modifier(obj, mod_name):
@@ -49,16 +48,17 @@ def init_main_node_tree(tree):
     output = get_output(nodes)
 
     recenter = create_node(nodes, bpy.types.GeometryNodeGroup)
-    recenter.node_tree = get_or_create_recenter_node_group()
+    recenter.node_tree = RecenterGNTree().get()
     plug_and_offset_geometry_sockets(tree, _input, recenter, output)
 
     merge_by_distance = create_node(nodes, bpy.types.GeometryNodeMergeByDistance)
     plug_and_offset_geometry_sockets(tree, _input, merge_by_distance, recenter)
 
     extrude_edges_upward = create_node(nodes, bpy.types.GeometryNodeGroup)
-    extrude_edges_upward.node_tree = get_or_create_extrude_edges_upward_node_group()
+    extrude_edges_upward.node_tree = ExtrudeEdgesUpwardGNTree().get()
     plug_and_offset_geometry_sockets(tree, recenter, extrude_edges_upward, output)
 
     links = tree.links
     links.new(_input.outputs[-1], extrude_edges_upward.inputs[1])
-    _input.outputs["Offset Scale"].name = "Scale"
+
+    _input.location -= Vector((0, 200))
