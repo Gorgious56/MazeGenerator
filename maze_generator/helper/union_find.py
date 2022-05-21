@@ -1,9 +1,9 @@
 # Courtesy of Tomáš Bouda : https://medium.com/100-days-of-algorithms/day-41-union-find-d0027148376d
 
 class UnionFind(object):
-    def __init__(self, all_cells):
+    def __init__(self, items):
         self.data = {}
-        [self.data.update({c: c}) for c in all_cells]
+        [self.data.update({c: c}) for c in items]
 
     def find(self, i):
         data = self.data
@@ -36,7 +36,10 @@ class UnionFind(object):
 
     def get_all(self, group):
         return [it for it in self.data if self.connected(it, group)]
-        
+
+    def __str__(self):
+        return "{}({})".format(self.__class__.__name__, dict(self.data))
+
 
 
 
