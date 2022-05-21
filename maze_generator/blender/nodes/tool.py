@@ -9,7 +9,7 @@ def get_tree_with_flag(flag):
 def traverse_tree_right(node):
     yield node
     for output in node.outputs:
-        if output.is_linked():
+        if output.is_linked:
             for link in output.links:
                 to_socket = link.to_socket
                 yield from traverse_tree_right(to_socket.node)
@@ -23,6 +23,10 @@ def plug_and_offset(tree, from_node, from_socket, new_node, new_input_socket, ne
     offset_nodes(from_node, new_node)
     nodes_to_offset = [new_node] + list(set(traverse_tree_right(to_node)))
     offset_nodes_chain(*nodes_to_offset)
+
+
+def plug_and_offset_geometry_sockets(tree, from_node, new_node, to_node):
+    plug_and_offset(tree, from_node, "Geometry", new_node, "Geometry", "Geometry", to_node, "Geometry")
 
 
 def get_input(nodes):

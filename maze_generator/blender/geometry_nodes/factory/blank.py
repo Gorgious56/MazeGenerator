@@ -13,7 +13,11 @@ def init_node_tree(tree):
     input.location = Vector((0, 0))
     output.location = input.location + Vector((200, 0))
 
+    tree.inputs.clear()
+    tree.outputs.clear()
+
     links = tree.links
+    links.clear()
     links.new(proxy.outputs[0], output.inputs[0])
     links.new(input.outputs[0], output.inputs[0])
 

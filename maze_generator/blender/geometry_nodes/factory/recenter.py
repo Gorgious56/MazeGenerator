@@ -1,9 +1,16 @@
 import bpy
-from maze_generator.blender.nodes.tool import ensure_and_get_tree, create_node, get_input, get_output, offset_nodes_chain
-from maze_generator.blender.geometry_nodes.factory.main import init_node_tree
+from maze_generator.blender.nodes.tool import (
+    ensure_and_get_tree,
+    create_node,
+    get_input,
+    get_output,
+    offset_nodes_chain,
+)
+from maze_generator.blender.geometry_nodes.factory.blank import init_node_tree
+
 
 def get_or_create_recenter_node_group():
-    tree = ensure_and_get_tree("MG_FLAG_GN_RECENTER", _type=bpy.types.GeometryNodeTree)
+    tree = ensure_and_get_tree("MG_GN_RECENTER", _type=bpy.types.GeometryNodeTree)
     init_node_tree(tree)
 
     nodes = tree.nodes
