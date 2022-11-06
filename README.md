@@ -1,6 +1,10 @@
 # MazeGenerator
 Blender add-on for generating Mazes, with options for different types of cells and algorithms, 3D visualization in real time.
 
+# THE CURRENT RELEASE (0.4) ONLY REALLY WORKS ON BLENDER VERSIONS UP TO 2.83. IF YOU TRY IT ON MORE RECENT VERSIONS, IT WONT WORK. YOU CAN DOWNLOAD THIS VERSION FROM THE BLENDER ARCHIVES AS A PORTABLE ZIP : https://download.blender.org/release/Blender2.83/
+
+## The license for both the addon code and the things you generate with it are CC0 (or equivalent). You can do whatever you wish with it, no strings attached. If you do something cool, don't hesitate to start a thread here to showcase it, I'm interested. :)
+
 Go to https://github.com/Gorgious56/MazeGenerator/releases for the latest release.
 
 Go to https://gorgious.artstation.com/ or https://imgur.com/gallery/U5yoODH for artworks created with this add-on.
